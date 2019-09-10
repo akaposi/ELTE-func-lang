@@ -51,5 +51,5 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
   
 #### Anyagok
 
-- Órai feladatok és megoldásaik felkerülnek ebben a repóba minden gyakorlat/előadás után. 
+- Órai feladatok és megoldásaik felkerülnek ebbe a repóba minden gyakorlat/előadás után. 
 - Ajánlott irodalom: http://learnyouahaskell.com/chapters, illetve https://en.wikibooks.org/wiki/Haskell. További irodalom órai jegyzetekben lehet hivatkozva.
