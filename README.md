@@ -19,7 +19,7 @@
 
 #### Infrastruktúra
 
-- Compiler installáció: legcélszerűbb [Haskell Platform](https://www.haskell.org/platform/) vagy [stack](https://docs.haskellstack.org/en/stable/README/) segítségével. Szerkesztéshez megfelel tetszőleges szerkesztő GHCI-vel, de nyilván használható szofisztikáltabb környezet (emacs [haskell-mode](http://haskell.github.io/haskell-mode/), VSCode), aki ismer ilyet.
+- Compiler installáció: legcélszerűbb [Haskell Platform](https://www.haskell.org/platform/) vagy [stack](https://docs.haskellstack.org/en/stable/README/) segítségével. Szerkesztéshez megfelel tetszőleges szerkesztő GHCI-vel, de nyilván használható szofisztikáltabb környezet (pl. emacs [haskell-mode](http://haskell.github.io/haskell-mode/), VSCode), aki ismer ilyet.
 
 #### Előzetes ismeretek
 
