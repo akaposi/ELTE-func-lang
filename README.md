@@ -19,7 +19,7 @@
 
 #### Infrastruktúra
 
-- Compiler installáció: legcélszerűbb [Haskell Platform](https://www.haskell.org/platform/) vagy [stack](https://docs.haskellstack.org/en/stable/README/) segítségével. Szerkesztéshez megfelel tetszőleges szerkesztő GHCI-vel, de nyilván használható szofisztikáltabb környezet (emacs [haskell-mode](http://haskell.github.io/haskell-mode/), VSCode), aki ismer ilyet.
+- Compiler installáció: legcélszerűbb [Haskell Platform](https://www.haskell.org/platform/) vagy [stack](https://docs.haskellstack.org/en/stable/README/) segítségével. Szerkesztéshez megfelel tetszőleges szerkesztő GHCI-vel, de nyilván használható szofisztikáltabb környezet (pl. emacs [haskell-mode](http://haskell.github.io/haskell-mode/), VSCode), aki ismer ilyet.
 
 #### Előzetes ismeretek
 
@@ -51,5 +51,5 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
   
 #### Anyagok
 
-- Órai feladatok és megoldásaik felkerülnek ebben a repóba minden gyakorlat/előadás után. 
+- Órai feladatok és megoldásaik felkerülnek ebbe a repóba minden gyakorlat/előadás után. 
 - Ajánlott irodalom: http://learnyouahaskell.com/chapters, illetve https://en.wikibooks.org/wiki/Haskell. További irodalom órai jegyzetekben lehet hivatkozva.
