@@ -17,7 +17,7 @@ xor = undefined
 -- 2. Írj egy függvényt, ami megadja az első n darab négyzetszám összegét.
 --    Példa: sqrsum 10 == 285. Tipp: listakifejezést érdemes használni,
 --    lásd: http://lambda.inf.elte.hu/Comprehensions.xml
-sqrSum :: Int -> Int
+sqrSum :: Int -> Int   -- sum of first n square numbers
 sqrSum n = undefined
 
 
