@@ -44,7 +44,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
 - Egyszerű osztályok: Eq, Ord, Show, Monoid
 - Functor, Foldable
 - Monad, egyes monádok: Reader, State, Maybe, lista, IO
-- Applicative
+- Applicative, Traversable
 - Parser monád
 - Monad transformer
 - Parser és interpreter egyszerű nyelvekhez
