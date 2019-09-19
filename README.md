@@ -29,7 +29,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
 
 - Gyakorlatok látogatása kötelező, maximum három hiányzás engedélyezett.
 - Előadás látogatása *nem kötelező*, viszont erősen ajánlott. Az előadás csak névlegesen előadás, gépteremben van, és többnyire gyakorlófeladatok megoldásából és konzultációból áll.
-- A tárgyi jegy vizsgaidőszaki vizsgából áll elő. Ez gépes feladmegoldásból áll és kb. két órás. 
+- A tárgyi jegy vizsgaidőszaki vizsgából áll elő. Ez gépes feladmegoldásból áll és kb. két órás. Vizsgán minden segédeszköz/internet használható, kommunikáció más vizsgázóval vagy külső személlyel nem engedélyezett.
 - A vizsgázás előfeltétele a gyakorlati követelmény teljesítése.
 - Gyakorlati követelmény:
   + Gyakorlatok elején 10 perces feladatmegoldás BEAD-ban. Ezekre 0, 1 vagy 2 pont kapható. Az első gyakorlaton
@@ -44,7 +44,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
 - Egyszerű osztályok: Eq, Ord, Show, Monoid
 - Functor, Foldable
 - Monad, egyes monádok: Reader, State, Maybe, lista, IO
-- Applicative
+- Applicative, Traversable
 - Parser monád
 - Monad transformer
 - Parser és interpreter egyszerű nyelvekhez
