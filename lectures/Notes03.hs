@@ -27,28 +27,31 @@ newtype Const a b = Const a
 newtype Fun a b = Fun (a -> b)
 
 instance Functor Tree1 where
-  fmap = undefined
+  fmap f (Leaf1 a) = Leaf1 (f a)
+  fmap f (Node1 l r) = Node1 (fmap f l) (fmap f r)
 
 instance Functor Tree2 where
-  fmap = undefined
+  fmap f (Node2 a ts) = Node2 (f a) (map (fmap f) ts)
 
 instance Functor (Tree3 i) where
-  fmap = undefined
+  fmap f (Leaf3 a) = Leaf3 (f a)
+  fmap f (Node3 g) = Node3 (\i -> fmap f (g i))
 
 instance Functor (Pair a) where
-  fmap = undefined
+  fmap f (Pair a b) = Pair a (f b)
 
 instance Functor (Either a) where
-  fmap = undefined
+  fmap f (Left a) = Left a
+  fmap f (Right b) = Right (f b)
 
 instance Functor Id where
-  fmap = undefined
+  fmap f (Id a) = Id (f a)
 
 instance Functor (Const a) where
-  fmap = undefined
+  fmap f (Const a) = Const a
 
 instance Functor (Fun a) where
-  fmap = undefined
+  fmap f (Fun g) = Fun (\a -> f (g a))
 
 
 -- 2. feladat (bónusz). Írj Functor instance-t az alábbi típusokhoz
@@ -57,22 +60,26 @@ data Prod f g a = Prod (f a) (g a)
 data Sum f g a = Inl (f a) | Inr (g a)
 data Compose f g a = Compose (f (g a))
 data List f a = Empty | Cons (f a) (List f a)
+
+-- utána lehet nézni: continuation monad
 newtype Cont r a = Cont ((a -> r) -> r)
 
 instance (Functor f, Functor g) => Functor (Prod f g) where
-  fmap = undefined
+  fmap f (Prod fa ga) = Prod (fmap f fa) (fmap f ga)
 
 instance (Functor f, Functor g) => Functor (Sum f g) where
-  fmap = undefined
+  fmap f (Inl fa) = Inl (fmap f fa)
+  fmap f (Inr ga) = Inr (fmap f ga)
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga)
 
 instance Functor f => Functor (List f) where
-  fmap = undefined
+  fmap f Empty        = Empty
+  fmap f (Cons fa fs) = Cons (fmap f fa) (fmap f fs)
 
 instance Functor (Cont r) where
-  fmap = undefined
+  fmap f (Cont g) = Cont (\k -> g (k . f))
 
 
 -- 3. feladat. Írd meg a következő instance-okat.
@@ -112,4 +119,9 @@ e2 = Add (Mul (Var "y") (Var "x")) (Literal 100)
 -- eval [("x", 2), ("y", 2)] e2 == 400
 
 eval :: [(String, Int)] -> Expr -> Int
-eval = undefined
+eval env (Literal n) = n
+eval env (Add e1 e2) = eval env e1 + eval env e2
+eval env (Mul e1 e2) = eval env e1 * eval env e2
+eval env (Var x)     = case lookup x env of
+  Just n  -> n
+  Nothing -> error "variable not in environment"
