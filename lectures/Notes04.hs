@@ -59,7 +59,7 @@ toList = undefined
 mconcat' :: (Foldable f, Monoid a) => f a -> a
 mconcat' = undefined
 
-foldl' :: Foldable f => (b -> a -> a) -> b -> f a -> b
+foldl' :: Foldable f => (b -> a -> b) -> b -> f a -> b
 foldl' = undefined
 
 -- 3. (bónusz) írd meg a következő instance-okat!
