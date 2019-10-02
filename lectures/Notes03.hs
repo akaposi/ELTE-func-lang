@@ -85,16 +85,16 @@ instance Functor (Cont r) where
 -- 3. feladat. Írd meg a következő instance-okat.
 
 instance (Semigroup a, Semigroup b) => Semigroup (a, b) where
-  (<>) = undefined
+  (a, b) <> (c, d) = (a <> c, b <> d)
 
 instance (Monoid a, Monoid b) => Monoid (a, b) where
-  mempty = undefined
+  mempty = (mempty, mempty)
 
 instance Semigroup b => Semigroup (a -> b) where
-  (<>) = undefined
+  f <> g = \a -> f a <> g a
 
 instance Monoid b => Monoid (a -> b) where
-  mempty = undefined
+  mempty = \a -> mempty
 
 
 -- 4. feladat. Vegyük a következő típust:
