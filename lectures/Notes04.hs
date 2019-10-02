@@ -94,7 +94,7 @@ second = undefined
 --    esetén, azaz ha löb :: [[a] -> a] -> [a]
 
 löb :: Functor f => f (f a -> a) -> f a
-plöb = undefined
+löb = undefined
 
 
 -- 6. feladat:
