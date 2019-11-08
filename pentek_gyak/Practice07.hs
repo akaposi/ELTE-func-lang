@@ -51,21 +51,35 @@ type CounterM a b = State (CMap a) b
 
 -- simple recursion
 inc :: Eq a => a -> CMap a -> CMap a
-inc = undefined
+inc x [] = [(x,1)]
+inc x ((y,n):ys) 
+  | x == y    = (y,n+1) : ys 
+  | otherwise = (y,n)   : inc x ys
 
 -- use DO, use inc, similar to pushM 
 incM :: Eq a => a -> CounterM a () 
-incM = undefined
+incM x = do 
+  cmap <- get 
+  let cmap' = inc x cmap
+  put cmap'
 
 -- use DO, use incM, similar pushAllM
 countM :: Eq a => [a] -> CounterM a ()
-countM = undefined
+countM [] = pure () 
+countM (x:xs) = do 
+  incM x
+  countM xs 
+  
 
 -- use execState
 execCounter :: CounterM a b -> CMap a 
-execCounter = undefined
+execCounter m = execState m []
 
 -- use countM, execCounter, lookup :: Eq a => a -> [(a,b)] -> Maybe b
 -- execute the counterM computation
 count :: Eq a => a -> [a] -> Int
-count = undefined
+count x xs = case lookup x occurences of 
+  Nothing -> 0 
+  Just n -> n
+  where
+    occurences = execCounter (countM xs)
