@@ -54,7 +54,7 @@ inc :: Eq a => a -> CMap a -> CMap a
 inc = undefined
 
 -- use DO, use inc, similar to pushM 
-incM :: Eq a => a -> CounterM (CMap a) () 
+incM :: Eq a => a -> CounterM a () 
 incM = undefined
 
 -- use DO, use incM, similar pushAllM
