@@ -50,11 +50,11 @@ type CMap a       = [(a, Int)]
 type CounterM a b = State (CMap a) b 
 
 -- simple recursion
-inc :: a -> CMap a -> CMap a
+inc :: Eq a => a -> CMap a -> CMap a
 inc = undefined
 
 -- use DO, use inc, similar to pushM 
-incM :: a -> CounterM (CMap a) () 
+incM :: Eq a => a -> CounterM (CMap a) () 
 incM = undefined
 
 -- use DO, use incM, similar pushAllM
