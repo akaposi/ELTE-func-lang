@@ -62,19 +62,31 @@ instance Monoid e => Applicative (Either2 e) where
   -}
   -- (>>=) :: Either2 e a -> (a -> Either2 e b) -> Either2 e b
 
-  
+
 -- motivation for Traversable
 
 -- sequenceMaybes [Just 1, Just 2, Just 3]  == Just [1,2,3]
 -- sequenceMaybes [Just 1, Nothing, Just 3] == Nothing
 sequenceMaybes :: [Maybe a] -> Maybe [a]
-sequenceMaybes = undefined
+sequenceMaybes [] = Just [] 
+sequenceMaybes (Just x : xs) = case sequenceMaybes xs of 
+  Nothing -> Nothing 
+  Just ys -> Just (x:ys) 
+sequenceMaybes _ = Nothing
 
 -- gatherEffects [Just 1, Just 2, Just 3]  == Just [1,2,3]
 -- gatherEffects [Just 1, Nothing, Just 3] == Nothing
 gatherEffects :: Monad m => [m a] -> m [a]
-gatherEffects = undefined
+gatherEffects [] = return []
+gatherEffects (m:ms) = do 
+  x  <- m 
+  xs <- gatherEffects ms
+  return (x:xs)
 
 -- run a monadic computation twice
+-- runState (twiceM (modify (+1) >> get)) 0 == ((1,2),2) -- m ~ State Int, a ~ Int
 twiceM :: Monad m => m a -> m (a, a)
-twiceM = undefined
+twiceM m = do 
+  x <- m 
+  y <- m 
+  pure (x,y)
