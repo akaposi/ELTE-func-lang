@@ -1,6 +1,8 @@
 {-# LANGUAGE InstanceSigs #-}
 module Practice09 where
 
+import Data.Char
+import Data.Functor (void)
 import Control.Applicative
 
 -- transactional
@@ -93,8 +95,9 @@ digit = fmap (\n -> n - 48)
       $ map char ['0'..'9']
 
 -- use foldl, digit
+-- [1,2,3] -> (10*1 + 2)*10 + 3
 natural :: Parser Int 
-natural = undefined 
+natural = foldl1 (\acc cur -> 10*acc + cur) <$> some digit 
 
 data Bit = F | T
   deriving (Eq, Ord, Show)  
@@ -113,3 +116,18 @@ bit = bitF <|> bitT
 
 shortByte :: Parser ShortByte 
 shortByte = SB <$> bit <*> bit <*> bit <*> bit 
+
+token' :: String -> Parser () 
+token' []     = pure () 
+token' (c:cs) = char c *> token' cs
+
+token :: String -> Parser () 
+token str = token' str <* ws
+
+satisfy :: (Char -> Bool) -> Parser Char 
+satisfy p = P $ \str -> case str of 
+  (c:cs) | p c -> Just (c, cs)
+  _ -> Nothing
+
+ws :: Parser () 
+ws = void $ many (char ' ')
