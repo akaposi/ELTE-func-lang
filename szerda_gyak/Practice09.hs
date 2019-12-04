@@ -96,10 +96,10 @@ digit = fmap (\n -> n - 48)
       . foldr (<|>) empty 
       $ map char ['0'..'9']
 
-int :: Parser Int
-int = undefined
+natural :: Parser Int
+natural = foldl (\acc cur -> acc*10 + cur) 0 <$> some digit
 
 foo :: Parser a -> Parser [a]
 foo p = do 
-  n <- int 
+  n <- natural 
   times n p
