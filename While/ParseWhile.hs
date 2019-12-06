@@ -38,7 +38,7 @@ statement' = (token "Skip" *> pure Skip)
                 <*> (token "then" *> statement)
                 <*> (token "else" *> statement)
         <|> While <$> (token "While" *> expr)
-                  <*> (token "do"    *> statement)
+                  <*> (token "do"    *> statement <* token "end")
 
 statement :: Parser Statement
 statement = Seq <$> statement' <*> (token ";" *> statement)
