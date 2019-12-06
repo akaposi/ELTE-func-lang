@@ -26,7 +26,8 @@ data Expr
   deriving (Eq, Ord, Show)
 
 data Statement
-  = Seq Statement Statement
+  = Skip
+  | Seq Statement Statement
   | If Expr Statement Statement
   | While Expr Statement
   | Assign Var Expr
