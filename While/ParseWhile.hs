@@ -3,7 +3,7 @@ module ParseWhile where
 import Control.Applicative
 
 import Syntax
-import Parser
+import Parser2
 
 iLit :: Parser Lit
 iLit = (LInt <$> natural) <* ws
