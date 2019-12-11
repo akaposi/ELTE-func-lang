@@ -96,6 +96,7 @@ digit :: Parser Int
 digit = undefined
 
 -- Írj egy parser-t, ami számjegyek vesszővel elválasztott listáit olvassa be.
+-- Whitespace beszúrható bárhova.
 digitCommaSepList :: Parser [Int]
 digitCommaSepList = undefined
 -- Példák:
@@ -103,7 +104,38 @@ digitCommaSepList = undefined
 --   [  0  , 2  ]
 --   []
 --   [     ]
--- Használj ws-t a szóközök olvasásához.
+
+
+-- Írj egy parser-t, ami egy pozitív Int-et olvas be, mint számjegyek
+-- nemüres sorozatát! Tipp: használd a (read :: String -> Int) függvényt
+-- az olvasott String konvertálásához.
+-- helyes példák:
+--    01
+--    200
+--    0
+positiveInt :: Parser Int
+positiveInt = undefined
+
+-- Írj egy parser-t, ami beolvas valahány darab (akár 0) 'a' karaktert, majd
+-- ugyanannyi 'b' karaktert!
+-- helyes példák:
+--    ""
+--    ab
+--    aabb
+--    aaaabbbb
+ab :: Parser ()
+ab = undefined
+
+
+-- Írj egy parser-t, ami beolvas egy pozitív Int-et, aztán pedig annyiszor
+-- olvas be egy megadott parser-t!
+-- példák:
+--   runParser (lengthPrefixed (char 'a')) "3aaa" == Just("aaa", [])
+--   runParser (lengthPrefixed (char 'b')) "5bbbbb" == Just("bbbbb", [])
+--   runParser (lengthPrefixed (string "malac")) "1malac" == Just([()], [])
+
+lengthPrefixed :: Parser a -> Parser [a]
+lengthPrefixed = undefined
 
 -- Írj egy parser-t, ami helyes zárójelezéseket olvas.
 -- Példák:
@@ -128,7 +160,6 @@ arithExpr = undefined
 
 
 -- Írj egy parser-t, ami típusozatlan lambda kifejezéseket olvas be!
-
 data Tm =
     Lam String Tm  -- lam x. t
   | App Tm Tm      -- t u
