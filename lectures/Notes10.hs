@@ -1,6 +1,6 @@
 {-# language InstanceSigs #-}
 
-import Control.Applicative
+import Control.Applicative hiding (optional)
 import Data.Char
 
 newtype Parser a = P { runParser :: String -> Maybe (a, String) }
@@ -60,46 +60,63 @@ char c = P $ \str -> case str of
 
 -- implementáld a következő parsereket!
 
--- kiolvas nulla vagy több szóköz karaktert vagy newline-t
--- tipp: Data.Char.isSpace használható
-ws :: Parser ()
-ws = undefined
-
--- egy konkrét String-et olvas ki
-string :: String -> Parser ()
-string = undefined
+-- kiolvas egy karaktert, ha a (Char -> Bool) függvény igaz a karakterre
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy f = P $ \cs -> case cs of
+  c:cs | f c -> Just (c, cs)
+  _          -> Nothing
 
 -- akármilyen karaktert kiolvas
 anyChar :: Parser Char
-anyChar = undefined
+anyChar = satisfy (const True)
 
--- kiolvas egy karaktert, ha a (Char -> Bool) függvény igaz a karakterre
-satisfy :: (Char -> Bool) -> Parser Char
-satisfy f = undefined
+-- kiolvas nulla vagy több szóköz karaktert vagy newline-t
+-- tipp: Data.Char.isSpace használható
+ws :: Parser ()
+ws = () <$ many (satisfy isSpace)
+
+-- egy konkrét String-et olvas ki
+string :: String -> Parser ()
+string = mapM_ char
+
 
 -- Írj egy parser-t, ami beolvas egy vagy több `a`-t `b`-vel
 -- elválasztva, és visszaadja a beolvasott `a`-kat listában.
 -- Pl. runParser (sepBy1 (char 'x') (char 'y')) "xyxyx" == "xxx"
 sepBy1 :: Parser a -> Parser b -> Parser [a]
-sepBy1 = undefined
+sepBy1 pa pb = (:) <$> pa <*> many (pb *> pa)
 
 -- Írj egy parser-t, ami mindig sikeres, és "Just a"-t ad vissza, ha
 -- az input parser sikeres, egyébként Nothing-ot.
 optional :: Parser a -> Parser (Maybe a)
-optional = undefined
+optional pa = (Just <$> pa) <|> pure Nothing
 
 -- Írj parser-t, ami úgy működik, mint a sepBy1, viszont végül opcionálisan
 -- beolvas egy adott parsert.
 sepEndBy1 :: Parser a -> Parser b -> Parser end -> Parser [a]
-sepEndBy1 = undefined
+sepEndBy1 pa pb pend = sepBy1 pa pb <* optional pend
 
 -- olvass be egy számjegyet
 digit :: Parser Int
-digit = undefined
+digit = read . (:[]) <$> satisfy isDigit
+
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy pa pb = sepBy1 pa pb <|> pure []
+
+token :: Parser a -> Parser a
+token pa = pa <* ws
+
+-- token parserek: maguk után ws-t olvasnak
+digit' = token digit
+char' c = token (char c)
+string' s = token (string s)
+
 
 -- Írj egy parser-t, ami számjegyek vesszővel elválasztott listáit olvassa be.
 digitCommaSepList :: Parser [Int]
-digitCommaSepList = undefined
+digitCommaSepList = char' '[' *> sepBy digit' (char' ',') <* char' ']'
+
+
 -- Példák:
 --   [1, 4, 5, 1]
 --   [  0  , 2  ]
@@ -115,7 +132,9 @@ digitCommaSepList = undefined
 --   "(())()"
 --   "((()()))"
 parenExpr :: Parser ()
-parenExpr = undefined
+parenExpr = some expr *> eof where
+  expr = char '(' *> (() <$ many expr) <* char ')'
+
 
 -- Írj egy parser-t, ami zárójelek + számliterálok + összeadás
 -- kifejezéseket ismer fel. Whitespace beszúrható akárhova.
@@ -125,5 +144,9 @@ parenExpr = undefined
 --  10 + 10
 --  10 + 10 + 10 + 10
 
-expr :: Parser ()
-expr = undefined
+arithExpr :: Parser ()
+arithExpr = ws *> addition <* eof where
+  parens p = char' '(' *> p <* char' ')'
+  literal  = token (() <$ some (satisfy isDigit))
+  atom     = parens addition <|> literal
+  addition = () <$ sepBy1 atom (char' '+')
