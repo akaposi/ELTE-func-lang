@@ -60,7 +60,7 @@ mapList f (Cons a as) = Cons (f a) (mapList f as)
 data BinTree = BTLeaf | BTNode BinTree BinTree
 
 numLeaves :: BinTree -> Int
-numLeaves BTLeaf       = 0
+numLeaves BTLeaf       = 1
 numLeaves (BTNode l r) = numLeaves l + numLeaves r
 
 
