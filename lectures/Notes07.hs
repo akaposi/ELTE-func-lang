@@ -87,7 +87,7 @@ evalExp2 :: [(String, Int)] -> Exp2 -> Maybe Int
 evalExp2 env e = case e of
   Literal2 n -> pure n
   Add2 e1 e2 -> (+) <$> evalExp2 env e1 <*> evalExp2 env e2
-  Mul2 e1 e2 -> (+) <$> evalExp2 env e1 <*> evalExp2 env e2
+  Mul2 e1 e2 -> (*) <$> evalExp2 env e1 <*> evalExp2 env e2
   Var2 x     -> lookup x env
 
 
@@ -108,7 +108,7 @@ evalExp3 :: Exp3 -> Reader [(String, Int)] Int
 evalExp3 e = case e of
   Literal3 n  -> pure n
   Add3 e1 e2  -> (+) <$> evalExp3 e1 <*> evalExp3 e2
-  Mul3 e1 e2  -> (+) <$> evalExp3 e1 <*> evalExp3 e2
+  Mul3 e1 e2  -> (*) <$> evalExp3 e1 <*> evalExp3 e2
   Var3 x      -> do e <- ask
                     case lookup x e of
                       Just n -> pure n
