@@ -7,7 +7,7 @@ newtype State s a = State (s -> (a,s))
 
 instance Functor (State s) where 
   fmap :: (a -> b) -> State s a -> State s b
-  fmap f (State g) = State $ \s -> (f (fst $ g s), g s)
+  fmap f (State g) = State $ \s -> (f (fst $ g s), snd $ g s)
 
 instance Applicative (State s) where 
   pure  = return
