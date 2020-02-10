@@ -9,7 +9,7 @@
   + (Rafaël Bocquet, **in english**) monday 17:45-19:15, 2-107 (PC2)
   + (Péter Podlovics) thursday 17:45-19:15, 00-411 (PC 7)
 
-#### Elérhetőségek
+#### Contact
 
 - András Kovács, email: kovacsandras @ inf.elte.hu (without spaces).
 - Péter Podlovics, email: anabra @ inf.elte.hu (without spaces).
@@ -19,9 +19,9 @@
   + Students have to register here with the same account and password which
     is used for lab computers.
 
-#### Infrastruktúra
+#### Infrastructure
 
-- Compiler installáció: [Haskell Platform](https://www.haskell.org/platform/) or
+- Compiler: [Haskell Platform](https://www.haskell.org/platform/) or
   [stack](https://docs.haskellstack.org/en/stable/README/) recommended.  For
   text editing, any editor is fine alongside GHCI.
 
