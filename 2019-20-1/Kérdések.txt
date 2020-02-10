@@ -1,0 +1,61 @@
+
+Notes02: tördelés?
+mapMaybe :: (a -> Maybe b) -> [a] -> Maybe [b]
+mapMaybe f []     = Just []
+mapMaybe f (a:as) =
+  bindMaybe (f a) $ \a ->
+  bindMaybe (mapMaybe f as) $ \as ->
+  Just (a : as)
+
+Notes03:
+-- 4. feladat. Vegyük a következő típust:
+
+data Expr = Literal Int | Add Expr Expr | Mul Expr Expr | Var String
+  deriving Show
+
+-- ez a típus egyszerű kifejezésfák típusa, ahol vannak számliterálok, szorzás,
+-- összeadás és változónevek. Pl:
+
+e1 = Add (Literal 10) (Add (Literal 20) (Var "x"))
+-- ez megfelel annak, hogy "10 + (20 + x)"
+
+e2 = Add (Mul (Var "y") (Var "x")) (Literal 100)
+-- "y * x + 100"
+
+-- Írj kiértékelő függvényt. Paraméterként megkapunk egy '[(String, Int)]' listát,
+-- ez minden változónévhez megad egy értéket.
+
+-- példa:
+-- eval [("x", 10)] e1 == 40
+-- eval [("x", 2), ("y", 2)] e2 == 400
+miért nem kell felbontani a listát? miért csak az expressiont kell felbontani?
+eval :: [(String, Int)] -> Expr -> Int
+eval env (Literal n) = n
+eval env (Add e1 e2) = eval env e1 + eval env e2
+eval env (Mul e1 e2) = eval env e1 * eval env e2
+eval env (Var x)     = case lookup x env of
+  Just n  -> n
+  Nothing -> error "variable not in environment"
+  
+Notes04: go - honnan tudjuk hogy hány paramétere van??
+dfs :: Graph -> Int -> [Int]
+dfs g = reverse . go []
+  where
+  go visited i | elem i visited = visited
+  go visited i = case lookup i g of
+    Just is -> foldl' go (i:visited) is
+    Nothing -> error "impossible"
+	
+Notes05:
+
+Csak összefűzés?
+-- 3. Alkalmazz egy (a -> Maybe b) függvény egy Tree1 minden levelére,
+--    ha bármelyik alkalmazás Nothing-ot ad, legyen az eredmény Nothing!
+mapMaybeTree :: (a -> Maybe b) -> Tree1 a -> Maybe (Tree1 b)
+mapMaybeTree f (Leaf1 a) = Leaf1 <$> f a
+mapMaybeTree f (Node1 l r) = case mapMaybeTree f l of
+  Nothing -> Nothing
+  Just l  -> case mapMaybeTree f r of
+    Nothing -> Nothing
+    Just r  -> Just (Node1 l r)
+
