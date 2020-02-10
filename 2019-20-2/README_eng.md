@@ -43,7 +43,7 @@ Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 - The prerequisite of exam taking is the fulfillment of tutorial (practice)
   requirements.
 - Practice requirements:
-  + There is 10 minute BEAD assignment at the start of each practice, except the
+  + There is 10 minute [BEAD](https://bead.inf.elte.hu/) assignment at the start of each practice, except the
     first one. 0, 1 or 2 points are awarded for each.
   + Three larger homework assignments will be created, each is worth 4 points.
   + Min. 13 practice points have to be acquired during the semester.
