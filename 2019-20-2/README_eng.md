@@ -14,7 +14,7 @@
 - András Kovács, email: kovacsandras @ inf.elte.hu (without spaces).
 - Péter Podlovics, email: anabra @ inf.elte.hu (without spaces).
 - Rafaël Bocquet, email: bocquet @ inf.elte.hu (without spaces).
-- Please have `[fny] <tárgy>` as subject of mails sent to the above addresses.
+- Please have `[fny] <subject>` as subject of mails sent to the above addresses.
 - Submissions: https://bead.inf.elte.hu/
   + Students have to register here with the same account and password which
     is used for lab computers.
@@ -28,7 +28,7 @@
 #### Prerequisites
 
 It is required to know the content of the BSc "functional programming" course,
-or equivalent prior knowledge. It is recommended to review the [kezdő
+or equivalent prior knowledge. It is recommended to review the [beginner
 Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 
 
