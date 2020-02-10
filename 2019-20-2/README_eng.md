@@ -4,10 +4,10 @@
 
 - Lecture (András Kovács): thursday 16:00-17:30, north building -1.75
 - Labs:
-  + (András Kovács) thursday 17:45-19:15, north building 7.16 (PC 12)
-  + (Péter Podlovics) thursday 19:30-21:00, 00-410 (PC 1)
-  + (Rafaël Bocquet, **in english**) monday 17:45-19:15, 2-107 (PC2)
-  + (Péter Podlovics) thursday 17:45-19:15, 00-411 (PC 7)
+  + Group: 1, (András Kovács) thursday 17:45-19:15, north building 7.16 (PC 12)
+  + Group: 2, (Péter Podlovics) thursday 19:30-21:00, 00-410 (PC 1)
+  + Group: 3, (Péter Podlovics) thursday 17:45-19:15, 00-411 (PC 7)
+  + Group: 4, (Rafaël Bocquet, **in english**) monday 17:45-19:15, 2-107 (PC2)
 
 #### Contact
 
@@ -62,6 +62,8 @@ Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 
 #### Materials
 
-- Course materials and exercises are uploaded to this repository.
+- Course materials and exercises are uploaded to this repository. Tutorial
+  materials go to "gyak_X" folders, where "X" denotes the group code wihch can
+  be found in neptun.
 - Recommended literature: http://learnyouahaskell.com/chapters,
   https://en.wikibooks.org/wiki/Haskell

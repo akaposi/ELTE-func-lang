@@ -4,10 +4,10 @@
 
 - Előadás (Kovács András): csütörtök 16:00-17:30, északi épület -1.75
 - Gyakorlatok:
-  + (Kovács András) csütörtök 17:45-19:15, északi épület 7.16 (PC 12)
-  + (Podlovics Péter) csütörtök 19:30-21:00, 00-410 (PC 1)
-  + (Rafaël Bocquet, **angol** nyelven) hétfő 17:45-19:15, 2-107 (PC2)
-  + (Podlovics Péter) csütörtök 17:45-19:15, 00-411 (PC 7)
+  + Kód: 1, Kovács András, csütörtök 17:45-19:15, északi épület 7.16 (PC 12)
+  + Kód: 2, Podlovics Péter, csütörtök 19:30-21:00, 00-410 (PC 1)
+  + Kód: 3, Podlovics Péter, csütörtök 17:45-19:15, 00-411 (PC 7)
+  + Kód: 4, Rafaël Bocquet, (**angol** nyelven) hétfő 17:45-19:15, 2-107 (PC2)
 
 #### Elérhetőségek
 
@@ -65,7 +65,8 @@ jegyzet átismétlése.
 #### Anyagok
 
 - Órai feladatok és megoldásaik felkerülnek ebbe a repóba minden
-  gyakorlat/előadás után.
+  gyakorlat/előadás után. Gyakorlati anyagok a "gyak_X" mappákba kerülnek, ahol
+  "X" a neptunban található csoport kód.
 - Ajánlott irodalom: http://learnyouahaskell.com/chapters, illetve
   https://en.wikibooks.org/wiki/Haskell. További irodalom órai jegyzetekben
   lehet hivatkozva.
