@@ -39,6 +39,14 @@ ltNat _ Zero          = False
 ltNat Zero _          = True 
 ltNat (Suc n) (Suc m) = ltNat n m
 
+instance Eq Nat where 
+  (==) = eqNat
+
+instance Ord Nat where 
+  Zero  <= _     = True 
+  Suc n <= Suc m = n <= m 
+  _     <= _     = False
+
 -- listák ...
 
 data List a = Nil             -- []
