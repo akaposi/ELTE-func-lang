@@ -3,6 +3,7 @@ module Practice1 where
 
 data List a = Nil 
             | Cons a (List a)
+  deriving Show
 
 ex1 :: [Int] 
 ex1 = [1,2,3]
@@ -35,6 +36,7 @@ error' x = error' x
 
 data Nat = Zero
          | Suc Nat 
+  deriving Show
 
 zero :: Nat
 zero = Zero
@@ -43,13 +45,22 @@ three :: Nat
 three = Suc $ Suc $ Suc Zero
 
 toInt :: Nat -> Int 
-toInt = undefined 
+toInt Zero = 0
+toInt (Suc n) = 1 + toInt n  
 
 eqNat :: Nat -> Nat -> Bool 
-eqNat = undefined
+eqNat (Suc n) (Suc k) = eqNat n k
+eqNat Zero Zero = True 
+eqNat _ _ = True 
 
 addNat :: Nat -> Nat -> Nat 
-addNat = undefined 
+addNat Zero k = k 
+addNat (Suc n) k = Suc $ addNat n k 
 
 mulNat :: Nat -> Nat -> Nat 
-mulNat = undefined
+mulNat Zero k = Zero 
+mulNat (Suc n) k = addNat k (mulNat n k)
+
+lengthL' :: List a -> Nat 
+lengthL' Nil = Zero 
+lengthL' (Cons x xs) = Suc $ lengthL' xs
