@@ -22,6 +22,11 @@ lengthL :: List a -> Int
 lengthL Nil = 0 
 lengthL (Cons x xs) = 1 + lengthL xs
 
+eqL :: Eq a => List a -> List a -> Bool 
+eqL (Cons x xs) (Cons y ys) = x == y && eqL xs ys
+eqL Nil Nil = True 
+eqL _ _ = False
+
 foo :: Int -> Bool 
 foo = error "asd"
 
@@ -37,3 +42,14 @@ zero = Zero
 three :: Nat 
 three = Suc $ Suc $ Suc Zero
 
+toInt :: Nat -> Int 
+toInt = undefined 
+
+eqNat :: Nat -> Nat -> Bool 
+eqNat = undefined
+
+addNat :: Nat -> Nat -> Nat 
+addNat = undefined 
+
+mulNat :: Nat -> Nat -> Nat 
+mulNat = undefined
