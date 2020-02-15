@@ -52,7 +52,8 @@ Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 
 - Algebraic datatypes
 - Type classes
-- Basic classes: Eq, Ord, Show, Monoid
+- Basic classes: Eq, Ord, Show
+- Semigroup, Monoid
 - Functor, Foldable
 - Monad, specific monads: Reader, State, Maybe, list, IO
 - Applicative, Traversable
