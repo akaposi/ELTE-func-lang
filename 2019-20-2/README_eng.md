@@ -14,7 +14,7 @@
 - András Kovács, email: kovacsandras @ inf.elte.hu (without spaces).
 - Péter Podlovics, email: anabra @ inf.elte.hu (without spaces).
 - Rafaël Bocquet, email: bocquet @ inf.elte.hu (without spaces).
-- Please have `[fny] <tárgy>` as subject of mails sent to the above addresses.
+- Please have `[fny] <subject>` as subject of mails sent to the above addresses.
 - Submissions: https://bead.inf.elte.hu/
   + Students have to register here with the same account and password which
     is used for lab computers.
@@ -28,7 +28,7 @@
 #### Prerequisites
 
 It is required to know the content of the BSc "functional programming" course,
-or equivalent prior knowledge. It is recommended to review the [kezdő
+or equivalent prior knowledge. It is recommended to review the [beginner
 Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 
 
@@ -43,7 +43,7 @@ Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 - The prerequisite of exam taking is the fulfillment of tutorial (practice)
   requirements.
 - Practice requirements:
-  + There is 10 minute BEAD assignment at the start of each practice, except the
+  + There is 10 minute [BEAD](https://bead.inf.elte.hu/) assignment at the start of each practice, except the
     first one. 0, 1 or 2 points are awarded for each.
   + Three larger homework assignments will be created, each is worth 4 points.
   + Min. 13 practice points have to be acquired during the semester.
@@ -52,7 +52,8 @@ Haskell](http://lambda.inf.elte.hu/Index.xml) notes.
 
 - Algebraic datatypes
 - Type classes
-- Basic classes: Eq, Ord, Show, Monoid
+- Basic classes: Eq, Ord, Show
+- Semigroup, Monoid
 - Functor, Foldable
 - Monad, specific monads: Reader, State, Maybe, list, IO
 - Applicative, Traversable
