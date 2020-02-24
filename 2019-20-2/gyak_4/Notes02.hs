@@ -5,7 +5,6 @@ module Notes02 where
 -- ys = [y1, y2, y3, ...]    y1 <= y2, y2 <= y3, ...
 --   merge xs ys  is the sorted list with the elements of xs ys
 --   merge [1, 4, 9] [2, 3, 8] = [1, 2, 3, 4, 8, 9]
-
 merge :: Ord a => [a] -> [a] -> [a]
 merge (x:xs) (y:ys)
   | x <= y    = x : merge xs (y:ys)
