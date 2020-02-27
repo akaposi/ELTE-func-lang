@@ -14,23 +14,29 @@ import Data.Monoid
 data List a = Nil | Cons a (List a)
   deriving (Show)
 
-instance Eq (List a) where 
-  (==) _ _ = undefined
+instance Eq a => Eq (List a) where 
+  (==) Nil Nil = True 
+  (==) (Cons x xs) (Cons y ys) = x == y && xs == ys
+  (==) _ _ = False
 
 instance Semigroup (List a) where 
-  (<>) _ _ = undefined
+  (<>) Nil ys = ys 
+  (<>) (Cons x xs) ys = Cons x (xs <> ys)
 
 instance Monoid (List a) where 
-  mempty = _
+  mempty = Nil
 
 -- tudjuk: x,y,z típusához létezik Monoid instance
 -- mconcatL [x, y, z] == x <> y <> z <> mempty
+-- mconcatL (Cons x (Cons y (Cons z Nil))) == x <> y <> z <> mempty
 mconcatL :: Monoid m => List m -> m
-mconcatL = undefined 
+mconcatL Nil         = undefined 
+mconcatL (Cons x xs) = undefined
 
 -- fodlMapL f [x, y, z] == f x <> f y <> f z <> mempty
 foldMapL :: Monoid m => (a -> m) -> List a -> m 
-foldMapL = undefined 
+foldMapL f Nil         = undefined 
+foldMapL f (Cons x xs) = undefined
 
 data BinTree l n = Leaf l | Node n (BinTree l n) (BinTree l n)
   deriving (Eq, Ord, Show)
@@ -38,10 +44,10 @@ data BinTree l n = Leaf l | Node n (BinTree l n) (BinTree l n)
 concatLeaves :: Semigroup l => BinTree l n -> l
 concatLeaves = undefined 
 
-concatNodes :: Monoid n => BinTree n l -> n
+concatNodes :: Monoid n => BinTree l n -> n
 concatNodes = undefined 
 
-concatMapBoth :: Monoid m => (l -> m) -> (n -> m) -> BinTree n l -> m
+concatMapBoth :: Monoid m => (l -> m) -> (n -> m) -> BinTree l n -> m
 concatMapBoth = undefined
 
 data T a = TodoT
