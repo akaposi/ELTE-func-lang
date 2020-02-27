@@ -30,26 +30,47 @@ instance Monoid (List a) where
 -- mconcatL [x, y, z] == x <> y <> z <> mempty
 -- mconcatL (Cons x (Cons y (Cons z Nil))) == x <> y <> z <> mempty
 mconcatL :: Monoid m => List m -> m
-mconcatL Nil         = undefined 
-mconcatL (Cons x xs) = undefined
+mconcatL Nil         = mempty
+mconcatL (Cons x xs) = x <> mconcatL xs
 
 -- fodlMapL f [x, y, z] == f x <> f y <> f z <> mempty
 foldMapL :: Monoid m => (a -> m) -> List a -> m 
-foldMapL f Nil         = undefined 
-foldMapL f (Cons x xs) = undefined
+foldMapL f Nil         = mempty 
+foldMapL f (Cons x xs) = f x <> foldMapL f xs
 
 data BinTree l n = Leaf l | Node n (BinTree l n) (BinTree l n)
   deriving (Eq, Ord, Show)
 
 concatLeaves :: Semigroup l => BinTree l n -> l
-concatLeaves = undefined 
+concatLeaves (Leaf x) = x
+concatLeaves (Node _ lhs rhs) = concatLeaves lhs <> concatLeaves rhs 
 
 concatNodes :: Monoid n => BinTree l n -> n
-concatNodes = undefined 
+concatNodes (Leaf _) = mempty 
+concatNodes (Node x lhs rhs) = x <> concatNodes lhs <> concatNodes rhs
 
 concatMapBoth :: Monoid m => (l -> m) -> (n -> m) -> BinTree l n -> m
-concatMapBoth = undefined
+concatMapBoth f _ (Leaf x) = f x
+concatMapBoth f g (Node y lhs rhs) = g y <> 
+  concatMapBoth f g lhs <> 
+  concatMapBoth f g rhs
 
+-- rávezetés
+data T0 a = TodoT0
+
+lift0 :: a -> T0 a 
+lift0 = undefined
+
+-- LAWS: lift0 (x <> y) == lift0 x <> lift0 y
+instance Semigroup a => Semigroup (T0 a) where 
+  (<>) lhs rhs = undefined
+
+-- LAWS: lift0 mempty == (mempty :: T0 a)
+instance Semigroup a => Monoid (T0 a) where 
+  mempty = undefined
+
+
+-- "nehezebb"
 data T a = TodoT
 
 lift :: a -> T a 
