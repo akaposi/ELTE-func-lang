@@ -15,20 +15,20 @@ data Const a b = Const a
 
 instance Functor (Sum a) where 
   fmap :: (b -> c) -> Sum a b -> Sum a c  
-  fmap f (L x) = undefined 
-  fmap f (R x) = undefined
+  fmap f (L x) = L x
+  fmap f (R x) = R $ f x
 
 instance Functor (Prod a) where 
   fmap :: (b -> c) -> Prod a b -> Prod a c  
-  fmap f (P x y) = undefined 
+  fmap f (P x y) = P x (f y) 
 
 instance Functor Id where 
   fmap :: (a -> b) -> Id a -> Id b  
-  fmap f (Id x) = undefined 
+  fmap f (Id x) = Id $ f x 
 
 instance Functor (Const a) where 
   fmap :: (b -> c) -> Const a b -> Const a c 
-  fmap f (Const x) = undefined
+  fmap f (Const x) = Const x
 
 data List a = Nil             -- []
             | Cons a (List a) -- (:)
@@ -36,28 +36,33 @@ data List a = Nil             -- []
 
 instance Functor List where 
   fmap :: (a -> b) -> List a -> List b 
-  fmap = undefined
+  fmap f Nil = Nil 
+  fmap f (Cons x xs) = Cons (f x) (fmap f xs)
 
 data BinTree l n = Leaf l | Node n (BinTree l n) (BinTree l n)
   deriving (Eq, Show, Ord)
 
 instance Functor (BinTree l) where 
-  fmap :. (n -> n') -> BinTree l n -> BinTree l n' 
-  fmap = undefined
+  fmap :: (n -> n') -> BinTree l n -> BinTree l n' 
+  fmap _ (Leaf x) = Leaf x 
+  fmap f (Node x lhs rhs) = Node (f x) (fmap f lhs) (fmap f rhs)
+
 
 newtype BinTreeFlipped n l = Flip { unflip :: BinTree l n } 
   deriving (Eq, Ord, Show)
 
 instance Functor (BinTreeFlipped n) where 
-  fmap :. (l -> l') -> BinTreeFlipped n l' -> BinTreeFlipped n l' 
-  fmap = undefined
+  fmap :: (l -> l') -> BinTreeFlipped n l -> BinTreeFlipped n l' 
+  fmap f (Flip (Leaf x)) = Flip $ Leaf (f x)
+  fmap f (Flip (Node x lhs rhs)) = Flip $ Node x (unflip $ fmap f $ Flip lhs) 
+                                                 (unflip $ fmap f $ Flip rhs)
 
 class Bifunctor (f :: * -> * -> *) where 
   bimap :: (a -> b) -> (c -> d) -> f a c -> f b d 
 
 instance Bifunctor BinTree where 
   bimap :: (l -> l') -> (n -> n') -> BinTree l n -> BinTree l' n'
-  bimap = undefined
+  bimap f g btree = unflip $ fmap f $ Flip $ fmap g btree
 
 newtype Fun a b = Fun {getFun :: a -> b}
 
