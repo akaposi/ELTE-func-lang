@@ -18,23 +18,22 @@ class Functor f where
 -- Feladat: írd meg a következő instance-okat!
 
 instance Semigroup [a] where
-  (<>) = undefined
+  (<>) = (++)
 
 instance Monoid [a] where
-  mempty = undefined
+  mempty = []
 
 instance (Semigroup a, Semigroup b) => Semigroup (a, b) where
-  (<>) = undefined
+  (x, y) <> (x', y') = (x <> x, y <> y')
 
 instance (Monoid a, Monoid b) => Monoid (a, b) where
-  mempty = undefined
+  mempty = (mempty, mempty)
 
 instance Semigroup b => Semigroup (a -> b) where
-  (<>) = undefined
+  (f <> g) x = f x <> g x
 
 instance Monoid b => Monoid (a -> b) where
-  mempty = undefined
-
+  mempty x = mempty
 
 -- Feladat: írj Functor instance-t az összes alábbi típushoz!
 
@@ -51,34 +50,37 @@ newtype Const a b   = Const a
 newtype Fun a b     = Fun (a -> b)
 
 instance Functor Foo1 where
-  fmap = undefined
+  fmap f (Foo1 n x y z) = Foo1 n (f x) (f y) (f z)
 
 instance Functor Foo2 where
-  fmap = undefined
+  fmap f (Foo2 b a b') = Foo2 b (f a) b'
 
 instance Functor Foo3 where
-  fmap = undefined
+  fmap f (Foo3 a b c d e) = Foo3 (f a) (f b) (f c) (f d) (f e)
 
 instance Functor Tree1 where
-  fmap = undefined
+  fmap f (Leaf1 a) = Leaf1 (f a)
+  fmap f (Node1 l r) = Node1 (fmap f l) (fmap f r)
 
 instance Functor Tree2 where
-  fmap = undefined
+  fmap f (Node2 a ts) = Node2 (f a) (map (fmap f) ts)
 
 instance Functor (Tree3 i) where
-  fmap = undefined
+  fmap f (Leaf3 a) = Leaf3 (f a)
+  fmap f (Node3 g) = Node3 (fmap f . g)
 
 instance Functor (Pair a) where
-  fmap = undefined
+  fmap f (Pair a b) = Pair a (f b)
 
 instance Functor (Either' a) where
-  fmap = undefined
+  fmap f (Left' a) = Left' a
+  fmap f (Right' b) = Right' (f b)
 
 instance Functor Id where
-  fmap = undefined
+  fmap f (Id a) = Id (f a)
 
 instance Functor (Const a) where
-  fmap = undefined
+  fmap f (Const a) = Const a
 
 instance Functor (Fun a) where
-  fmap = undefined
+  fmap f (Fun g) = Fun (f . g)
