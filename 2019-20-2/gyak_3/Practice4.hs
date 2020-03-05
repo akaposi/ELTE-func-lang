@@ -15,7 +15,20 @@ data Const a b = Const a
 
 instance Functor (Sum a) where 
   fmap :: (b -> c) -> Sum a b -> Sum a c  
-  fmap = undefined
+  fmap f (L x) = undefined 
+  fmap f (R x) = undefined
+
+instance Functor (Prod a) where 
+  fmap :: (b -> c) -> Prod a b -> Prod a c  
+  fmap f (P x y) = undefined 
+
+instance Functor Id where 
+  fmap :: (a -> b) -> Id a -> Id b  
+  fmap f (Id x) = undefined 
+
+instance Functor (Const a) where 
+  fmap :: (b -> c) -> Const a b -> Const a c 
+  fmap f (Const x) = undefined
 
 data List a = Nil             -- []
             | Cons a (List a) -- (:)
