@@ -1,3 +1,4 @@
+{-# OPTIONS -Wincomplete-patterns #-}
 module Practice5 where
 
 -- review
@@ -14,8 +15,9 @@ foo ((k,v) : rest) toFind
   | k == toFind = Just v
   | otherwise   = foo rest toFind
 
-fmapMaybe :: (a -> b) -> Maybe a -> MAybe b
-fmapMaybe = undefined
+fmapMaybe :: (a -> b) -> Maybe a -> Maybe b
+fmapMaybe f (Just x) = undefined
+fmapMaybe f Nothing  = Nothing
 
 {- tests
 fmapMaybe (Just 5) (2*) == Just 10
@@ -27,16 +29,24 @@ fmapMaybe Nothing  (2*) == Nothing
 --   (>>=)  :: m a -> (a -> m b) -> m b
 
 isJust :: Maybe a -> Bool
-isJust = undefined
+isJust (Just x) = undefined
+isJust Nothing  = undefined
 
 fromJust :: Maybe a -> a
-fromJust = undefined
+fromJust (Just x) = undefined
+fromJust Nothing  = undefined
 
 safeHead :: [a] -> Maybe a
-safeHead = undefined
+safeHead (x:_) = undefined
+safeHead []    = undefined
 
 catMaybes :: [Maybe a] -> [a]
-catMaybes = undefined
+catMaybes (Just x  : xs) = x : catMaybes xs
+catMaybes (Nothing : xs) = catMaybes xs
+-- catMaybes (x:xs)
+--   | isJust x = fromJust x : catMaybes xs
+--   | not (isJust x) = undefined
+catMaybes [] = []
 
 mapMaybe :: (a -> Maybe b) -> [a] -> [b]
 mapMaybe = undefined
