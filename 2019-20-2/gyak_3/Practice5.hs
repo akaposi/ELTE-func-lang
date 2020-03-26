@@ -1,3 +1,4 @@
+{-# OPTIONS -Wincomplete-patterns #-}
 module Practice5 where
 
 -- Maybe intro
@@ -22,25 +23,38 @@ foo ((k,v):rest) toFind
 
 
 isJust :: Maybe a -> Bool
-isJust = undefined
+isJust Nothing  = False
+isJust (Just x) = True
 
 fromJust :: Maybe a -> a
-fromJust = undefined
-
-catMaybes :: [Maybe a] -> [a]
-catMaybes = undefined
-
-mapMaybe :: (a -> Maybe b) -> [a] -> [b]
-mapMaybe = undefined
+fromJust Nothing  = error "asd"
+fromJust (Just x) = x
 
 safeHead :: [a] -> Maybe a
-safeHead = undefined
+safeHead (x:_) = Just x
+safeHead []    = Nothing
+
+isNothing Nothing = True
+isNothing _ = False
+
+catMaybes :: [Maybe a] -> [a]
+catMaybes [] = []
+catMaybes (Just x : xs) = x : catMaybes xs
+catMaybes (Nothing : xs) = catMaybes xs
+-- catMaybes (x : xs)
+--   | isJust x = fromJust x : catMaybes xs
+--   | isNothing x = undefined
+
+mapMaybe :: (a -> Maybe b) -> [a] -> [b]
+mapMaybe f xs = catMaybes $ map f xs
 
 fmapMaybe :: (a -> b) -> Maybe a -> Maybe b
-fmapMaybe = undefined
+fmapMaybe f Nothing  = Nothing
+fmapMaybe f (Just x) = Just (f x)
 
 bindMaybe :: Maybe a -> (a -> Maybe b) -> Maybe b
-bindMaybe = undefined
+bindMaybe Nothing _  = Nothing
+bindMaybe (Just x) f = f x
 
 {- tests
 bindMaybe Nothing id                  == Nothing
@@ -80,4 +94,7 @@ exchangeRateDB = [ (USD, 1)
 -- lookup, foo
 
 lookupMoneyInUSD :: String -> Maybe Double
-lookupMoneyInUSD = undefined
+lookupMoneyInUSD name =
+  case lookup name nameIdDB of
+    Nothing -> Nothing
+    Just id -> undefined
