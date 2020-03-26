@@ -63,7 +63,8 @@ returnMaybe :: a -> Maybe a
 returnMaybe = undefined
 
 bindMaybe :: Maybe a -> (a -> Maybe b) -> Maybe b
-bindMaybe = undefined
+bindMaybe Nothing  f = error "fail here too"
+bindMaybe (Just x) f = error "apply f to x"
 
 
 
