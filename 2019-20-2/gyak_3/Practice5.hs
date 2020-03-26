@@ -79,5 +79,5 @@ exchangeRateDB = [ (USD, 1)
 
 -- lookup, foo
 
-lookupMoneyInUSD :: String -> Double
+lookupMoneyInUSD :: String -> Maybe Double
 lookupMoneyInUSD = undefined
