@@ -16,7 +16,7 @@ foo ((k,v) : rest) toFind
   | otherwise   = foo rest toFind
 
 fmapMaybe :: (a -> b) -> Maybe a -> Maybe b
-fmapMaybe f (Just x) = undefined
+fmapMaybe f (Just x) = Just (f x)
 fmapMaybe f Nothing  = Nothing
 
 {- tests
@@ -29,16 +29,16 @@ fmapMaybe Nothing  (2*) == Nothing
 --   (>>=)  :: m a -> (a -> m b) -> m b
 
 isJust :: Maybe a -> Bool
-isJust (Just x) = undefined
-isJust Nothing  = undefined
+isJust (Just x) = True
+isJust Nothing  = False
 
 fromJust :: Maybe a -> a
-fromJust (Just x) = undefined
-fromJust Nothing  = undefined
+fromJust (Just x) = x
+fromJust Nothing  = error "Not just"
 
 safeHead :: [a] -> Maybe a
-safeHead (x:_) = undefined
-safeHead []    = undefined
+safeHead (x:_) = Just x
+safeHead []    = Nothing
 
 catMaybes :: [Maybe a] -> [a]
 catMaybes (Just x  : xs) = x : catMaybes xs
@@ -49,7 +49,7 @@ catMaybes (Nothing : xs) = catMaybes xs
 catMaybes [] = []
 
 mapMaybe :: (a -> Maybe b) -> [a] -> [b]
-mapMaybe = undefined
+mapMaybe f xs = catMaybes $ map f xs
 
 {- tests
 returnMaybe 5 == Just 5
@@ -60,11 +60,11 @@ bindMaybe (Just 0) (\x -> if (x == 0) then Nothing else 2/x) == Nothing
 -}
 
 returnMaybe :: a -> Maybe a
-returnMaybe = undefined
+returnMaybe = Just
 
 bindMaybe :: Maybe a -> (a -> Maybe b) -> Maybe b
-bindMaybe Nothing  f = error "fail here too"
-bindMaybe (Just x) f = error "apply f to x"
+bindMaybe Nothing  f = Nothing
+bindMaybe (Just x) f = f x
 
 
 
@@ -94,4 +94,8 @@ lookupMoneyInUSD :: String -> Maybe Double
 lookupMoneyInUSD name =
   case lookup name nameIdDB of
     Nothing -> Nothing
-    Just id -> undefined
+    Just id -> case lookup id idMoneyCurDB of
+      Nothing -> Nothing
+      Just (money, currency) -> case lookup currency exchangeRateDB of
+        Nothing -> Nothing
+        Just exRate -> Just (exRate * money)
