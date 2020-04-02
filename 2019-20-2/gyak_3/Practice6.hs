@@ -102,7 +102,11 @@ instance Monad Maybe' where
 -- runState (State f) s0 = f s0
 
 sumElements :: [Int] -> State Int ()
-sumElements = undefined
+sumElements [] = do
+  return ()
+sumElements (x:xs) = do
+  n <- get
+  put (x + n)
 
 sumAndCollect :: [Int] -> State [Int] Int
 sumAndCollect [] = do
@@ -114,13 +118,20 @@ sumAndCollect (x:xs) = do
   sumAndCollect xs
 
 partitionAndDecide :: [Either a b] -> State ([a], [b]) Bool
-partitionAndDecide = undefined
+partitionAndDecide (Left x : ys)
 
 data BinTree l n = Leaf l | Node n (BinTree l n) (BinTree l n)
   deriving (Eq, Ord, Show)
 
 labelLeaves :: BinTree l n -> State Int (BinTree (Int, l) n)
-labelLeaves = undefined
+labelLeaves (Node n lhs rhs) = do
+  lhs' <- labelLeaves lhs
+  rhs' <- labelLeaves rhs
+  return $ Node n lhs' rhs'
+labelLeaves (Leaf l) = do
+  n <- get
+  put (n+1)
+  return $ Leaf (n,l)
 
 labelNodes :: BinTree l n -> State Int (BinTree l (Int, n))
 labelNodes = undefined
