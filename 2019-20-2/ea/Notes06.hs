@@ -2,7 +2,7 @@
 
 import Control.Monad (ap)
 
--- Monad folyt, State, Reader
+-- Monad folyt, State
 --------------------------------------------------------------------------------
 
 -- Monad class
