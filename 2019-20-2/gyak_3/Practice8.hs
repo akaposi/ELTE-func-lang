@@ -63,6 +63,12 @@ satisfy pred = undefined
 digit :: Parser2 Int
 digit = undefined
 
+{- tests
+runParser digit "45" == (Just 4, "5")
+runParser digit "x5" == (Nothing, "5")
+runParser digit "a5" == (Nothing, "5")
+-}
+
 digitCoordinate :: Parser2 (Int, Int)
 digitCoordinate = undefined
 
