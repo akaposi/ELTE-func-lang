@@ -88,6 +88,7 @@ digitCoordinate :: Parser (Int, Int)
 digitCoordinate = undefined
 
 -- NOTE: DO NOT use the P data ctor, just satisfy + monad instance (do notation)
-charN :: Int -> Parser [Char]
-charN = undefined
+-- TODO: recognize n digits
+digitN :: Int -> Parser [Int]
+digitN = undefined
 
