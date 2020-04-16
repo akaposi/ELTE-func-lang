@@ -9,7 +9,7 @@ import Control.Monad (ap)
 -- "2 +"   -> fail
 -- "2 + 3 + 4" -> Add (I 2) (Add (I 3) (I 4))
 
-newtype Parser1 a = P1 { runParser1 :: Maybe (String -> (a, String)) }
+newtype Parser1 a = P1 { runParser1 :: String -> Maybe (a, String) }
 newtype Parser2 a = P2 { runParser2 :: String -> (Maybe a, String)   }
 
 char :: Char -> Parser2 Char
@@ -54,7 +54,13 @@ string str = sequenceParser $ map char str
 -- runParser2 (char 'c') "c"
 -- runParser2 (string "asd") "asd"
 
-digit :: Int -> Parser2 Int
+-- TODO: Parser that recognizes a character that satisfies a given predicate
+-- NOTE: similarly to char
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy pred = undefined
+
+-- NOTE: use satisfy, digitToInt, fmap
+digit :: Parser2 Int
 digit = undefined
 
 digitCoordinate :: Parser2 (Int, Int)
@@ -66,6 +72,3 @@ digitCoordinate = undefined
 -- runParser2 (digitN 2) "12" == (Just [1,2,3], "4")
 digitN :: Int -> Parser2 [Int]
 digitN = undefined
-
-natural :: Parser2 Int
-natural = undefined
