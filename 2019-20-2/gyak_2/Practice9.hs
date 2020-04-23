@@ -126,6 +126,12 @@ class Applicative f => Alternative f where
   (<|>) :: f a -> f a -> f a
   empty :: f a
 
+  some :: f a -> f [a]
+  some f = (:) <$> f <*> many f
+
+  many :: f a -> f [a]
+  many f = some f <|> pure []
+
 -- forall p. p <|> empty === p
 -- forall p. empty <|> p === p
 
@@ -136,14 +142,25 @@ instance Alternative Parser where
   empty :: Parser a
   empty = P $ \str -> Nothing
 
+true1 :: Parser Bool
+true1 = do
+  _ <- string "true"
+  return True
+
+true2 :: Parser Bool
+true2 = (\lhs rhs -> rhs) <$> string "true" <*> pure True
+
+true3 :: Parser Bool
+true3 = (\_ -> True) <$> string "true"
+
 true :: Parser Bool
-true = undefined
+true = string "true" *> pure True
 
 false :: Parser Bool
-false = undefined
+false = string "false" *> pure False
 
 bool :: Parser Bool
-bool = undefined
+bool = true <|> false
 
 {- tests
 runParser true "true"    == Just (True, "")
@@ -157,3 +174,10 @@ runParser false "faLse"    == Nothing
 runParser bool "true"  == Just (True, "")
 runParser bool "false" == Just (False, "")
 -}
+
+someDigits :: Parser [Int]
+someDigits = some digit
+
+-- NOTE: use some, digit, fmap and (foldl or foldr)
+natural :: Parser Int
+natural = undefined
