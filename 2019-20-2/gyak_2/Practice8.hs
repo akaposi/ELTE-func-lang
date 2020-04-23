@@ -76,19 +76,29 @@ runParser (string "abc") "aXcXYZ" == Nothing
 
 -- NOTE: use the P data ctor
 combine :: Parser a -> Parser a -> Parser a
-combine p q = error "run p, if it recognizes teh string, use that result, otherwise run q"
+combine p q = P $ \str ->
+  case runParser p str of
+    Nothing -> runParser q str
+    x -> x
 
 -- NOTE: DO NOT use the P data ctor, just satisfy + monad instance (do notation)
 -- use: digitToInt + fmap
 digit :: Parser Int
-digit = undefined
+digit = fmap digitToInt $ satisfy (`elem` ['0'..'9'])
 
 -- NOTE: DO NOT use the P data ctor, just satisfy + monad instance (do notation)
 digitCoordinate :: Parser (Int, Int)
-digitCoordinate = undefined
+digitCoordinate = do
+  d1 <- digit
+  d2 <- digit
+  return (d1,d2)
 
 -- NOTE: DO NOT use the P data ctor, just satisfy + monad instance (do notation)
 -- TODO: recognize n digits
 digitN :: Int -> Parser [Int]
-digitN = undefined
+digitN n = do
+  n <- digit
+  forM [1..n] $ \_ ->
+    digit
+
 
