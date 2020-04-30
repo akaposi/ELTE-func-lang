@@ -48,7 +48,7 @@ runParser lit "51"    == Just (LInt 51, "")
 runParser var "x"  == Just (Var "x", "")
 runParser var "xs" == Just (Var "xs", "")
 runParser var "5"  == Nothing
-runParser var "x5" == Nothing
+runParser var "x5" == Just (Var "x", "5")
 
 runParser expr "x"  == Just (EVar (Var "x"), "")
 runParser expr "53" == Just (ELit (LInt 53), "")
