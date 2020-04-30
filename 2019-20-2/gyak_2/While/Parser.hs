@@ -93,6 +93,7 @@ coordinate = undefined
 {-
 runParser coordinate "(1,2)"             == Just ((1,2), "")
 runParser coordinate "(14,23)"           == Just ((14,23), "")
+runParser coordinate "(14,  23)"         == Just ((14,23), "")
 runParser coordinate "  ( 14  ,  23 )  " == Just ((14,23), "")
 runParser coordinate "(14,23"  == Nothing
 runParser coordinate "(14 23)" == Nothing
@@ -102,6 +103,7 @@ runParser coordinate "(,23)"   == Nothing
 
 runParser2 coordinate "(1,2)"             == Just (1,2)
 runParser2 coordinate "(14,23)"           == Just (14,23)
+runParser2 coordinate "(14,  23)"         == Just (14,23)
 runParser2 coordinate "  ( 14  ,  23 )  " == Just (14,23)
 runParser2 coordinate "(14,23"  == Nothing
 runParser2 coordinate "(14 23)" == Nothing
