@@ -1,7 +1,7 @@
 {-# LANGUAGE InstanceSigs #-}
-module Practice8 where
+module Practice9 where
 
-import Control.Monad (ap)
+import Control.Monad (ap, forM)
 import Data.Char
 
 -- Parser = Maybe + State
@@ -34,7 +34,20 @@ runParser (satisfy isLower) "Xasd" == Nothing
 -- NOTE: use the P data ctor
 instance Functor Parser where
   fmap :: (a -> b) -> Parser a -> Parser b
-  fmap = undefined
+  fmap f p = P $ \str ->
+    case runParser p str of
+      Just (x, str') -> Just (f x, str')
+      _ -> Nothing
+
+-- instance Monad m => Applicative m where
+--   pure :: a -> m a
+--   pure = return
+
+--   (<*>) :: m (a -> b) -> m a -> m b
+--   (<*>) mF mX = do
+--     f <- mF
+--     fmap f mX
+--   -- (<*>) mF mX = mF >>= (\f -> fmap f mX)
 
 instance Applicative Parser where
   pure = return
@@ -88,17 +101,83 @@ digit = fmap digitToInt $ satisfy (`elem` ['0'..'9'])
 
 -- NOTE: DO NOT use the P data ctor, just satisfy + monad instance (do notation)
 digitCoordinate :: Parser (Int, Int)
-digitCoordinate = do
-  d1 <- digit
-  d2 <- digit
-  return (d1,d2)
+digitCoordinate = (,) <$> digit <*> digit
+
+digitVec3 :: Parser (Int, Int, Int)
+-- (digit, digit, digit)
+-- (,,) digit digit digit
+-- fmap (,,) digit                     :: Parser (b -> c -> (Int, b, c))
+-- fmap (,,) digit <*> digit           :: Parser (c -> (Int, Int, c))
+-- fmap (,,) digit <*> digit <*> digit :: Parser (Int, Int, Int)
+-- (,,) <$> digit <*> digit <*> digit  :: Parser (Int, Int, Int)
+digitVec3 = (,,) <$> digit <*> digit <*> digit
 
 -- NOTE: DO NOT use the P data ctor, just satisfy + monad instance (do notation)
 -- TODO: recognize n digits
 digitN :: Int -> Parser [Int]
-digitN n = do
+digitN n = forM [1..n] $ \_ -> digit
+
+digits :: Parser [Int]
+digits = do
   n <- digit
-  forM [1..n] $ \_ ->
-    digit
+  digitN n
 
+class Applicative f => Alternative f where
+  (<|>) :: f a -> f a -> f a
+  empty :: f a
 
+  some :: f a -> f [a]
+  some f = (:) <$> f <*> many f
+
+  many :: f a -> f [a]
+  many f = some f <|> pure []
+
+-- forall p. p <|> empty === p
+-- forall p. empty <|> p === p
+
+instance Alternative Parser where
+  (<|>) :: Parser a -> Parser a -> Parser a
+  (<|>) = combine
+
+  empty :: Parser a
+  empty = P $ \str -> Nothing
+
+true1 :: Parser Bool
+true1 = do
+  _ <- string "true"
+  return True
+
+true2 :: Parser Bool
+true2 = (\lhs rhs -> rhs) <$> string "true" <*> pure True
+
+true3 :: Parser Bool
+true3 = (\_ -> True) <$> string "true"
+
+true :: Parser Bool
+true = string "true" *> pure True
+
+false :: Parser Bool
+false = string "false" *> pure False
+
+bool :: Parser Bool
+bool = true <|> false
+
+{- tests
+runParser true "true"    == Just (True, "")
+runParser true "trueXXX" == Just (True, "XXX")
+runParser true "tRue"    == Nothing
+
+runParser false "false"    == Just (False, "")
+runParser false "falseXXX" == Just (False, "XXX")
+runParser false "faLse"    == Nothing
+
+runParser bool "true"  == Just (True, "")
+runParser bool "false" == Just (False, "")
+-}
+
+someDigits :: Parser [Int]
+someDigits = some digit
+
+-- NOTE: use some, digit, fmap and (foldl or foldr)
+natural :: Parser Int
+natural = undefined

@@ -10,7 +10,7 @@ import Control.Monad (ap)
 -- "2 + 3 + 4" -> Add (I 2) (Add (I 3) (I 4))
 
 newtype Parser1 a = P1 { runParser1 :: String -> Maybe (a, String) }
-newtype Parser2 a = P2 { runParser2 :: String -> (Maybe a, String)   }
+newtype Parser2 a = P2 { runParser2 :: String -> (Maybe a, String) }
 
 char :: Char -> Parser2 Char
 char x = P2 $ \str ->
