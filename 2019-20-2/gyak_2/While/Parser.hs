@@ -60,8 +60,11 @@ digit = fmap (\n -> n - 48)
       . foldl (<|>) empty
       $ map char ['0'..'9']
 
+natural' :: Parser Int
+natural' = foldl1 (\acc cur -> 10*acc + cur) <$> some digit
+
 natural :: Parser Int
-natural = foldl1 (\acc cur -> 10*acc + cur) <$> some digit
+natural = natural' <* ws
 
 string :: String -> Parser String
 string str = traverse char str
@@ -83,12 +86,12 @@ ws = void $ many (char ' ')
 -- Practice 10
 
 runParser2 :: Parser a -> String -> Maybe a
-runParser2 p str = undefined
+runParser2 p str = fst <$> runParser p str
 
 
 -- NOTE: natural, token, ws (?)
 coordinate :: Parser (Int, Int)
-coordinate = undefined
+coordinate = (,) <$> (ws *> token "(" *> natural) <*> (token "," *> natural <* token ")")
 
 {-
 runParser coordinate "(1,2)"             == Just ((1,2), "")
