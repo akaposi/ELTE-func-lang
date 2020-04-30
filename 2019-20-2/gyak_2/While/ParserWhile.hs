@@ -24,20 +24,23 @@ bool = true <|> false
 bLit :: Parser Lit
 bLit = LBool <$> bool
 
--- TODO: natural
 iLit :: Parser Lit
-iLit = undefined
+iLit = LInt <$> (natural <* ws)
 
 lit :: Parser Lit
 lit = bLit <|> iLit
 
--- TODO: lowerAlpha
 var :: Parser Var
-var = undefined
+var = Var <$> (some lowerAlpha <* ws)
 
--- TODO: ELit, EVar ... LEq
+expr' :: Parser Expr
+expr' = ELit <$> lit
+    <|> EVar <$> var
+
 expr :: Parser Expr
-expr = undefined
+expr = LEq  <$> (expr' <* token "<=") <*> expr
+   <|> Plus <$> (expr' <* token "+")  <*> expr
+   <|> expr'
 
 statement :: Parser Statement
 statement = undefined
@@ -59,4 +62,17 @@ runParser var "x5" == Just (Var "x", "5")
 
 runParser expr "x"  == Just (EVar (Var "x"), "")
 runParser expr "53" == Just (ELit (LInt 53), "")
+
+runParser expr "x <= 5" == Just (LEq (EVar (Var "x")) (ELit (LInt 5)),"")
+-}
+
+{-
+runParser expr "1 + 2 + 3 + 4"
+
+(Plus (ELit (LInt 1))
+  (Plus (ELit (LInt 2))
+    (Plus (ELit (LInt 3))
+          (ELit (LInt 4))))
+
+1 + (2 + (3 + 4))
 -}
