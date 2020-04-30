@@ -83,20 +83,30 @@ ws = void $ many (char ' ')
 -- Practice 10
 
 runParser2 :: Parser a -> String -> Maybe a
-runParser2 = undefined
+runParser2 p str = fst <$> runParser p str
 
 
 -- NOTE: natural, token, ws (?)
 coordinate :: Parser (Int, Int)
-coordinate = undefined
+coordinate = (,) <$> (ws *> token "(" *> naturalWS) <*> (token "," *> naturalWS <* token ")") where
+  naturalWS = natural <* ws
 
 {-
-runParser2 coordinate "(1,2)" == Just (1,2)
-runParser2 coordinate "(14,23)" == Just (14,23)
+runParser coordinate "(1,2)"             == Just ((1,2), "")
+runParser coordinate "(14,23)"           == Just ((14,23), "")
+runParser coordinate "  ( 14  ,  23 )  " == Just ((14,23), "")
+runParser coordinate "(14,23"  == Nothing
+runParser coordinate "(14 23)" == Nothing
+runParser coordinate "14 23)"  == Nothing
+runParser coordinate "(14,)"   == Nothing
+runParser coordinate "(,23)"   == Nothing
+
+runParser2 coordinate "(1,2)"             == Just (1,2)
+runParser2 coordinate "(14,23)"           == Just (14,23)
 runParser2 coordinate "  ( 14  ,  23 )  " == Just (14,23)
-runParser2 coordinate "(14,23" == Nothing
+runParser2 coordinate "(14,23"  == Nothing
 runParser2 coordinate "(14 23)" == Nothing
-runParser2 coordinate "14 23)" == Nothing
-runParser2 coordinate "(14,)" == Nothing
-runParser2 coordinate "(,23)" == Nothing
+runParser2 coordinate "14 23)"  == Nothing
+runParser2 coordinate "(14,)"   == Nothing
+runParser2 coordinate "(,23)"   == Nothing
 -}
