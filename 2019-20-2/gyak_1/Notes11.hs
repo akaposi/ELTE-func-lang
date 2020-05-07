@@ -1,13 +1,12 @@
+{-# language DeriveFunctor #-}
 
+import Prelude hiding (exp)
 import Control.Monad
-import Control.Applicative
+import Control.Applicative    -- many, some
 import Data.Char -- isSpace, isLetter, isDigit, isAlpha
 
 newtype Parser a = Parser {runParser :: String -> Maybe (a, String)}
-
-instance Functor Parser where
-  fmap f (Parser g) = Parser $ \s ->
-       fmap (\(a, s') -> (f a, s')) (g s)
+  deriving Functor
 
 instance Applicative Parser where
   pure = return
@@ -26,10 +25,9 @@ instance Alternative Parser where
     Nothing -> g s
     x       -> x
 
--- Olvas egy karaktert amire True-t ad egy függvény
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy f = Parser $ \s -> case s of
-  c:cs | f c -> Just (c, cs)   -- extra feltétel, f c == True
+  c:cs | f c -> Just (c, cs)
   _          -> Nothing
 
 eof :: Parser ()
@@ -43,11 +41,19 @@ char c = () <$ satisfy (==c)
 string :: String -> Parser ()
 string = mapM_ char
 
---------------------------------------------------------------------------------
+ws :: Parser ()
+ws = () <$ many (char ' ' <|> char '\n')
 
--- Olvass pozitív Int literálokat. Ne használd a "read" függvént!
-posInt :: Parser Int
-posInt = undefined
+sepBy1 :: Parser a -> Parser b -> Parser [a]
+sepBy1 pa pb = (:) <$> pa <*> many (pb *> pa)
+
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy pa pb = sepBy1 pa pb <|> pure []
+
+anyChar :: Parser Char
+anyChar = satisfy (const True)
+
+--------------------------------------------------------------------------------
 
 -- A következő a "takeWhile" függvény parser megfelelője, addig olvas
 -- egy String-et, amíg egy feltétel igaz a karakterekre.
@@ -61,7 +67,6 @@ takeWhileP = undefined
 -- kiolvas az első 'x'-ig, és az 'x'-et is kiolvassa.
 manyUntil :: Parser a -> Parser b -> Parser [a]
 manyUntil = undefined
-
 
 -- Írj egy egyszerű csv (comma separated values) parsert!
 -- A formátum a következő:
@@ -81,17 +86,3 @@ foo,bar,12,31
 
 csv1 :: Parser [[Either Int String]]
 csv1 = undefined
-
-
--- Írj parsert típusozatlan lambda kalkulushoz!
---   https://en.wikipedia.org/wiki/Lambda_calculus
--- A változónevek álljanak csak latin betűkből, a
--- lambda pedig legyen backslash ('\\').
--- Whitespace megengedett minden token körül.
--- Olvassunk eof-ot a parsolás végén.
-
-data Term = Var String | App Term Term | Lam String Term
-  deriving Show
-
-parseLC :: Parser Term
-parseLC = undefined
