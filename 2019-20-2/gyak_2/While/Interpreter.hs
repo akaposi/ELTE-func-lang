@@ -36,4 +36,30 @@ evalExpr (Plus lhs rhs) = do
       -> pure $ RTLit $ LInt $ lhsVal + rhsVal
     _ -> error "Type error"
 
+evalStatement :: Expr -> Eval ()
+evalStatement Skip = pure ()
+evalStatement (Assign var expr) = do
+  res <- evalExpr
+  varMapping <- get
+  let varMapping' = Map.insert var res varMapping
+  put varMapping'
+evalStatement (If cond lhs rhs) = do
+  condRTVal <- evalExpr cond
+  case condRTVal of
+    RTLit (LBool True)  -> evalStatement lhs
+    RTLit (LBool False) -> evalStatement rhs
+    _ -> error "Type error"
+evalStatement (Seq lhs rhs) = do
+  evalStatement lhs
+  evalStatement rhs
+evalStatement loop@(While cond body) = do
+  condRTVal <- evalExpr cond
+  case condRTVal of
+    RTLit (LBool True) -> do
+      evalStatement body
+      evalStatement loop
+    RTLit (LBool False) -> do
+      pure ()
+    _ -> error "Type error"
+
 -- runState (evalExpr $ Plus (ELit $ LInt 2) (ELit $ LInt 3)) (Map.singleton (Var "v") (RTLit $ LInt 5))
