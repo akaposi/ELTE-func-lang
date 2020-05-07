@@ -29,18 +29,32 @@ name = some lowerAlpha <* ws
 var :: Parser Var
 var = Var <$> name
 
+paren :: Parser a -> Parser a
+paren p = token "(" *> p <* token ")"
+
 expr' :: Parser Expr
 expr' = EVar <$> var
     <|> ELit <$> lit
-    <|> token "(" *> expr <* token ")"
+    <|> Not  <$> (token "!" *> expr')
+    <|> paren expr
 
 expr :: Parser Expr
 expr = Plus  <$> (expr' <* token "+") <*> expr
    <|> Minus <$> (expr' <* token "-") <*> expr
+   <|> LEq   <$> (expr' <* token "<=") <*> expr
    <|> expr'
 
+statement' :: Parser Statement
+statement' = const Skip <$> token "Skip"
+         <|> Assign <$> (var <* token ":=") <*> expr
+         <|> If <$> (token "If" *> paren expr) <*>
+                    statement <*>
+                    (token "Else" *> statement)
+         <|> While <$> (token "While" *> paren expr) <*> statement
+
 statement :: Parser Statement
-statement = undefined
+statement = Seq <$> (statement' <* token ";") <*> statement
+        <|> statement'
 
 program :: Parser Statement
 program = statement <* eof
