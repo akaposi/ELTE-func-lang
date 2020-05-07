@@ -36,10 +36,12 @@ var = Var <$> (some lowerAlpha <* ws)
 expr' :: Parser Expr
 expr' = ELit <$> lit
     <|> EVar <$> var
+    <|> token "(" *> expr <* token ")"
 
 expr :: Parser Expr
-expr = LEq  <$> (expr' <* token "<=") <*> expr
-   <|> Plus <$> (expr' <* token "+")  <*> expr
+expr = LEq   <$> (expr' <* token "<=") <*> expr
+   <|> Plus  <$> (expr' <* token "+")  <*> expr
+   <|> Minus <$> (expr' <* token "-")  <*> expr
    <|> expr'
 
 statement :: Parser Statement
@@ -67,12 +69,12 @@ runParser expr "x <= 5" == Just (LEq (EVar (Var "x")) (ELit (LInt 5)),"")
 -}
 
 {-
-runParser expr "1 + 2 + 3 + 4"
+runParser expr "1 + 2 + 3 + 4" -> 1 + (2 + (3 + 4))
 
 (Plus (ELit (LInt 1))
   (Plus (ELit (LInt 2))
     (Plus (ELit (LInt 3))
           (ELit (LInt 4))))
 
-1 + (2 + (3 + 4))
+runParser expr "1 - 2 - 3 - 4" -> 1 - (2 - (3 - 4))
 -}

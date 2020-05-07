@@ -36,9 +36,9 @@ data Statement
 {-
 Program as string:
 
-if (x <= 1)
+If (x <= 1)
   x := 2
-else
+Else
   y := 3;
   x := y
 
