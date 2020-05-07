@@ -34,18 +34,28 @@ var :: Parser Var
 var = Var <$> (some lowerAlpha <* ws)
 
 expr' :: Parser Expr
-expr' = ELit <$> lit
-    <|> EVar <$> var
-    <|> token "(" *> expr <* token ")"
+expr' = EVar <$> var
+    <|> ELit <$> lit
+    <|> Not  <$> (token "!" *> expr')
+    <|> paren expr
 
 expr :: Parser Expr
-expr = LEq   <$> (expr' <* token "<=") <*> expr
-   <|> Plus  <$> (expr' <* token "+")  <*> expr
-   <|> Minus <$> (expr' <* token "-")  <*> expr
+expr = Plus  <$> (expr' <* token "+") <*> expr
+   <|> Minus <$> (expr' <* token "-") <*> expr
+   <|> LEq   <$> (expr' <* token "<=") <*> expr
    <|> expr'
 
+statement' :: Parser Statement
+statement' = const Skip <$> token "Skip"
+         <|> Assign <$> (var <* token ":=") <*> expr
+         <|> If <$> (token "If" *> paren expr) <*>
+                    statement <*>
+                    (token "Else" *> statement)
+         <|> While <$> (token "While" *> paren expr) <*> statement
+
 statement :: Parser Statement
-statement = undefined
+statement = Seq <$> (statement' <* token ";") <*> statement
+        <|> statement'
 
 program :: Parser Statement
 program = statement <* eof
