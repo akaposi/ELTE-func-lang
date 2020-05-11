@@ -45,10 +45,7 @@ jegyzet átismétlése.
   más vizsgázóval vagy külső személlyel nem engedélyezett.
 - A vizsgázás előfeltétele a gyakorlati követelmény teljesítése.
 - Gyakorlati követelmény:
-  + Gyakorlatok elején 10 perces feladatmegoldás BEAD-ban. Ezekre 0, 1 vagy 2 pont kapható. Az első gyakorlaton
-    nem lesz ilyen feladat. Összesen 12 darab feladat várható.
-  + Továbbá, ki lesz írva félév során 3 darab házi feladat, mindegyik 4 pontot ér.
-  + Legalább 13 gyakorlati pontot kell megszerezni a félév során.
+  + **Módosulás**: a 2020 tavaszi szemeszterbeli távoktatás miatt **nincs** elvárt követelmény a gyakorlaton. Vizsgára jelentkezhez minden tárgyra regisztrált hallgató.
 
 #### Tematika
 

@@ -107,6 +107,7 @@ sumElements [] = do
 sumElements (x:xs) = do
   n <- get
   put (x + n)
+  sumElements xs
 
 sumAndCollect :: [Int] -> State [Int] Int
 sumAndCollect [] = do
@@ -118,7 +119,12 @@ sumAndCollect (x:xs) = do
   sumAndCollect xs
 
 partitionAndDecide :: [Either a b] -> State ([a], [b]) Bool
-partitionAndDecide (Left x : ys)
+partitionAndDecide (x : ys) = do
+  (ls,rs) <- get
+  case x of
+    Left  x' -> put (x':ls, rs)
+    Right x' -> put (ls, x':rs)
+  partitionAndDecide ys
 
 data BinTree l n = Leaf l | Node n (BinTree l n) (BinTree l n)
   deriving (Eq, Ord, Show)
