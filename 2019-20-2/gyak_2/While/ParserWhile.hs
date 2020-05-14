@@ -33,6 +33,9 @@ lit = bLit <|> iLit
 var :: Parser Var
 var = Var <$> (some lowerAlpha <* ws)
 
+paren :: Parser a -> Parser a
+paren p = token "(" *> p <* token ")"
+
 expr' :: Parser Expr
 expr' = EVar <$> var
     <|> ELit <$> lit
