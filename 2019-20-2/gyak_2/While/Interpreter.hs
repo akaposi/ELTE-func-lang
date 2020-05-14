@@ -36,7 +36,7 @@ evalExpr (Plus lhs rhs) = do
       -> pure $ RTLit $ LInt $ lhsVal + rhsVal
     _ -> error "Type error"
 
-evalStatement :: Expr -> Eval ()
+evalStatement :: Statement -> Eval ()
 evalStatement Skip = pure ()
 evalStatement (Assign var expr) = do
   res <- evalExpr
@@ -61,5 +61,7 @@ evalStatement loop@(While cond body) = do
     RTLit (LBool False) -> do
       pure ()
     _ -> error "Type error"
+-- evalStatement loop@(While cond body) =
+--   evalStatement $ If cond (Seq body loop) Skip
 
 -- runState (evalExpr $ Plus (ELit $ LInt 2) (ELit $ LInt 3)) (Map.singleton (Var "v") (RTLit $ LInt 5))
