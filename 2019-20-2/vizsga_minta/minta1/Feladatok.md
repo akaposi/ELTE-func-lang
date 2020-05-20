@@ -128,7 +128,7 @@ A `LogStr` és a `LogInt` kulcsszavaknak számítanak.
 A `LogStr` szintaxisa "LogStr" kulcsszó után egy string literál. Példa:
 
 ```haskell
-If (x == 10) then LogStr "kutya" else skip
+if (x == 10) then LogStr "kutya" else skip end
 ```
 
 A `LogInt` szintaxisa "LogInt" kulcsszó után egy kifejezés. Példa:
