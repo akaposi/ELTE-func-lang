@@ -210,7 +210,6 @@ data Statement
   | While Exp Program       -- while e do p1 end
   | If Exp Program Program  -- if e then p1 else p2 end
   | Block Program           -- {p1}       (lokális scope)
-  | Skip                    -- skip
 
   | LogStr String
   | LogInt Exp
@@ -256,7 +255,7 @@ string' :: String -> Parser ()
 string' s = string s <* ws
 
 keywords :: [String]
-keywords = ["not", "and", "while", "do", "if", "end", "true", "false", "skip",  "LogStr", "LogInt"]
+keywords = ["not", "and", "while", "do", "if", "end", "true", "false", "LogStr", "LogInt"]
 
 pIdent :: Parser String
 pIdent = do
@@ -277,9 +276,9 @@ pStringLit = char '\"' *> many (satisfy (/='\"')) <* char' '\"'
 
 pAtom :: Parser Exp
 pAtom = (BoolLit <$> pBoolLit)
-      <|> (IntLit <$> pIntLit)
-      <|> (Var <$> pIdent)
-      <|> (char' '(' *> pExp <* char' ')')
+    <|> (IntLit <$> pIntLit)
+    <|> (Var <$> pIdent)
+    <|> (char' '(' *> pExp <* char' ')')
 
 pNot :: Parser Exp
 pNot =
@@ -320,7 +319,6 @@ pStatement =
             <*> (string' "then" *> pProgram)
             <*> (string' "else" *> pProgram <* string' "end"))
     <|> (Block <$> (char' '{' *> pProgram <* char' '}'))
-    <|> (Skip <$ string' "skip")
     <|> (LogStr <$> (string' "LogStr" *> pStringLit))
     <|> (LogInt <$> (string' "LogInt" *> pExp))
 
@@ -440,8 +438,6 @@ evalSt s = case s of
       Left _ -> error "type error: expected a Bool condition in \"if\" expression"
   Block p ->
     newScope (evalProg p)
-  Skip ->
-    pure ()
   LogStr str ->
     modify (\(env, log) -> (env, str:log))
   LogInt e -> do

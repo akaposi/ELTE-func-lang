@@ -143,8 +143,6 @@ data Statement
   | While Exp Program       -- while e do p1 end
   | If Exp Program Program  -- if e then p1 else p2 end
   | Block Program           -- {p1}       (lokális scope)
-  | Skip                    -- skip
-
   deriving Show
 
 
@@ -187,7 +185,7 @@ string' :: String -> Parser ()
 string' s = string s <* ws
 
 keywords :: [String]
-keywords = ["not", "and", "while", "do", "if", "end", "true", "false", "skip"]
+keywords = ["not", "and", "while", "do", "if", "end", "true", "false"]
 
 pIdent :: Parser String
 pIdent = do
@@ -248,7 +246,6 @@ pStatement =
             <*> (string' "then" *> pProgram)
             <*> (string' "else" *> pProgram <* string' "end"))
     <|> (Block <$> (char' '{' *> pProgram <* char' '}'))
-    <|> (Skip <$ string' "skip")
 
 pSrc :: Parser Program
 pSrc = ws *> pProgram <* eof
@@ -366,8 +363,6 @@ evalSt s = case s of
       Left _ -> error "type error: expected a Bool condition in \"if\" expression"
   Block p ->
     newScope (evalProg p)
-  Skip ->
-    pure ()
 
 evalProg :: Program -> Eval ()
 evalProg = mapM_ evalSt
