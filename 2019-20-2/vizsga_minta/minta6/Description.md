@@ -81,10 +81,10 @@ labelWithAlphabet (Leaf 3) == Leaf (3,'a')
 labelWithAlphabet (BNode (Leaf 3) [7,8]) == (BNode (Leaf (3,'a')) [(7,'b'),(8,'c')])
 ```
 
-Egz fában lévő `k` típusú értékeket cseréljünk le egy kulcs-érték párokat
+Egz fában lévő `k` típusú értékeket cseréljük le egy kulcs-érték párokat
 tartalmazó lista értékeire! Azaz keressük ki, hogy a fában lévő kulcshoz milyen
-érték tartozik a listában. Ha akár egyetlen egy olyan kulcs iselőfordul,
-amelyhey nem tarzik érték, akkor ay eredmény lehet `Nothing`! Segítség
+érték tartozik a listában. Ha akár egyetlen egy olyan kulcs is előfordul,
+amelyhez nem tartozik érték, akkor az eredmény lehet `Nothing`! Segítség:
 használjuk a `traverse` és `lookup` függvényeket! __(3 pont)__
 
 ```haskell
@@ -109,7 +109,7 @@ lookupReplace [(1,'a')] (BNode (Leaf 1) [1,2,1]) == Nothing
 
 ## `While` nyelv (8 pont)
 
-Feladatunk, hogy kiegeszitsuk a `While` nyelvet az `exit` és `assert` utasításokkal.
+Feladatunk, hogy kiegészitsuk a `While` nyelvet az `exit` és `assert` utasításokkal.
 
 ### Absztrakt szintaxis
 
@@ -127,7 +127,7 @@ Ne felejtsük el kiegészíteni a kulcsszavak kezelését. __(2 pont)__
 
 ### Interpretáció
 
-Első lépésként egészitsuk ki a jelenlegi program állapotot egy `Bool` értékkel!
+Első lépésként egészítsük ki a jelenlegi programállapotot egy `Bool` értékkel!
 Ez a változó fogja meghatározni, hogy az `assert` utasítások élesek-e. Ha
 `True`, akkor az `assert`-ek megszakítják a program működését, ellenkező esetben
 azonban nem. Ehhez módosítanunk kell egyéb függvények működését is. Továbbá
