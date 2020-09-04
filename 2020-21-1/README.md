@@ -12,7 +12,6 @@
 
 - Kovács András, email: kovacsandras @ inf.elte.hu (szóköz nélkül).
 - Rafaël Bocquet, email: bocquet @ inf.elte.hu (szóköz nélkül).
-- Szeretnénk kérni, hogy a fenti címekre küldött levelek tárgya `[fny] <tárgy>` formátumú legyen.
 
 #### Infrastruktúra, online oktatás
 

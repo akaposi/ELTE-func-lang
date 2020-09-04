@@ -12,7 +12,6 @@
 
 - András Kovács, email: kovacsandras @ inf.elte.hu (without spaces).
 - Rafaël Bocquet, email: bocquet @ inf.elte.hu (without spaces).
-- Please have `[fny] <subject>` as subject of mails sent to the above addresses.
 
 #### Infrastructure, online teaching
 
