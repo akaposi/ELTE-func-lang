@@ -28,7 +28,7 @@
   + A Teams-hez inf-es felhasználónévvel és jelszóval lehet csatlakozni.
   + Minden hallgató email-ben kap linket, amivel csatlakozni lehet a tárgyi team-hez.
 
-- Discord: a *gyakorlatok* discord-on folynak, elsősorban az ottani párhuzamos
+- Discord: a *gyakorlatok* [Discord](https://discord.com/)-on folynak, elsősorban az ottani párhuzamos
   képernyőmegosztás feature miatt.
   + Mindenki email-ben kap linket a saját Discord csoportjához.
 

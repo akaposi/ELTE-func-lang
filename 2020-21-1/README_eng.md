@@ -25,7 +25,7 @@
   + You can register on Teams with inf account and password.
   + Every students gets an email with an invitation link to the course Teams group.
 
-- Discord: *tutorials* take place on Discord, primarily because of the
+- Discord: *tutorials* take place on [Discord](https://discord.com/), primarily because of the
   simultaneous screen sharing feature.
   + Every student get an email with an invitation to the tutorial Discord group.
 
