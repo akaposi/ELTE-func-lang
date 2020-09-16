@@ -12,6 +12,12 @@ mapPair = undefined
 mapEither :: (a -> b) -> (c -> d) -> Either a c -> Either b d
 mapEither = undefined
 
+f :: (a -> b) -> [[a]] -> [[b]]
+f = undefined
+
+g :: (a -> b) -> [(a, a)] -> [(a, b)]
+g = undefined
+
 data Tree1 a = Leaf1 a
              | Node1 (Tree1 a) (Tree1 a)
 
