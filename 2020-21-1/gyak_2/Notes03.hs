@@ -6,9 +6,26 @@ module Notes03 where
 --   (>>=) :: f a -> (a -> f b) -> f b
 -- (>>=) is read "bind".
 
+returnList' :: a -> [a]
+returnList' x = [x]
+
+mapList' :: (a -> b) -> [a] -> [b]
+mapList' f xs = [ f x | x <- xs ]
+
+bindList' :: (a -> [b]) -> [a] -> [b]
+bindList' f xs = [ y | x <- xs, y <- f x ]
+
+concatList' :: [[a]] -> [a]
+concatList' xss = [ x | xs <- xss, x <- xs ]
+
+
+
 data Tree1 a = Leaf1 a
              | Node1 (Tree1 a) (Tree1 a)
              deriving(Show, Eq, Ord, Functor)
+
+returnTree1 :: a -> Tree1 a
+returnTree1 = Leaf1
 -- Functor can be derived
 
 bindList :: (a -> [b]) -> [a] -> [b]
