@@ -23,10 +23,10 @@ concatList' xss = [ x | xs <- xss, x <- xs ]
 data Tree1 a = Leaf1 a
              | Node1 (Tree1 a) (Tree1 a)
              deriving(Show, Eq, Ord, Functor)
+-- Functor can be derived
 
 returnTree1 :: a -> Tree1 a
 returnTree1 = Leaf1
--- Functor can be derived
 
 bindList :: (a -> [b]) -> [a] -> [b]
 bindList = undefined
@@ -72,10 +72,31 @@ tree2 = Node1 (Leaf1 (Node1 (Leaf1 0) (Leaf1 2))) (Leaf1 (Leaf1 3))
 
 sequenceMaybe :: [Maybe a] -> Maybe [a]
 sequenceMaybe = undefined
+-- examples:
+--   sequenceMaybe [] = Just []
+--   sequenceMaybe [Nothing] = Nothing
+--   sequenceMaybe [Just 1, Just 2, Just 3] = Just [1, 2, 3]
+--   sequenceMaybe [Just 1, Just 2, Nothing, Just 4] = Nothing
 
-sequenceTree1 :: [Tree1 a] -> Tree1 [a]
-sequenceTree1 = undefined
-
+traverseList_Maybe :: (a -> Maybe b) -> [a] -> Maybe [b]
+traverseList_Maybe = undefined
 
 traverseTree1_Maybe :: (a -> Maybe b) -> Tree1 a -> Maybe (Tree1 b)
 traverseTree1_Maybe = undefined
+
+apList :: [a -> b] -> [a] -> [b]
+apList = undefined
+-- example:
+--   apList [ (*2), (*3), (*5) ] [ 1, 7 ] == [ 1, 14, 3, 21, 5, 35 ]
+
+apMaybe :: Maybe (a -> b) -> Maybe a -> Maybe b
+apMaybe = undefined
+
+sequenceTree1 :: [Tree1 a] -> Tree1 [a]
+sequenceTree1 = undefined
+-- sequenceTree1 [] = Leaf1 []
+-- sequenceTree1 [Leaf1 0] == Leaf1 [0]
+-- sequenceTree1 [Leaf1 0, Leaf1 1] == Leaf1 [0, 1]
+-- sequenceTree1 [Node1 (Leaf1 'L') (Leaf1 'R'), Node1 (Leaf1 'L') (Leaf1 'R')] 
+--     == Node1 (Node1 (Leaf1 "LL") (Leaf1 "LR")) (Node1 (Leaf1 "RL") (Leaf1 "RR"))
+
