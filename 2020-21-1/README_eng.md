@@ -7,6 +7,7 @@
   + Code: 1, András Kovács, Wednesday 17:45-19:15
   + Code: 2, Rafaël Bocquet, (in **English**), Wednesday 19:30-21:00
   + Code: 4, Rafaël Bocquet, (in **English**), Thursday 19:30-21:00
+- Consultation: Friday 17:00-18:30, MS Teams General channel meeting
 
 #### Contact
 

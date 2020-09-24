@@ -7,6 +7,7 @@
   + Kód: 1, Kovács András, szerda 17:45-19:15
   + Kód: 2, Rafaël Bocquet, (**angol** nyelven), szerda 19:30-21:00
   + Kód: 4, Rafaël Bocquet, (**angol** nyelven), csütörtök 19:30-21:00
+ - Konzultáció: péntek 17:00-18:30, MS Teams General csoport meeting
 
 #### Elérhetőségek
 
