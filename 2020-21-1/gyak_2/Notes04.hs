@@ -2,6 +2,7 @@
 module Notes03 where
 
 import Control.Monad (ap)
+import Control.Monad.State
 
 -- Evaluation of expressions
 data IntExpr = Value Int
@@ -54,3 +55,28 @@ liftM3 = undefined
 
 foldM :: Monad m => (b -> a -> m b) -> b -> [a] -> m b
 foldM = undefined
+
+-- Define using the State monad:
+
+-- impFactorial should be a translation of the imperative program
+--    x = 1
+--    for i from 1 to n
+--      x = x * i
+
+impFactorial :: Integer -> State Integer ()
+impFactorial n = undefined
+
+runFactorial :: Integer -> Integer
+runFactorial n = execState (impFactorial n) 1
+
+-- impFibo should be a translation of the imperative program
+--    a = 1
+--    b = 1
+--    for i from 1 to n
+--      (a, b) = (b, a+b)
+
+impFibo :: Integer -> State (Integer, Integer) ()
+impFibo n = undefined
+
+runFibo :: Integer -> Integer
+runFibo n = fst (execState (impFibo n) (1, 1))
