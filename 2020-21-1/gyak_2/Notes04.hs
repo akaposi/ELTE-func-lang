@@ -49,7 +49,7 @@ liftM = undefined
 liftM2 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
 liftM2 = undefined
 
-liftM3 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
+liftM3 :: Monad m => (a -> b -> c -> d) -> m a -> m b -> m c -> m d
 liftM3 = undefined
 
 foldM :: Monad m => (b -> a -> m b) -> b -> [a] -> m b
