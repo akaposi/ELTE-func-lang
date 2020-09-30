@@ -8,6 +8,7 @@ data IntExpr = Value Int
              | Plus  IntExpr IntExpr
              | Times IntExpr IntExpr
              | Div   IntExpr IntExpr
+             deriving (Show, Eq, Ord)
 
 expr1 :: IntExpr
 expr1 = Value 10 `Plus` Value 5
@@ -39,6 +40,7 @@ evalIntExpr = undefined
 --   evalIntExprMaybe expr4 == Nothing
 evalIntExprMaybe :: IntExpr -> Maybe Int
 evalIntExprMaybe = undefined
+
 
 -- Some operations on monads
 liftM :: Monad m => (a -> b) -> m a -> m b
