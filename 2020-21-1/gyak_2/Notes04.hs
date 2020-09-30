@@ -31,7 +31,14 @@ expr4 = Value 10 `Div` Value 0
 --   evalIntExpr expr4 == ???
 
 evalIntExpr :: IntExpr -> Int
-evalIntExpr = undefined
+evalIntExpr (Value x)   = x
+evalIntExpr (Plus x y)  = (evalIntExpr x) + (evalIntExpr y)
+evalIntExpr (Times x y) = (evalIntExpr x) * (evalIntExpr y)
+evalIntExpr (Div x y)   = (evalIntExpr x) `div` (evalIntExpr y)
+
+safeDiv :: Int -> Int -> Maybe Int
+safeDiv x y | y == 0 = Nothing
+safeDiv x y = Just (x `div` y)
 
 -- Define `evalIntExprMaybe :: IntExpr -> Maybe Int`
 -- Examples: 
@@ -40,21 +47,52 @@ evalIntExpr = undefined
 --   evalIntExprMaybe expr3 == Just 2
 --   evalIntExprMaybe expr4 == Nothing
 evalIntExprMaybe :: IntExpr -> Maybe Int
-evalIntExprMaybe = undefined
-
+evalIntExprMaybe (Value x)  = return x
+evalIntExprMaybe (Plus x y) = do
+  x' <- evalIntExprMaybe x
+  y' <- evalIntExprMaybe y
+  return (x' + y')
+-- evalIntExprMaybe (Plus x y) = liftM2 (+) (evalIntExprMaybe x) (evalIntExprMaybe y)
+evalIntExprMaybe (Times x y) = do
+  x' <- evalIntExprMaybe x
+  y' <- evalIntExprMaybe y
+  return (x' * y')
+evalIntExprMaybe (Div x y) = do
+  x' <- evalIntExprMaybe x
+  y' <- evalIntExprMaybe y
+  safeDiv x' y'
+-- Alternative definition:
+-- evalIntExprMaybe (Div x y) = do
+--   x' <- evalIntExprMaybe x
+--   y' <- evalIntExprMaybe y
+--   -- guard (y' /= 0)
+--   if y' == 0 then Nothing else Just ()
+--   return (x' `div` y')
 
 -- Some operations on monads
 liftM :: Monad m => (a -> b) -> m a -> m b
-liftM = undefined
+liftM f ma = do
+  a <- ma
+  return (f a)
 
 liftM2 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
-liftM2 = undefined
+liftM2 f ma mb = do
+  a <- ma
+  b <- mb
+  return (f a b)
 
 liftM3 :: Monad m => (a -> b -> c -> d) -> m a -> m b -> m c -> m d
-liftM3 = undefined
+liftM3 f ma mb mc = do
+  a <- ma
+  b <- mb
+  c <- mc
+  return (f a b c)
 
-foldM :: Monad m => (b -> a -> m b) -> b -> [a] -> m b
-foldM = undefined
+foldM' :: Monad m => (b -> a -> m b) -> b -> [a] -> m b
+foldM f e [] = return e
+foldM' f e (x:xs) = do
+  e' <- f e x 
+  foldM' f e' xs
 
 -- Define using the State monad:
 
@@ -64,7 +102,10 @@ foldM = undefined
 --      x = x * i
 
 impFactorial :: Integer -> State Integer ()
-impFactorial n = undefined
+impFactorial n = do
+  put 1                   -- x = 1
+  forM_ [1..n] $ \i -> do -- for i from 1 to n
+    modify (\x -> x * i)  --   x = x * i
 
 runFactorial :: Integer -> Integer
 runFactorial n = execState (impFactorial n) 1
@@ -76,7 +117,10 @@ runFactorial n = execState (impFactorial n) 1
 --      (a, b) = (b, a+b)
 
 impFibo :: Integer -> State (Integer, Integer) ()
-impFibo n = undefined
+impFibo n = do
+  put (1, 1)
+  forM_ [1..n] $ \i -> do
+    modify (\(a,b) -> (b, a+b))
 
 runFibo :: Integer -> Integer
 runFibo n = fst (execState (impFibo n) (1, 1))
