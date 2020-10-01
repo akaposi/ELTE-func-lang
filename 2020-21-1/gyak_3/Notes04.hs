@@ -55,6 +55,9 @@ liftM2 = undefined
 liftM3 :: Monad m => (a -> b -> c -> d) -> m a -> m b -> m c -> m d
 liftM3 = undefined
 
+zipWithM :: Monad m => (a -> b -> m c) -> [a] -> [b] -> m [c]
+zipWithM = undefined
+
 foldM' :: Monad m => (b -> a -> m b) -> b -> [a] -> m b
 foldM' = undefined
 
