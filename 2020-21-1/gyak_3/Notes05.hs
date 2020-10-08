@@ -48,7 +48,7 @@ modify f = State undefined
 ex :: Integer -> State Integer ()
 ex n = do
   put 1                   -- x = 1
-  forM_ [1..n] $ \_ -> do -- for i from 1 to n
+  forM_ [1..n] $ \i -> do -- for i from 1 to n
     -- modify (\x -> x + 1)
     x <- get 
     put (x+1)             --   x = x+1
@@ -101,7 +101,33 @@ runGcd x y = fst $ execState impGcd (x, y)
 whileM :: Monad m => m Bool -> m a -> m ()
 whileM cond ma = undefined
 
+-- 
+
 takeWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a] 
 takeWhileM = undefined
 
---
+-- 
+
+data BinTree a = Leaf a 
+               | Node (BinTree a) (BinTree a)
+               deriving( Eq, Ord, Show, Functor )
+
+-- The function labelTree should label the leaves of a tree with increasing integers:
+--    labelTree (Leaf ()) == Leaf 0
+--    labelTree (Node (Leaf ()) (Leaf ())) == Node (Leaf 0) (Leaf 1)
+--    ..
+labelTree :: BinTree a -> BinTree Int
+labelTree = undefined
+
+-- Hint: define a function labelTree' :: BinTree a -> State Int (BinTree Int), 
+--   where the state represents the next leaf value.
+
+-- The function labelTree should label the leaves of a tree with the maximum leaf value 
+--        to the left of it.
+--    labelTreeMax (Leaf 10) == Leaf 10
+--    labelTreeMax (Node (Leaf 10) (Leaf 100)) == Node (Leaf 10) (Leaf 100)
+--    labelTreeMax (Node (Leaf 100) (Leaf 10)) == Node (Leaf 100) (Leaf 100)
+--    labelTreeMax (Node (Leaf 2) (Node (Leaf 1) (Leaf 3))) == Node (Leaf 2) (Node (Leaf 1) (Node Leaf 3))
+--    ..
+labelTreeMax :: BinTree Int -> BinTree Int
+labelTreeMax = undefined
