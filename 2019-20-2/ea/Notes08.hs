@@ -154,6 +154,7 @@ mapFst' f (a, c) = fmap (\b -> (b, c)) (f a)
 -- Foldable, Traversable
 --------------------------------------------------------------------------------
 
+
 {-
 -- Foldable: osztály, aminek a foldr a metódusa
 -- fold-olást általánosítom valamilyen container típusokra (lista, fa, pár, stb)

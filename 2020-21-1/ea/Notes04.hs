@@ -163,13 +163,12 @@ instance Monad (State s) where
   -- return :: a -> State s a
   return a = State (\s -> (a, s))   -- változatlanul továbbadja az s-et (állapotot)
 
-  -- állapot propagálja
+  -- állapotot propagálja
   State f >>= g = State (\s -> case f s of (a, s') -> runState (g a) s')
   -- g :: a -> State s b
   -- newtype nélkül: a -> s -> (b, s)
 
--- szükség van: API az "s" írás/olvasáshoz magasabb szintű műveleteket
-
+-- szükség van: API az írás/olvasáshoz
 
 -- állapot lekérdezése :
 get :: State s s  -- lekérdezi az állapotot, visszaadja értékként
@@ -221,7 +220,7 @@ f3 = do
 --     ((),[10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10])
 
 
--- módosítsuk az állapotot egy függvényel
+-- módosítsuk az állapotot egy függvénnyel
 modify :: (s -> s) -> State s ()
 modify f = do
   s <- get
