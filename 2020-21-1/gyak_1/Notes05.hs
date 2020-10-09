@@ -1,6 +1,5 @@
 
 {-# language DeriveFunctor #-}
-{-# language ScopedTypeVariables #-}
 
 import Control.Monad
 
