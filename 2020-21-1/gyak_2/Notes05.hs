@@ -118,8 +118,3 @@ whileM cond ma = do
     then do ma
             whileM cond ma
     else return ()
-
-takeWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a] 
-takeWhileM = undefined
-
---
