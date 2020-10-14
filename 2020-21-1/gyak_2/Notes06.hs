@@ -45,13 +45,17 @@ data BinTree a = Leaf a
 
 -- Hint: define a function labelTree_State :: BinTree a -> State Int (BinTree Int), 
 --   where the state represents the next leaf value.
+-- labelTree_State should be defined by recursion on its argument.
 labelTree_State :: BinTree a -> State Int (BinTree Int)
-labelTree_State = undefined 
+labelTree_State (Leaf _)   = undefined -- You should use   labelLeaf
+labelTree_State (Node l r) = undefined -- You should use   labelTree_State l and labelTree_State r
 
 -- When reaching a leaf, we should use the current state as the leaf value and increment the state.
+-- labelLeaf should increment the state by 1 and return the previous state.
 labelLeaf :: State Int Int
 labelLeaf = undefined
 
+-- labelTree should be defined using evalState and labelTree_State
 labelTree :: BinTree a -> BinTree Int
 labelTree = undefined
 
