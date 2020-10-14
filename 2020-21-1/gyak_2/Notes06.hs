@@ -42,12 +42,18 @@ data BinTree a = Leaf a
 --    labelTree (Node (Leaf ()) (Leaf ())) == Node (Leaf 0) (Leaf 1)
 --    labelTree (Node (Leaf ()) (Node (Leaf ()) (Leaf ()))) == Node (Leaf 0) (Node (Leaf 1) (Leaf 2))
 --    ..
+
+-- Hint: define a function labelTree_State :: BinTree a -> State Int (BinTree Int), 
+--   where the state represents the next leaf value.
+labelTree_State :: BinTree a -> State Int (BinTree Int)
+labelTree_State = undefined 
+
+-- When reaching a leaf, we should use the current state as the leaf value and increment the state.
+labelLeaf :: State Int Int
+labelLeaf = undefined
+
 labelTree :: BinTree a -> BinTree Int
 labelTree = undefined
-
--- Hint: define a function labelTree' :: BinTree a -> State Int (BinTree Int), 
---   where the state represents the next leaf value.
-
 
 
 -- The function labelTreeMax should label the leaves of a tree with the maximum leaf value 
@@ -55,7 +61,7 @@ labelTree = undefined
 --    labelTreeMax (Leaf 10) == Leaf 10
 --    labelTreeMax (Node (Leaf 10) (Leaf 100)) == Node (Leaf 10) (Leaf 100)
 --    labelTreeMax (Node (Leaf 100) (Leaf 10)) == Node (Leaf 100) (Leaf 100)
---    labelTreeMax (Node (Leaf 2) (Node (Leaf 1) (Leaf 3))) == Node (Leaf 2) (Node (Leaf 1) (Node Leaf 3))
+--    labelTreeMax (Node (Leaf 2) (Node (Leaf 1) (Leaf 3))) == Node (Leaf 2) (Node (Leaf 2) (Node Leaf 3))
 --    ..
 labelTreeMax :: BinTree Int -> BinTree Int
 labelTreeMax = undefined
