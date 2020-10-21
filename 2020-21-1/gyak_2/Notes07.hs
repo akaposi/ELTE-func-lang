@@ -30,31 +30,54 @@ foldMapList f (x:xs) = f x <> foldMapList f xs
 
 -- Define foldMap using foldr
 foldMapFromFoldr :: (Foldable f, Monoid m) => (a -> m) -> f a -> m
-foldMapFromFoldr = undefined
+foldMapFromFoldr f xs = foldr (\a m -> f a <> m) mempty xs
 
 -- Define the functions null', length' and toList' using foldr
 null' :: Foldable f => f a -> Bool
-null' = undefined
+null' xs = foldr (\_ _ -> False) True xs
 
 length' :: Foldable f => f a -> Int
-length' = undefined
+length' xs = foldr (\_ x -> x+1) 0 xs
 
 toList' :: Foldable f => f a -> [a]
-toList' = undefined
+toList' xs = foldr (\y ys -> y : ys) [] xs
 
 -- Define the functions null'', length'' and toList'' using foldMap
 -- Hint : you should define some monoid instances for Bool and Int
+
+newtype And = And { getAnd :: Bool }
+            deriving (Show, Eq, Ord)
+instance Semigroup And where x <> y = And $ getAnd x && getAnd y
+instance Monoid And    where mempty = And True
+
 null'' :: Foldable f => f a -> Bool
-null'' = undefined
+null'' xs = getAnd $ foldMap (\_ -> And False) xs
+
+-- could be called Or
+newtype Any = Any { getAny :: Bool }
+            deriving (Show, Eq, Ord)
+instance Semigroup Any where x <> y = Any $ getAny x || getAny y
+instance Monoid Any    where mempty = Any False
+
+notNull'' :: Foldable f => f a -> Bool
+notNull'' xs = getAny $ foldMap (\_ -> Any True) xs
+
+newtype Sum a = Sum { getSum :: a }
+              deriving (Show, Eq, Ord)
+instance Num a => Semigroup (Sum a) where x <> y = Sum $ getSum x + getSum y
+instance Num a => Monoid (Sum a)    where mempty = Sum 0
 
 length'' :: Foldable f => f a -> Int
-length'' = undefined
+length'' xs = getSum $ foldMap (\_ -> Sum 1) xs
 
 toList'' :: Foldable f => f a -> [a]
 toList'' = foldMap (\x -> [x])
 
 -- Define the following functions on Foldable
 --   Try to use both foldr and foldMap
+
+sum' :: (Num a, Foldable f) => f a -> a
+sum' = undefined
 
 -- firstElem p xs should return the first element of xs that satisfies the predicate p. 
 --   Just x means that this element was x.
@@ -65,9 +88,6 @@ firstElem = undefined
 -- lastElem p xs should return the last element of xs that satisfies the predicate p. 
 lastElem :: Foldable f => (a -> Bool) -> f a -> Maybe a
 lastElem = undefined
-
-sum' :: (Num a, Foldable f) => f a -> a
-sum' = undefined
 
 product' :: (Num a, Foldable f) => f a -> a
 product' = undefined
