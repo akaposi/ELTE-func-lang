@@ -29,7 +29,7 @@ foldMapList f (x:xs) = f x <> foldMapList f xs
 -- foldMapList f [x, y, z] == f x <> f y <> f z <> mempty == f x <> f y <> f z
 
 -- Define foldMap using foldr
-foldMapFromFoldr :: (Foldable f, Monoid m) => (m -> a) -> f a -> m
+foldMapFromFoldr :: (Foldable f, Monoid m) => (a -> m) -> f a -> m
 foldMapFromFoldr = undefined
 
 -- Define the functions null', length' and toList' using foldr
