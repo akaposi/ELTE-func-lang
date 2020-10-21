@@ -15,8 +15,8 @@ data BinTree a = Leaf a | Node (BinTree a) (BinTree a)
 -- class Semigroup m => Monoid m where
 --   mempty :: m
 
--- instance Semigroup [] where (<>) = (++)
--- instance Monoid [] where mempty = []
+-- instance Semigroup [a] where (<>) = (++)
+-- instance Monoid [a] where mempty = []
 
 -- class Foldable f where
 --   foldMap :: Monoid m => (a -> m) -> f a -> m
@@ -52,6 +52,30 @@ length'' = undefined
 
 toList'' :: Foldable f => f a -> [a]
 toList'' = foldMap (\x -> [x])
+
+-- Define the following functions on Foldable
+--   Try to use both foldr and foldMap
+
+-- firstElem p xs should return the first element of xs that satisfies the predicate p. 
+--   Just x means that this element was x.
+--   Nothing means that there was no such element.
+firstElem :: Foldable f => (a -> Bool) -> f a -> Maybe a
+firstElem = undefined
+
+-- lastElem p xs should return the last element of xs that satisfies the predicate p. 
+lastElem :: Foldable f => (a -> Bool) -> f a -> Maybe a
+lastElem = undefined
+
+sum' :: (Num a, Foldable f) => f a -> a
+sum' = undefined
+
+product' :: (Num a, Foldable f) => f a -> a
+product' = undefined
+
+-- maximum' xs should return the maximum element of xs.
+--   Nothing means that xs was empty.
+maximum' :: (Ord a, Foldable f) => f a -> Maybe a
+maximum' = undefined
 
 -- class Traversable f where
 --   traverse :: Applicative m => (a -> m b) -> f a -> m (f b)
