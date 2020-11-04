@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, MonadComprehensions #-}
-module Notes07 where
+module Notes08 where
 
 import Data.Char
 import Control.Applicative (Alternative(..))
@@ -42,18 +42,33 @@ satisfy f = Parser $ \s -> case s of
 -------------------------------------------------------------------------------
 
 -- The parser `char c` should succeed if the input string start with the character c.
+-- Examples:
+--   runParser (char 'a') "" == Nothing
+--   runParser (char 'a') "abc" == Just ((), "bc")
+--   runParser (char 'a') "bcd" == Nothing
 char :: Char -> Parser ()
 char = undefined
 
 -- The parser anyChar should succeed if the input string is not empty, and return its first character.
+-- Examples:
+--   runParser anyChar "" == Nothing
+--   runParser anyChar "()" == Just ('(', ")")
+--   runParser anyChar "abc" == Just ('a', "bc")
 anyChar :: Parser Char
 anyChar = undefined
 
 -- The parser `string s` should succeed if the input string starts with the string s.
+--   runParser (string "abc") "abdef" == Nothing
+--   runParser (string "") "abcdef" == Just ((), "abcdef")
+--   runParser (string "abc") "abcdef" == Just ((), "def")
 string :: String -> Parser ()
 string = undefined
 
 -------------------------------------------------------------------------------
+
+-- class Applicative f => Alternative f where
+--   empty :: f a 
+--   (<|>) :: f a -> f a -> f a
 
 instance Alternative Parser where
   -- The parser `empty` always fails.
@@ -76,6 +91,12 @@ some :: Alternative f => f a -> f [a]
 many :: Alternative f => f a -> f [a]
 some = undefined
 many = undefined
+
+-- Examples:
+--   runParser (some (char 'a')) "aaabbb" = Just ("aaa", "bbb")
+--   runParser (some (char 'a')) "bbb" = Nothing
+--   runParser (many (char 'a')) "aaabbb" = Just ("aaa", "bbb")
+--   runParser (many (char 'a')) "bbb" = Just ("", "bbb")
 
 -------------------------------------------------------------------------------
 
