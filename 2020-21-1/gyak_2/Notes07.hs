@@ -77,39 +77,82 @@ toList'' = foldMap (\x -> [x])
 --   Try to use both foldr and foldMap
 
 sum' :: (Num a, Foldable f) => f a -> a
-sum' = undefined
+sum' = getSum . foldMap Sum
 
 -- firstElem p xs should return the first element of xs that satisfies the predicate p. 
 --   Just x means that this element was x.
 --   Nothing means that there was no such element.
+newtype First a = First { getFirst :: Maybe a }
+instance Semigroup (First a) where
+  First Nothing <> b = b
+  a             <> _ = a
+instance Monoid (First a) where
+  mempty = First Nothing
+
 firstElem :: Foldable f => (a -> Bool) -> f a -> Maybe a
-firstElem = undefined
+firstElem p = getFirst . foldMap (\x -> if p x then First (Just x) else First Nothing)
 
 -- lastElem p xs should return the last element of xs that satisfies the predicate p. 
+newtype Last a = Last { getLast :: Maybe a }
+instance Semigroup (Last a) where
+  a <> Last Nothing = a
+  _ <> b            = b
+instance Monoid (Last a) where
+  mempty = Last Nothing
+
 lastElem :: Foldable f => (a -> Bool) -> f a -> Maybe a
-lastElem = undefined
+lastElem p = getLast . foldMap (\x -> if p x then Last (Just x) else Last Nothing)
+
+newtype Product a = Product { getProduct :: a }
+                  deriving (Show, Eq, Ord)
+instance Num a => Semigroup (Product a) where x <> y = Product $ getProduct x * getProduct y
+instance Num a => Monoid (Product a) where mempty = Product 1
 
 product' :: (Num a, Foldable f) => f a -> a
-product' = undefined
+product' = getProduct . foldMap Product
 
 -- maximum' xs should return the maximum element of xs.
 --   Nothing means that xs was empty.
+newtype Max a = Max { getMax :: Maybe a }
+instance Ord a => Semigroup (Max a) where
+  Max (Just a) <> Max (Just b) = Max (Just (max a b))
+  Max (Just a) <> Max Nothing  = Max (Just a)
+  Max Nothing  <> b            = b
+instance Ord a => Monoid (Max a) where
+  mempty = Max Nothing
+
 maximum' :: (Ord a, Foldable f) => f a -> Maybe a
-maximum' = undefined
+maximum' = getMax . foldMap (Max . Just)
 
 -- class Traversable f where
 --   traverse :: Applicative m => (a -> m b) -> f a -> m (f b)
 
 -- Bonus: define foldr using foldMap
+data Endo a = Endo { getEndo :: a -> a }
+instance Semigroup (Endo a) where Endo f <> Endo g = Endo (f . g)
+instance Monoid (Endo a) where mempty = Endo id
+
 foldrFromFoldMap :: (Foldable f) => (a -> b -> b) -> b -> f a -> b
-foldrFromFoldMap = undefined
+foldrFromFoldMap f x t = getEndo (foldMap (\x -> Endo (f x)) t) x
 
 -- Bonus: define foldMap using traverse
+newtype Writer m a = Writer { getWriter :: (m,a) }
+                  deriving (Functor)
+instance Monoid m => Applicative (Writer m) where
+  pure x = Writer (mempty, x)
+  Writer (m1, f) <*> Writer (m2, x) = Writer (m1 <> m2, f x)
+
 foldMapFromTraverse :: (Traversable f, Monoid m) => (a -> m) -> f a -> m
-foldMapFromTraverse = undefined
+foldMapFromTraverse f t = fst (getWriter (traverse (\x -> Writer (f x, ())) t))
 
 -- Bonus: define fmap using traverse
+newtype Id a = Id { getId :: a }
+            deriving (Functor)
+instance Applicative Id where
+  pure x = Id x
+  Id f <*> Id x = Id (f x)
+
 fmapFromTraverse :: (Traversable f) => (a -> b) -> f a -> f b
-fmapFromTraverse = undefined
+fmapFromTraverse f t = getId (traverse (Id . f) t)
 
 --------------------------------------------------------------------------------
