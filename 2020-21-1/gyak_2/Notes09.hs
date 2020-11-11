@@ -137,11 +137,16 @@ data Tree a = Leaf a
 --   runParser pIntTree "[[], [2]]"        ~~>  Node [Node [], Node [Leaf 2]]
 --   runParser pIntTree "[0, [1], [[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
 
+-- To handle whitespace:
 lexeme :: Parser a -> Parser a
 lexeme p = p <* ws
 
+char' :: Char -> Parser ()
 char' c = lexeme (char c)
+
+int' :: Parser Integer
 int' = lexeme int
+
 
 brackets :: Parser a -> Parser a
 brackets p = char' '[' *> p <* char' ']'
