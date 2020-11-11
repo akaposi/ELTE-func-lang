@@ -2,8 +2,9 @@
 module Notes08 where
 
 import Data.Char
-import Control.Applicative (Alternative(..))
-import Control.Monad (ap)
+import Data.List
+import Control.Applicative
+import Control.Monad 
 
 -------------------------------------------------------------------------------
 
@@ -47,7 +48,7 @@ satisfy f = Parser $ \s -> case s of
 --   runParser (char 'a') "abc" == Just ((), "bc")
 --   runParser (char 'a') "bcd" == Nothing
 char :: Char -> Parser ()
-char = undefined
+char c = satisfy (== c) *> pure ()
 
 -- The parser anyChar should succeed if the input string is not empty, and return its first character.
 -- Examples:
@@ -55,14 +56,14 @@ char = undefined
 --   runParser anyChar "()" == Just ('(', ")")
 --   runParser anyChar "abc" == Just ('a', "bc")
 anyChar :: Parser Char
-anyChar = undefined
+anyChar = satisfy (const True)
 
 -- The parser `string s` should succeed if the input string starts with the string s.
 --   runParser (string "abc") "abdef" == Nothing
 --   runParser (string "") "abcdef" == Just ((), "abcdef")
 --   runParser (string "abc") "abcdef" == Just ((), "def")
 string :: String -> Parser ()
-string = undefined
+string s = forM_ s char
 
 -------------------------------------------------------------------------------
 
@@ -87,10 +88,14 @@ instance Alternative Parser where
 --  `many p` always succeeds.
 --  `some p` succeeds if the first run of p succeeded.
 
-some :: Alternative f => f a -> f [a]
-many :: Alternative f => f a -> f [a]
-some = undefined
-many = undefined
+some' :: Alternative f => f a -> f [a]
+many' :: Alternative f => f a -> f [a]
+-- `some' p` uses p at least 1 times
+--   => `some' p` uses p once, and then uses p again any number of times.
+some' p = (:) <$> p <*> many p
+-- `many' p` uses p any number of times
+--   => `many' p` uses p either (at least 1 times) or doesn't use p.
+many' p = some p <|> pure []
 
 -- Examples:
 --   runParser (some (char 'a')) "aaabbb" = Just ("aaa", "bbb")
@@ -102,24 +107,25 @@ many = undefined
 
 -- The parser digit should parse a digit between 0 and 9.
 digit :: Parser Integer
-digit = undefined
+digit = fromIntegral . digitToInt <$> satisfy isDigit
 
 -- The parser digit should parse a positive integer
 posInt :: Parser Integer
-posInt = undefined
+posInt = foldl' (\x y -> 10*x+y) 0 <$> some digit
 
 -- The parser int should parse a positive or negative integer
 int :: Parser Integer
-int = undefined
+int = negInt <|> posInt
+  where negInt = char '-' *> (negate <$> posInt)
 
 -- The parser `space` should parse a single whitespace character.
 --  Hint: use `isSpace :: Char -> Bool`
 space :: Parser ()
-space = undefined
+space = satisfy isSpace *> pure ()
 
 -- The parser `ws` should parse as many whitespace characters as possible.
 ws :: Parser ()
-ws = undefined
+ws = many space *> pure ()
 
 --------------------------------------------------------------------------------
 -- Parsing a simple configuration file.
@@ -127,10 +133,23 @@ ws = undefined
 --  identifier and value is an integer.
 
 pLine :: Parser (String, Integer)
-pLine = undefined
+pLine = do
+  ws
+  k <- some (satisfy isAlphaNum)
+  guard (isAlpha (head k)) 
+  -- k is any non-empty string of alphanumeric characters, starting from an alphabetic character.
+  ws
+  char '='
+  ws
+  v <- int
+  pure (k, v)
 
 pFile :: Parser [(String, Integer)]
-pFile = undefined
+pFile = do
+  kvs <- many pLine
+  ws
+  eof
+  pure kvs
 
 test1, test2, test3, test4 :: String
 test1 = ""
