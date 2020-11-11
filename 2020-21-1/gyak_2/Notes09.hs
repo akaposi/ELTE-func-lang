@@ -100,7 +100,10 @@ instance Alternative Parser where
 --     ...
 -- It fails if it cannot parse p at least once.  
 sepBy1 :: Parser a -> Parser sep -> Parser [a]
-sepBy1 p sep = undefined
+sepBy1 p sep = (:) <$> p <*> many (sep *> p)
+
+sepByWithSep1 :: Parser a -> Parser sep -> Parser (a, [(sep, a)])
+sepByWithSep1 p sep = (,) <$> p <*> many ((,) <$> sep <*> p)
 
 -- sepBy p sep parses either any sequence of the form
 --     p 
@@ -108,7 +111,7 @@ sepBy1 p sep = undefined
 --     ...
 --   or returns the empty list.
 sepBy :: Parser a -> Parser sep -> Parser [a]
-sepBy p sep = undefined
+sepBy p sep = sepBy1 p sep <|> pure []
 
 -------------------------------------------------------------------------------
 
@@ -134,8 +137,18 @@ data Tree a = Leaf a
 --   runParser pIntTree "[[], [2]]"        ~~>  Node [Node [], Node [Leaf 2]]
 --   runParser pIntTree "[0, [1], [[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
 
+lexeme :: Parser a -> Parser a
+lexeme p = p <* ws
+
+char' c = lexeme (char c)
+int' = lexeme int
+
+brackets :: Parser a -> Parser a
+brackets p = char' '[' *> p <* char' ']'
+
 pIntTree :: Parser (Tree Integer)
-pIntTree = undefined
+pIntTree = (Leaf <$> int')
+       <|> (Node <$> brackets (sepBy pIntTree (char' ',')))
 
 -------------------------------------------------------------------------------
 
@@ -151,6 +164,12 @@ data IntExpr = Value Integer
 --   +, -, *, /
 --   parentheses
 
+
+parens :: Parser a -> Parser a
+parens p = char' '(' *> p <* char' ')'
+
+
+
 -- We define several subparsers, to deal with the diffferent precedences of the operators.
 
 -- pValueOrParens should either parse an integer value, 
@@ -163,9 +182,23 @@ pExprPlus      :: Parser IntExpr
 
 pExpr          :: Parser IntExpr
 
-pValueOrParens = undefined
-pExprTimes     = undefined
-pExprPlus      = undefined
+pValueOrParens = (Value <$> int')
+             <|> parens pExpr
+
+-- pExprTimes = _ <$> sepByWithSep1 pValueOrParens (char '*' <|> char '/')
+pExprTimes = do acc <- pValueOrParens; go acc
+  where go acc = goTimes acc
+             <|> goDiv acc
+             <|> pure acc
+        goTimes x = do char '*'; y <- pValueOrParens; go (Times x y)
+        goDiv x   = do char '/'; y <- pValueOrParens; go (Div x y)
+
+pExprPlus = do acc <- pExprTimes; go acc
+  where go acc = goPlus acc
+             <|> goMinus acc
+             <|> pure acc
+        goPlus x = do char '+'; y <- pExprTimes; go (Plus x y)
+        goMinus x   = do char '-'; y <- pExprTimes; go (Minus x y)
 
 pExpr          = pExprPlus
 
