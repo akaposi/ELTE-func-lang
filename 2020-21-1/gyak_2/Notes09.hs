@@ -190,15 +190,15 @@ pExprTimes = do acc <- pValueOrParens; go acc
   where go acc = goTimes acc
              <|> goDiv acc
              <|> pure acc
-        goTimes x = do char '*'; y <- pValueOrParens; go (Times x y)
-        goDiv x   = do char '/'; y <- pValueOrParens; go (Div x y)
+        goTimes x = do char' '*'; y <- pValueOrParens; go (Times x y)
+        goDiv x   = do char' '/'; y <- pValueOrParens; go (Div x y)
 
 pExprPlus = do acc <- pExprTimes; go acc
   where go acc = goPlus acc
              <|> goMinus acc
              <|> pure acc
-        goPlus x = do char '+'; y <- pExprTimes; go (Plus x y)
-        goMinus x   = do char '-'; y <- pExprTimes; go (Minus x y)
+        goPlus x = do char' '+'; y <- pExprTimes; go (Plus x y)
+        goMinus x   = do char' '-'; y <- pExprTimes; go (Minus x y)
 
 pExpr          = pExprPlus
 
