@@ -2,8 +2,9 @@
 module Notes08 where
 
 import Data.Char
-import Control.Applicative (Alternative(..))
-import Control.Monad (ap)
+import Data.List
+import Control.Applicative
+import Control.Monad 
 
 -------------------------------------------------------------------------------
 
@@ -47,7 +48,7 @@ satisfy f = Parser $ \s -> case s of
 --   runParser (char 'a') "abc" == Just ((), "bc")
 --   runParser (char 'a') "bcd" == Nothing
 char :: Char -> Parser ()
-char = undefined
+char c = satisfy (== c) *> pure ()
 
 -- The parser anyChar should succeed if the input string is not empty, and return its first character.
 -- Examples:
@@ -55,14 +56,14 @@ char = undefined
 --   runParser anyChar "()" == Just ('(', ")")
 --   runParser anyChar "abc" == Just ('a', "bc")
 anyChar :: Parser Char
-anyChar = undefined
+anyChar = satisfy (const True)
 
 -- The parser `string s` should succeed if the input string starts with the string s.
 --   runParser (string "abc") "abdef" == Nothing
 --   runParser (string "") "abcdef" == Just ((), "abcdef")
 --   runParser (string "abc") "abcdef" == Just ((), "def")
 string :: String -> Parser ()
-string = undefined
+string s = forM_ s char
 
 -------------------------------------------------------------------------------
 
@@ -83,59 +84,88 @@ instance Alternative Parser where
 
 -------------------------------------------------------------------------------
 
--- The parser `some p` and `many p` both try to use the parser p as many times as possible.
---  `many p` always succeeds.
---  `some p` succeeds if the first run of p succeeded.
+-- Use `some` and/or `many` and/or `<|>` to define sepBy1 and sepBy.
 
-some :: Alternative f => f a -> f [a]
-many :: Alternative f => f a -> f [a]
-some = undefined
-many = undefined
+-- `sepBy1 p sep` parses the regular expression p (sep p)*, 
+--   i.e. any sequence of the form
+--     p 
+--     p sep p
+--     p sep p sep p
+--     ...
+-- It fails if it cannot parse p at least once.  
+sepBy1 :: Parser a -> Parser sep -> Parser [a]
+sepBy1 p sep = undefined
 
--- Examples:
---   runParser (some (char 'a')) "aaabbb" = Just ("aaa", "bbb")
---   runParser (some (char 'a')) "bbb" = Nothing
---   runParser (many (char 'a')) "aaabbb" = Just ("aaa", "bbb")
---   runParser (many (char 'a')) "bbb" = Just ("", "bbb")
+-- sepBy p sep parses either any sequence of the form
+--     p 
+--     p sep p
+--     ...
+--   or returns the empty list.
+sepBy :: Parser a -> Parser sep -> Parser [a]
+sepBy p sep = undefined
 
 -------------------------------------------------------------------------------
 
--- The parser digit should parse a digit between 0 and 9.
 digit :: Parser Integer
-digit = undefined
+digit = fromIntegral . digitToInt <$> satisfy isDigit
 
--- The parser digit should parse a positive integer
 posInt :: Parser Integer
-posInt = undefined
+posInt = foldl' (\x y -> 10*x+y) 0 <$> some digit
 
--- The parser int should parse a positive or negative integer
 int :: Parser Integer
-int = undefined
+int = negInt <|> posInt
+  where negInt = char '-' *> (negate <$> posInt)
 
--- The parser `space` should parse a single whitespace character.
---  Hint: use `isSpace :: Char -> Bool`
-space :: Parser ()
-space = undefined
+data Tree a = Leaf a 
+            | Node [Tree a]
+            deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
--- The parser `ws` should parse as many whitespace characters as possible.
-ws :: Parser ()
-ws = undefined
+-- pIntTree should parse trees of integers.
+-- Examples:
+--   runParser pIntTree "0"                ~~>  Leaf 0
+--   runParser pIntTree "[]"               ~~>  Node []
+--   runParser pIntTree "[0, 1]"           ~~>  Node [Leaf 0, Leaf 1]
+--   runParser pIntTree "[[], [2]]"        ~~>  Node [Node [], Node [Leaf 2]]
+--   runParser pIntTree "[0, [1], [[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
 
---------------------------------------------------------------------------------
--- Parsing a simple configuration file.
--- A configuration file is a list of lines "key = value" where key is an 
---  identifier and value is an integer.
+pIntTree :: Parser (Tree Integer)
+pIntTree = undefined
 
-pLine :: Parser (String, Integer)
-pLine = undefined
+-------------------------------------------------------------------------------
 
-pFile :: Parser [(String, Integer)]
-pFile = undefined
+data IntExpr = Value Int
+             | Plus  IntExpr IntExpr
+             | Minus IntExpr IntExpr
+             | Times IntExpr IntExpr
+             | Div   IntExpr IntExpr
+             deriving (Eq, Ord, Show)
 
-test1, test2, test3, test4 :: String
-test1 = ""
-test2 = "key = 10"
-test3 = "key1 = 10 \nkey2 = 100"
-test4 = "  key   =   10   \n   key2  =   0   \n   key3  =  -10 "
+-- Parser for expressions built from 
+--   integer constants,
+--   +, -, *, /
+--   parentheses
 
---------------------------------------------------------------------------------
+-- We define several subparsers, to deal with the diffferent precedences of the operators.
+
+-- pValueOrParens should either parse an integer value, 
+--   or any expression wrapped in parentheses.
+pValueOrParens :: Parser IntExpr
+-- pExprTimes should parse any expression built from pValueOrParens, * and /
+pExprTimes     :: Parser IntExpr
+-- pExprPlus should parse any expression built from pExprTimes, + and -
+pExprPlus      :: Parser IntExpr
+
+pExpr          :: Parser IntExpr
+
+pValueOrParens = undefined
+pExprTimes     = undefined
+pExprPlus      = undefined
+
+pExpr          = pExprPlus
+
+-- Examples:
+--  runParser pExpr  "((((2))))"       == Value 2
+--  runParser pExpr  "1 * 2 / 3 * 4"   == ((Value 1 `Times` Value 2) `Div` Value 3) `Times` Value 4
+--  runParser pExpr  "1 + 2 - 3 + 4"   == ((Value 1 `Plus` Value 2) `Minus` Value 3) `Plus` Value 4
+--  runParser pExpr  "1 * 2 + 3 * 4"   == (Value 1 `Times` Value 2) `Plus` (Value 3 `Times` Value 4)
+--  runParser pExpr  "1 * (2 + 3) * 4" == Value 1 `Times` (Value 2 `Plus` Value 3) `Times` Value 4
