@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable, MonadComprehensions #-}
-module Notes08 where
+module Notes09 where
 
 import Data.Char
 import Data.List
@@ -64,6 +64,12 @@ anyChar = satisfy (const True)
 --   runParser (string "abc") "abcdef" == Just ((), "def")
 string :: String -> Parser ()
 string s = forM_ s char
+
+space :: Parser ()
+space = satisfy isSpace *> pure ()
+
+ws :: Parser ()
+ws = many space *> pure ()
 
 -------------------------------------------------------------------------------
 
@@ -133,7 +139,7 @@ pIntTree = undefined
 
 -------------------------------------------------------------------------------
 
-data IntExpr = Value Int
+data IntExpr = Value Integer
              | Plus  IntExpr IntExpr
              | Minus IntExpr IntExpr
              | Times IntExpr IntExpr
