@@ -263,7 +263,6 @@ digit = undefined
 posInt :: Int
 posInt = undefined
 
-
 -- Írj egy parsert, ami felsimeri Int-ek vesszővel elválasztott listáit!
 -- Példák: "[]", "[    12 , 34555 ]", "[0,1,2,3]"
 intList :: Parser [Int]
