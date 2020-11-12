@@ -110,6 +110,26 @@ sepBy1 p sep = undefined
 sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy p sep = undefined
 
+-- runParser haskellList "[]"      : []
+-- runParser haskellList "[1,2]"   : [1, 2]
+-- runParser haskellList "[1,2,7]" : [1, 2, 7]
+haskellList :: Parser [Integer]
+haskellList = do
+  char '['
+  l <- sepBy int (char ',')
+  char ']'
+  pure $ l
+
+-- runParser nonEmptyHaskellList "[]"      : fails
+-- runParser nonEmptyHaskellList "[1,2]"   : [1, 2]
+-- runParser nonEmptyHaskellList "[1,2,7]" : [1, 2, 7]
+nonEmptyHaskellList :: Parser [Integer]
+nonEmptyHaskellList = do
+  char '['
+  l <- sepBy1 int (char ',')
+  char ']'
+  pure $ l
+
 -------------------------------------------------------------------------------
 
 digit :: Parser Integer
@@ -139,6 +159,15 @@ pIntTree = undefined
 
 -------------------------------------------------------------------------------
 
+data IntExpr0 = Value0 Integer
+              | Plus0  IntExpr0 IntExpr0
+
+pExpr0 :: Parser IntExpr0
+pExpr0 = do
+  l <- sepBy1 int (char '+') 
+  -- l :: [Integer]
+  pure $ foldl1' Plus0 (fmap Value0 l)
+
 data IntExpr = Value Integer
              | Plus  IntExpr IntExpr
              | Minus IntExpr IntExpr
@@ -150,6 +179,8 @@ data IntExpr = Value Integer
 --   integer constants,
 --   +, -, *, /
 --   parentheses
+
+-- 1 + 2 * 3   ->   1 + (2 * 3)
 
 -- We define several subparsers, to deal with the diffferent precedences of the operators.
 
