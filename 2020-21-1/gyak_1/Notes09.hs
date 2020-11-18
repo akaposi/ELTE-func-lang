@@ -179,8 +179,6 @@ pAtom2 =
   <|> (BoolLit2 <$> ((True <$ string' "true") <|> (False <$ string' "false")))
   <|> (char' '(' *> pEq2 <* char' ')')
 
-
--- 2 operátor ugyanazon a szinten
 pMul2 :: Parser Exp2
 pMul2 = foldr1 Mul2 <$> sepBy1 pAtom2 (char' '*')
 
