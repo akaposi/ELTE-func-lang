@@ -90,8 +90,6 @@ instance Alternative Parser where
 
 -------------------------------------------------------------------------------
 
--- Use `some` and/or `many` and/or `<|>` to define sepBy1 and sepBy.
-
 -- `sepBy1 p sep` parses the regular expression p (sep p)*, 
 --   i.e. any sequence of the form
 --     p 
@@ -125,39 +123,6 @@ int :: Parser Integer
 int = negInt <|> posInt
   where negInt = char '-' *> (negate <$> posInt)
 
-data Tree a = Leaf a 
-            | Node [Tree a]
-            deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-
--- pIntTree should parse trees of integers.
--- Examples:
---   runParser pIntTree "0"                ~~>  Leaf 0
---   runParser pIntTree "[]"               ~~>  Node []
---   runParser pIntTree "[0, 1]"           ~~>  Node [Leaf 0, Leaf 1]
---   runParser pIntTree "[[], [2]]"        ~~>  Node [Node [], Node [Leaf 2]]
---   runParser pIntTree "[0, [1], [[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
-
--- To handle whitespace:
-lexeme :: Parser a -> Parser a
-lexeme p = p <* ws
-
-char' :: Char -> Parser ()
-char' c = lexeme (char c)
-
-int' :: Parser Integer
-int' = lexeme int
-
-
-brackets :: Parser a -> Parser a
-brackets p = char' '[' *> p <* char' ']'
-
-pList :: Parser [Integer]
-pList = char '[' *> sepBy int (char ',') <* char ']'
-
-pIntTree :: Parser (Tree Integer)
-pIntTree = (Leaf <$> int')
-       <|> (Node <$> brackets (sepBy pIntTree (char' ',')))
-
 -------------------------------------------------------------------------------
 
 data IntExpr = Value Integer
@@ -168,15 +133,12 @@ data IntExpr = Value Integer
              deriving (Eq, Ord, Show)
 
 -- Parser for expressions built from 
---   integer constants,
---   +, -, *, /
---   parentheses
-
+--   integer constants, parentheses
+--   *, /
+--   +, -
 
 parens :: Parser a -> Parser a
-parens p = char' '(' *> p <* char' ')'
-
-
+parens p = char '(' *> p <* char ')'
 
 -- We define several subparsers, to deal with the diffferent precedences of the operators.
 
@@ -188,12 +150,13 @@ pExprTimes     :: Parser IntExpr
 -- pExprPlus should parse any expression built from pExprTimes, + and -
 pExprPlus      :: Parser IntExpr
 
-pExpr          :: Parser IntExpr
-
 pValueOrParens = (Value <$> int')
-             <|> parens pExpr
+             <|> parens pExprPlus
 
--- pExprTimes = _ <$> sepByWithSep1 pValueOrParens (char '*' <|> char '/')
+-- pExprTimes = do
+--   (x, ys) <- sepByWithSep1 pValueOrParens ((char '*' *> pure Times) <|> (char '/' *> pure Div))
+--   pure $ foldl (\a (f, b) -> f a b) x ys
+
 pExprTimes = do acc <- pValueOrParens; go acc
   where go acc = goTimes acc
              <|> goDiv acc
@@ -205,14 +168,77 @@ pExprPlus = do acc <- pExprTimes; go acc
   where go acc = goPlus acc
              <|> goMinus acc
              <|> pure acc
-        goPlus x = do char' '+'; y <- pExprTimes; go (Plus x y)
-        goMinus x   = do char' '-'; y <- pExprTimes; go (Minus x y)
+        goPlus x  = do char' '+'; y <- pExprTimes; go (Plus x y)
+        goMinus x = do char' '-'; y <- pExprTimes; go (Minus x y)
 
-pExpr          = pExprPlus
+-- To handle whitespace:
+lexeme :: Parser a -> Parser a
+lexeme p = p <* ws
 
--- Examples:
---  runParser pExpr  "((((2))))"       == Value 2
---  runParser pExpr  "1 * 2 / 3 * 4"   == ((Value 1 `Times` Value 2) `Div` Value 3) `Times` Value 4
---  runParser pExpr  "1 + 2 - 3 + 4"   == ((Value 1 `Plus` Value 2) `Minus` Value 3) `Plus` Value 4
---  runParser pExpr  "1 * 2 + 3 * 4"   == (Value 1 `Times` Value 2) `Plus` (Value 3 `Times` Value 4)
---  runParser pExpr  "1 * (2 + 3) * 4" == Value 1 `Times` (Value 2 `Plus` Value 3) `Times` Value 4
+char' :: Char -> Parser ()
+char' c = lexeme (char c)
+
+string' :: String -> Parser ()
+string' s = lexeme (string s)
+
+int' :: Parser Integer
+int' = lexeme int
+
+-- Exercise: 
+--  Modify this parser to handle whitespace correctly
+pList :: Parser [Integer]
+pList = char '[' *> sepBy int (char ',') <* char ']'
+
+-- Keywords and identifiers:
+--   keywords in Haskell : data let in where ...
+
+-- p = do
+--   string "let"
+--   x <- some (satisfy isAlpha)
+--   char '='
+--   x <- some (satisfy isAlpha)
+--   string "in"
+--   x <- some (satisfy isAlpha)
+--   pure _
+
+-- Now "letx = y inz" is accepted by p. We don't want this.
+-- "let let = let in let" is also accepted.
+
+keywords :: [String]
+keywords = ["let", "in", "where"]
+
+pLetKeyword :: Parser ()
+pLetKeyword = do
+  s <- some (satisfy isAlpha)
+  guard (s == "let")
+  return ()
+
+pIdent :: Parser String
+pIdent = do
+  s <- some (satisfy isAlpha)
+  guard (not $ s `elem` keywords)
+  pure s
+
+--------------------------------------------------------------------------------
+
+data Expr = Var String           --   x
+          | App Expr Expr        --   u v                 (left associative)
+          | Let String Expr Expr --   let x = u in v
+          | Lam String Expr      --   \x -> u   
+                                 -- Bonus: \x y z -> u
+          deriving(Show, Ord, Eq)
+
+pVarOrParens :: Parser Expr
+pVarOrParens = undefined
+
+pApp :: Parser Expr
+pApp = undefined
+
+pLet :: Parser Expr 
+pLet = undefined
+
+pLam :: Parser Expr 
+pLam = undefined
+
+pExpr :: Parser Expr
+pExpr = undefined
