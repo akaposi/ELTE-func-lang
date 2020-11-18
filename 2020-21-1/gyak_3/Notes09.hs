@@ -100,7 +100,7 @@ instance Alternative Parser where
 --     ...
 -- It fails if it cannot parse p at least once.  
 sepBy1 :: Parser a -> Parser sep -> Parser [a]
-sepBy1 p sep = undefined
+sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 
 -- sepBy p sep parses either any sequence of the form
 --     p 
@@ -108,7 +108,7 @@ sepBy1 p sep = undefined
 --     ...
 --   or returns the empty list.
 sepBy :: Parser a -> Parser sep -> Parser [a]
-sepBy p sep = undefined
+sepBy p sep = sepBy1 p sep <|> pure []
 
 -- runParser haskellList "[]"      : []
 -- runParser haskellList "[1,2]"   : [1, 2]
@@ -154,8 +154,15 @@ data Tree a = Leaf a
 --   runParser pIntTree "[[],[2]]"       ~~>  Node [Node [], Node [Leaf 2]]
 --   runParser pIntTree "[0,[1],[[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
 
+brackets :: Parser p -> Parser p
+brackets p = char '[' *> p <* char ']'
+
+parens :: Parser p -> Parser p
+parens p = char '(' *> p <* char ')'
+
 pIntTree :: Parser (Tree Integer)
-pIntTree = undefined
+pIntTree = (Node <$> brackets (sepBy pIntTree (char ',')))
+       <|> (Leaf <$> int)
 
 -------------------------------------------------------------------------------
 
@@ -195,13 +202,25 @@ pExprPlus      :: Parser IntExpr
 pExpr          :: Parser IntExpr
 pExpr          = pExprPlus
 
-pValueOrParens = undefined
-pExprTimes     = undefined
-pExprPlus      = undefined
+pValueOrParens = parens pExpr
+             <|> Value <$> int
+pExprTimes = do acc <- pValueOrParens; go acc
+  where go acc = goTimes acc
+             <|> goDiv acc
+             <|> pure acc
+        goTimes x = do char '*'; y <- pValueOrParens; go (Times x y)
+        goDiv x   = do char '/'; y <- pValueOrParens; go (Div x y)
+
+pExprPlus = do acc <- pExprTimes; go acc
+  where go acc = goPlus acc
+             <|> goMinus acc
+             <|> pure acc
+        goPlus x  = do char '+'; y <- pExprTimes; go (Plus x y)
+        goMinus x = do char '-'; y <- pExprTimes; go (Minus x y)
 
 -- Examples:
---  runParser pExpr  "((((2))))"       == Value 2
---  runParser pExpr  "1*2/3*4"   == ((Value 1 `Times` Value 2) `Div` Value 3) `Times` Value 4
---  runParser pExpr  "1+2-3+4"   == ((Value 1 `Plus` Value 2) `Minus` Value 3) `Plus` Value 4
---  runParser pExpr  "1*2+3*4"   == (Value 1 `Times` Value 2) `Plus` (Value 3 `Times` Value 4)
---  runParser pExpr  "1*(2+3)*4" == Value 1 `Times` (Value 2 `Plus` Value 3) `Times` Value 4
+--  runParser pExpr  "((((2))))"  ==  Value 2
+--  runParser pExpr  "1*2/3*4"    ==  ((Value 1 `Times` Value 2) `Div` Value 3) `Times` Value 4
+--  runParser pExpr  "1+2-3+4"    ==  ((Value 1 `Plus` Value 2) `Minus` Value 3) `Plus` Value 4
+--  runParser pExpr  "1*2+3*4"    ==  (Value 1 `Times` Value 2) `Plus` (Value 3 `Times` Value 4)
+--  runParser pExpr  "1*(2+3)*4"  ==  Value 1 `Times` (Value 2 `Plus` Value 3) `Times` Value 4

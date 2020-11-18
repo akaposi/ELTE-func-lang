@@ -23,6 +23,19 @@ instance Monad Parser where
     Just (x, s') -> runParser (f x) s'
     Nothing      -> Nothing
 
+putP :: String -> Parser ()
+putP s = Parser $ \_ -> Just ((), s)
+
+getP :: Parser String
+getP = Parser $ \s -> Just (s, s)
+
+empty' :: Parser a
+empty' = Parser $ \_ -> Nothing
+
+guard' :: Bool -> Parser ()
+guard' True  = pure ()
+guard' False = empty'
+
 -------------------------------------------------------------------------------
 
 -- The `eof` (end of file) parser.
@@ -32,13 +45,27 @@ eof = Parser $ \s -> case s of
   [] -> Just ((), [])
   _  -> Nothing
 
+eof' :: Parser ()
+eof' = do
+  input <- getP
+  guard' (null input)
+
 -- The parser `satisfy p` succeeds if the input string starts with a character 
 --  that satisfies the predicate p (and consumes that character), and fails otherwise.
 satisfy :: (Char -> Bool) -> Parser Char
-satisfy f = Parser $ \s -> case s of
-  c:cs | f c       -> Just (c, cs)
+satisfy p = Parser $ \s -> case s of
+  c:cs | p c       -> Just (c, cs)
        | otherwise -> Nothing
   [] -> Nothing
+
+satisfy' :: (Char -> Bool) -> Parser Char
+satisfy' p = do
+  input <- getP
+  case input of
+    c:cs | p c -> do
+      putP cs
+      pure c
+    _ -> empty
 
 -------------------------------------------------------------------------------
 
@@ -88,14 +115,22 @@ instance Alternative Parser where
 --  `many p` always succeeds.
 --  `some p` succeeds if the first run of p succeeded.
 
-some' :: Alternative f => f a -> f [a]
-many' :: Alternative f => f a -> f [a]
+some' :: Parser a -> Parser [a]
+many' :: Parser a -> Parser [a]
 -- `some' p` uses p at least 1 times
 --   => `some' p` uses p once, and then uses p again any number of times.
-some' p = (:) <$> p <*> many p
+some' p = do
+  x  <- p
+  xs <- many' p
+  pure $ (x : xs)
+--  (:) <$> p <*> many p
+
 -- `many' p` uses p any number of times
 --   => `many' p` uses p either (at least 1 times) or doesn't use p.
-many' p = some p <|> pure []
+many' p = some p
+      <|> pure []
+
+--    many p     /=     pure [] <|> some p      
 
 -- Examples:
 --   runParser (some (char 'a')) "aaabbb" = Just ("aaa", "bbb")
@@ -107,7 +142,11 @@ many' p = some p <|> pure []
 
 -- The parser digit should parse a digit between 0 and 9.
 digit :: Parser Integer
-digit = fromIntegral . digitToInt <$> satisfy isDigit
+-- digit = fromIntegral . digitToInt <$> satisfy isDigit
+digit = do
+  c <- satisfy isDigit
+  pure (fromIntegral (digitToInt c))
+-- <$> : same as fmap
 
 -- The parser digit should parse a positive integer
 posInt :: Parser Integer
@@ -135,6 +174,9 @@ ws = many space *> pure ()
 pLine :: Parser (String, Integer)
 pLine = do
   ws
+
+  -- k <- some isAlpha 
+
   k <- some (satisfy isAlphaNum)
   guard (isAlpha (head k)) 
   -- k is any non-empty string of alphanumeric characters, starting from an alphabetic character.
