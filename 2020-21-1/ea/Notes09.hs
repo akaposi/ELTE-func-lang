@@ -67,8 +67,12 @@ some_ p = () <$ some p
 optional :: Parser a -> Parser (Maybe a)
 optional pa = (Just <$> pa) <|> pure Nothing
 
+-- a^nb^n
+ab1 :: Parser ()
+ab1 = char 'a' *> ab *> char 'b'
+
 ab :: Parser ()
-ab = (char 'a' >> (ab <|> pure ()) >> char 'b')
+ab = ab1 <|> pure ()
 
 -- kiegyensúlyozott zárójelezés (minden nyitáshoz kell egy zárás)
 --   (())((()))  OK
