@@ -151,6 +151,9 @@ int' = lexeme int
 brackets :: Parser a -> Parser a
 brackets p = char' '[' *> p <* char' ']'
 
+pList :: Parser [Integer]
+pList = char '[' *> sepBy int (char ',') <* char ']'
+
 pIntTree :: Parser (Tree Integer)
 pIntTree = (Leaf <$> int')
        <|> (Node <$> brackets (sepBy pIntTree (char' ',')))

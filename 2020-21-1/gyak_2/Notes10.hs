@@ -90,8 +90,6 @@ instance Alternative Parser where
 
 -------------------------------------------------------------------------------
 
--- Use `some` and/or `many` and/or `<|>` to define sepBy1 and sepBy.
-
 -- `sepBy1 p sep` parses the regular expression p (sep p)*, 
 --   i.e. any sequence of the form
 --     p 
@@ -102,6 +100,9 @@ instance Alternative Parser where
 sepBy1 :: Parser a -> Parser sep -> Parser [a]
 sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 
+sepByWithSep1 :: Parser a -> Parser sep -> Parser (a, [(sep, a)])
+sepByWithSep1 p sep = (,) <$> p <*> many ((,) <$> sep <*> p)
+
 -- sepBy p sep parses either any sequence of the form
 --     p 
 --     p sep p
@@ -109,26 +110,6 @@ sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 --   or returns the empty list.
 sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy p sep = sepBy1 p sep <|> pure []
-
--- runParser haskellList "[]"      : []
--- runParser haskellList "[1,2]"   : [1, 2]
--- runParser haskellList "[1,2,7]" : [1, 2, 7]
-haskellList :: Parser [Integer]
-haskellList = do
-  char '['
-  l <- sepBy int (char ',')
-  char ']'
-  pure $ l
-
--- runParser nonEmptyHaskellList "[]"      : fails
--- runParser nonEmptyHaskellList "[1,2]"   : [1, 2]
--- runParser nonEmptyHaskellList "[1,2,7]" : [1, 2, 7]
-nonEmptyHaskellList :: Parser [Integer]
-nonEmptyHaskellList = do
-  char '['
-  l <- sepBy1 int (char ',')
-  char ']'
-  pure $ l
 
 -------------------------------------------------------------------------------
 
@@ -142,38 +123,7 @@ int :: Parser Integer
 int = negInt <|> posInt
   where negInt = char '-' *> (negate <$> posInt)
 
-data Tree a = Leaf a 
-            | Node [Tree a]
-            deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-
--- pIntTree should parse trees of integers.
--- Examples:
---   runParser pIntTree "0"              ~~>  Leaf 0
---   runParser pIntTree "[]"             ~~>  Node []
---   runParser pIntTree "[0,1]"          ~~>  Node [Leaf 0, Leaf 1]
---   runParser pIntTree "[[],[2]]"       ~~>  Node [Node [], Node [Leaf 2]]
---   runParser pIntTree "[0,[1],[[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
-
-brackets :: Parser p -> Parser p
-brackets p = char '[' *> p <* char ']'
-
-parens :: Parser p -> Parser p
-parens p = char '(' *> p <* char ')'
-
-pIntTree :: Parser (Tree Integer)
-pIntTree = (Node <$> brackets (sepBy pIntTree (char ',')))
-       <|> (Leaf <$> int)
-
 -------------------------------------------------------------------------------
-
-data IntExpr0 = Value0 Integer
-              | Plus0  IntExpr0 IntExpr0
-
-pExpr0 :: Parser IntExpr0
-pExpr0 = do
-  l <- sepBy1 int (char '+') 
-  -- l :: [Integer]
-  pure $ foldl1' Plus0 (fmap Value0 l)
 
 data IntExpr = Value Integer
              | Plus  IntExpr IntExpr
@@ -183,11 +133,12 @@ data IntExpr = Value Integer
              deriving (Eq, Ord, Show)
 
 -- Parser for expressions built from 
---   integer constants,
---   +, -, *, /
---   parentheses
+--   integer constants, parentheses
+--   *, /
+--   +, -
 
--- 1 + 2 * 3   ->   1 + (2 * 3)
+parens :: Parser a -> Parser a
+parens p = char '(' *> p <* char ')'
 
 -- We define several subparsers, to deal with the diffferent precedences of the operators.
 
@@ -199,28 +150,95 @@ pExprTimes     :: Parser IntExpr
 -- pExprPlus should parse any expression built from pExprTimes, + and -
 pExprPlus      :: Parser IntExpr
 
-pExpr          :: Parser IntExpr
-pExpr          = pExprPlus
+pValueOrParens = (Value <$> int')
+             <|> parens pExprPlus
 
-pValueOrParens = parens pExpr
-             <|> Value <$> int
+-- pExprTimes = do
+--   (x, ys) <- sepByWithSep1 pValueOrParens ((char '*' *> pure Times) <|> (char '/' *> pure Div))
+--   pure $ foldl (\a (f, b) -> f a b) x ys
+
 pExprTimes = do acc <- pValueOrParens; go acc
   where go acc = goTimes acc
              <|> goDiv acc
              <|> pure acc
-        goTimes x = do char '*'; y <- pValueOrParens; go (Times x y)
-        goDiv x   = do char '/'; y <- pValueOrParens; go (Div x y)
+        goTimes x = do char' '*'; y <- pValueOrParens; go (Times x y)
+        goDiv x   = do char' '/'; y <- pValueOrParens; go (Div x y)
 
 pExprPlus = do acc <- pExprTimes; go acc
   where go acc = goPlus acc
              <|> goMinus acc
              <|> pure acc
-        goPlus x  = do char '+'; y <- pExprTimes; go (Plus x y)
-        goMinus x = do char '-'; y <- pExprTimes; go (Minus x y)
+        goPlus x  = do char' '+'; y <- pExprTimes; go (Plus x y)
+        goMinus x = do char' '-'; y <- pExprTimes; go (Minus x y)
 
--- Examples:
---  runParser pExpr  "((((2))))"  ==  Value 2
---  runParser pExpr  "1*2/3*4"    ==  ((Value 1 `Times` Value 2) `Div` Value 3) `Times` Value 4
---  runParser pExpr  "1+2-3+4"    ==  ((Value 1 `Plus` Value 2) `Minus` Value 3) `Plus` Value 4
---  runParser pExpr  "1*2+3*4"    ==  (Value 1 `Times` Value 2) `Plus` (Value 3 `Times` Value 4)
---  runParser pExpr  "1*(2+3)*4"  ==  Value 1 `Times` (Value 2 `Plus` Value 3) `Times` Value 4
+-- To handle whitespace:
+lexeme :: Parser a -> Parser a
+lexeme p = p <* ws
+
+char' :: Char -> Parser ()
+char' c = lexeme (char c)
+
+string' :: String -> Parser ()
+string' s = lexeme (string s)
+
+int' :: Parser Integer
+int' = lexeme int
+
+-- Exercise: 
+--  Modify this parser to handle whitespace correctly
+pList :: Parser [Integer]
+pList = char '[' *> sepBy int (char ',') <* char ']'
+
+-- Keywords and identifiers:
+--   keywords in Haskell : data let in where ...
+
+-- p = do
+--   string "let"
+--   x <- some (satisfy isAlpha)
+--   char '='
+--   x <- some (satisfy isAlpha)
+--   string "in"
+--   x <- some (satisfy isAlpha)
+--   pure _
+
+-- Now "letx = y inz" is accepted by p. We don't want this.
+-- "let let = let in let" is also accepted.
+
+keywords :: [String]
+keywords = ["let", "in", "where"]
+
+pLetKeyword :: Parser ()
+pLetKeyword = do
+  s <- some (satisfy isAlpha)
+  guard (s == "let")
+  return ()
+
+pIdent :: Parser String
+pIdent = do
+  s <- some (satisfy isAlpha)
+  guard (not $ s `elem` keywords)
+  pure s
+
+--------------------------------------------------------------------------------
+
+data Expr = Var String           --   x
+          | App Expr Expr        --   u v                 (left associative)
+          | Let String Expr Expr --   let x = u in v
+          | Lam String Expr      --   \x -> u   
+                                 -- Bonus: \x y z -> u
+          deriving(Show, Ord, Eq)
+
+pVarOrParens :: Parser Expr
+pVarOrParens = undefined
+
+pApp :: Parser Expr
+pApp = undefined
+
+pLet :: Parser Expr 
+pLet = undefined
+
+pLam :: Parser Expr 
+pLam = undefined
+
+pExpr :: Parser Expr
+pExpr = undefined
