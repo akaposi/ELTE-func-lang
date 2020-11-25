@@ -138,7 +138,7 @@ data IntExpr = Value Integer
 --   +, -
 
 parens :: Parser a -> Parser a
-parens p = char '(' *> p <* char ')'
+parens p = char' '(' *> p <* char' ')'
 
 -- We define several subparsers, to deal with the diffferent precedences of the operators.
 
@@ -204,6 +204,15 @@ pList = char '[' *> sepBy int (char ',') <* char ']'
 -- Now "letx = y inz" is accepted by p. We don't want this.
 -- "let let = let in let" is also accepted.
 
+-- p = do
+--   pLetKeyword
+--   x <- pIdent
+--   char '='
+--   x <- pIdent
+--   pInKeyword
+--   x <- pIdent
+--   pure _
+
 keywords :: [String]
 keywords = ["let", "in", "where"]
 
@@ -213,8 +222,14 @@ pLetKeyword = do
   guard (s == "let")
   return ()
 
+pKeyword :: String -> Parser ()
+pKeyword kw = lexeme $ do
+  s <- some (satisfy isAlpha)
+  guard (s == kw)
+  return ()
+
 pIdent :: Parser String
-pIdent = do
+pIdent = lexeme $ do
   s <- some (satisfy isAlpha)
   guard (not $ s `elem` keywords)
   pure s
@@ -225,20 +240,34 @@ data Expr = Var String           --   x
           | App Expr Expr        --   u v                 (left associative)
           | Let String Expr Expr --   let x = u in v
           | Lam String Expr      --   \x -> u   
-                                 -- Bonus: \x y z -> u
           deriving(Show, Ord, Eq)
 
-pVarOrParens :: Parser Expr
-pVarOrParens = undefined
+pAtom :: Parser Expr
+pAtom = (Var <$> pIdent) 
+    <|> parens pExpr
 
-pApp :: Parser Expr
-pApp = undefined
+pApps :: Parser Expr
+pApps = foldl1 App <$> some pAtom
 
 pLet :: Parser Expr 
-pLet = undefined
+pLet = do
+  pKeyword "let"
+  x <- pIdent
+  char' '='
+  u <- pExpr
+  pKeyword "in"
+  v <- pExpr
+  pure $ Let x u v
 
 pLam :: Parser Expr 
-pLam = undefined
+pLam = do
+  char' '\\'
+  x <- pIdent 
+  string' "->"
+  u <- pExpr
+  pure $ Lam x u
 
 pExpr :: Parser Expr
-pExpr = undefined
+pExpr = pLet
+    <|> pLam
+    <|> pApps
