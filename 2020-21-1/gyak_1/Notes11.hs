@@ -176,7 +176,7 @@ instance Functor Tree where
   fmap f (Node2 l r) = Node2 (fmap f l) (fmap f r)
 
 instance Foldable Tree where
-  -- elég az egyik
+  -- elég fodldr vagy foldMap
   foldr f b (Leaf a)    = f a b
   foldr f b (Node1 a t) = f a (foldr f b t)
   foldr f b (Node2 l r) = foldr f (foldr f b r) l
