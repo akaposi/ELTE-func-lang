@@ -227,6 +227,9 @@ pKeyword kw = lexeme $ do
 pIdent :: Parser String
 pIdent = lexeme $ do
   s <- some (satisfy isAlpha)
+  -- to allow identifiers with digits, such as x0:
+  --     s <- some (satisfy isAlphaNum)
+  --     guard (not (isDigit (head s)))
   guard (not $ s `elem` keywords)
   pure s
 
@@ -242,18 +245,44 @@ data Expr = Var String           --   x
 --  /= (let x = u in v) w
 --  == let x = u in (v w)
 
+-- let x = let y = 2 in y in x
+
 -- Variables and parentheses
 pAtom :: Parser Expr
-pAtom = undefined
+pAtom = (Var <$> pIdent)
+    <|> (parens pExpr)
 
 pApps :: Parser Expr
-pApps = undefined
+pApps = foldl1 App <$> some pAtom
 
 pLet :: Parser Expr 
-pLet = undefined
+pLet = do
+  pKeyword "let"
+  x <- pIdent
+  char' '='
+  u <- pExpr
+  pKeyword "in"
+  v <- pExpr
+  pure (Let x u v)
 
 pLam :: Parser Expr 
-pLam = undefined
+pLam = do
+  char' '\\'
+  x <- pIdent
+  string' "->"
+  u <- pExpr
+  pure (Lam x u)
 
 pExpr :: Parser Expr
-pExpr = undefined
+pExpr = pLet
+    <|> pLam
+    <|> pApps
+
+-- Example of a slow parser.
+p :: Parser Integer
+p = int' <|> parens q
+
+q :: Parser Integer
+q =  (do x <- p; char '+'; y <- q; return (x+y))
+ <|> (do x <- p; char '-'; y <- q; return (x-y))
+ <|> p
