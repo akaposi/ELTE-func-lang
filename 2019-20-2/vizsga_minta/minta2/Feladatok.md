@@ -102,9 +102,9 @@ evalEval :: Eval a -> Map Var RTVal -> Either String RTVal
 
 Első feladatunk, hogy a nyelv absztrakt szintaxisát kiegészítsük string literálokkal és a konkatenációval.
 
-Vegyünk fel egy `StrLit :: String -> Expr` nevű és típusú adatkonstruktort az eddigi literálok mellé! __(1 pont)__
+Vegyünk fel egy `StrLit :: String -> Exp` nevű és típusú adatkonstruktort az eddigi literálok mellé! __(1 pont)__
 
-Vegyünk fel egy `Append :: Expr -> Expr -> Expr` nevű és típusú adatkonstruktort
+Vegyünk fel egy `Append :: Exp -> Exp -> Exp` nevű és típusú adatkonstruktort
 az eddigi kifejezések mellé! Ez fogja reprezentálni a `++` műveletet. __(1 pont)__
 
 ## Parser
@@ -135,7 +135,7 @@ asszociáljon jobbra! Tehát pl. a `"foo" ++ "bar" ++ "baz"` zárójelezése leg
 `"foo" ++ ("bar" ++ "baz")`.
 
 Egészítsük ki a kifejezéseket felismerő `Parser`-t (`pExp`), hogy a string
-összefűzést is felismerje! __(2 pont)__
+kifejezéseket (literálok, összefűzés) is felismerje! __(2 pont)__
 
 ## Interpretáció
 Definiáljuk újra a `Val` típust úgy, hogy `String` literálokat is tartalmazhasson!
