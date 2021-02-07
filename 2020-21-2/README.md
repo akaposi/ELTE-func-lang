@@ -60,11 +60,7 @@ jegyzet átismétlése.
   A gyakorlati jelenlétet a beküldött óra eleji BEAD feladatok tartják nyilván.
   Ezért fontos, hogy akkor is küldjünk BEAD megoldást, ha az hiányos!
 - Előadás látogatása nem kötelező.
-- A tárgyi jegy vizsgaidőszaki vizsgából áll elő. A vizsgázás előfeltétele a
-  gyakorlati követelmény teljesítése. A vizsga gépes feladmegoldásból áll és
-  kb. két órás, bonyolítása szintén BEAD-on történik. Vizsgán minden
-  segédeszköz/internet használható, kommunikáció más vizsgázóval vagy külső
-  személlyel nem engedélyezett.
+- A tárgyi jegy vizsgaidőszaki vizsgából áll elő. A vizsgázás előfeltétele a gyakorlati követelmény teljesítése. A vizsga gépes feladmegoldásból áll és kb. két órás, bonyolítása szintén BEAD-on történik. Vizsgán minden segédeszköz/internet használható, viszont együttműködés más vizsgázóval vagy külső személlyel nem engedélyezett, aki ezt megsérti, elégtelen jegyet kap és nem vizsgázhat újra a vizsgaidőszakban.
 
 #### Tematika
 
