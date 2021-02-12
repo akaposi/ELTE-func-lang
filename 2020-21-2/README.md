@@ -8,7 +8,7 @@
   + Kód: 2, Donkó István, kedd 19:30-21:00
   + Kód: 3, Donkó István, szerda 17:45-19:15
   + Kód: 4, Rafaël Bocquet, (**angol** nyelven), szerda 17:45-19:15
- - Konzultáció: péntek 15:00-16:00, MS Teams General csoport meeting
+ - Konzultáció: péntek 15:00-16:00, discord szerveren "general" text és voice channel-en.
 
 #### Elérhetőségek
 
