@@ -1,5 +1,5 @@
 {-# options_ghc -Wincomplete-patterns #-}
-{-# LANGUAGE InstanceSigs, ScopedTypeVariables #-}
+{-# LANGUAGE InstanceSigs, ScopedTypeVariables, TypeApplications #-}
 
 module Notes01 where
 
@@ -37,36 +37,74 @@ data Either' a b = Left' a
                  | Right' b
                  deriving (Show)
 
+type EitherIntBool = Either' Int Bool
+toInt :: EitherIntBool -> Int
+toInt (Left' i)  = i
+toInt (Right' b) = if b then 1 else 0
+
 -- Maybe a in Prelude
 data Maybe' a = Just' a 
               | Nothing'
               deriving (Show)
 
 -- [a] in Prelude
-data List a = Empty 
-            | Cons a (List a)
+data List a = Empty                -- []
+            | Cons a (List a)      -- (x : xs)
             deriving (Show)
 
 data BinTree a = Leaf a
                | Node (BinTree a) (BinTree a)
                deriving (Show)
 
+length'' :: [a] -> Int
+length'' []     = 0
+length'' (x:xs) = 1 + length'' xs
+
+length' :: List a -> Int
+length' Empty       = 0
+length' (Cons x xs) = 1 + length' xs
+
+height :: BinTree a -> Int
+height (Leaf _)   = 0
+height (Node l r) = 1 + max (height l) (height r)
+
 --------------------------------------------------------------------------------
 
-eqPair :: (a -> a -> Bool) -> (b -> b -> Bool) -> Pair a b -> Pair a b -> Bool
-eqPair eqA eqB = undefined
+eqPair :: (a -> a -> Bool) -> (b -> b -> Bool) 
+       -> Pair a b -> Pair a b -> Bool
+eqPair eqA eqB (Pair a1 b1) (Pair a2 b2) = eqA a1 a2 && eqB b1 b2
 
-eqEither :: (a -> a -> Bool) -> (b -> b -> Bool) -> Either' a b -> Either' a b -> Bool
-eqEither eqA eqB = undefined
+eqEither :: (a -> a -> Bool) 
+         -> (b -> b -> Bool) 
+         -> Either' a b -> Either' a b -> Bool
+eqEither eqA eqB (Left' a1)  (Left' a2)  = eqA a1 a2
+eqEither eqA eqB (Right' b1) (Right' b2) = eqB b1 b2
+eqEither eqA eqB (Left' a1)  (Right' a2) = False
+eqEither eqA eqB (Right' a1) (Left' a2)  = False
+
+eqEither' :: (a -> a -> Bool) 
+         -> (b -> b -> Bool) 
+         -> Either' a b -> Either' a b -> Bool
+eqEither' eqA eqB (Left' a1)  (Left' a2)  = eqA a1 a2
+eqEither' eqA eqB (Right' b1) (Right' b2) = eqB b1 b2
+eqEither' eqA eqB _           _           = False
+
+-- Maybe a ~ Either a ()
 
 eqMaybe :: (a -> a -> Bool) -> Maybe' a -> Maybe' a -> Bool
-eqMaybe eqA = undefined
+eqMaybe eqA Nothing Nothing = True
+eqMaybe eqA (Just x) (Just y) = x == y
+eqMaybe eqA _ _ = Nothing
 
 eqList :: (a -> a -> Bool) -> List a -> List a -> Bool
-eqList eqA = undefined
+eqList eqA Empty         Empty         = True
+eqList eqA (Cons a1 as1) (Cons a2 as2) = eqA a1 a2 && eqList eqA as1 as2
+eqList eqA _              _            = False
 
 eqBinTree :: (a -> a -> Bool) -> BinTree a -> BinTree a -> Bool
-eqBinTree eqA = undefined
+eqBinTree eqA (Leaf x)     (Leaf y)     = x == y
+eqBinTree eqA (Node l1 r1) (Node l2 r2) = l1 == l2 && r1 == r2
+eqBinTree eqA _            _            = False
 
 -- Eq typeclass:
 class Eq' a where       -- Eq in Prelude
@@ -105,14 +143,26 @@ f4 = undefined
 f5 :: ((a, b) -> c) -> (a -> b -> c)
 f5 = undefined
 
-f6 :: (a -> (b, c)) -> (a -> b, a -> c)
-f6 = undefined
+f6, f6', f6'' :: (a -> (b, c)) -> (a -> b, a -> c)
+
+f6 g  = (\x -> fst (g x) , \x -> snd (g x))
+f6' g = (fst . g , snd . g)
+
+f6'' g = (h1, h2)
+  where h1 x = fst (g x)
+        h2 x = snd (g x)
 
 f7 :: (a -> b, a -> c) -> (a -> (b, c))
 f7 = undefined
 
-f8 :: (Either a b -> c) -> (a -> c, b -> c)
-f8 = undefined
+f8, f8' :: forall a b c. (Either a b -> c) -> (a -> c, b -> c)
+f8' g = (g . Left, g . Right)
+f8 g = (h1, h2)
+  where h1 :: a -> c
+        h1 x = g (Left x)
+
+        h2 :: b -> c
+        h2 x = g (Right x)
 
 f9 :: (a -> c, b -> c) -> (Either a b -> c)
 f9 = undefined
