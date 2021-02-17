@@ -40,15 +40,19 @@ instance Ord' Color where
   compare' Green Green = EQ
 
 instance (Ord' a, Ord' b) => Ord' (a, b) where
+  compare' :: (a, b) -> (a, b) -> Ordering
   compare' = undefined
 
 instance (Ord' a, Ord' b) => Ord' (Either a b) where
+  compare' :: Either a b -> Either a b -> Ordering
   compare' = undefined
 
 instance Ord' a => Ord' [a] where
+  compare' :: [a] -> [a] -> Ordering
   compare' = undefined
 
 instance Ord' a => Ord' (BinTree a) where
+  compare' :: BinTree a -> BinTree a -> Ordering
   compare' = undefined
 
 --------------------------------------------------------------------------------
