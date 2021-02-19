@@ -2,8 +2,8 @@
 
 #### Timatable
 
-- Előadás (Kovács András): Friday 16:00-17:30
-- Gyakorlatok:
+- Lecture (András Kovács): Friday 16:00-17:30
+- Tutorials:
   + Kód: 1, András Kovács, Friday 17:45-19:15
   + Kód: 2, István Donkó, Tuesday 19:30-21:00
   + Kód: 3, István Donkó, Wednesday 17:45-19:15
