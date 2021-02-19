@@ -71,8 +71,7 @@ applyMany = undefined
 -- üres.
 
 --    Írj egy "toList :: NonEmptyList a -> [a]" függvényt, ami értelemszerűen
---    működik
-
+--    működik.
 
 -- Definiáld a "composeAll :: [a -> a] -> a -> a" függvényt. Az eredmény legyen
 -- az összes bemenő függvény kompozíciója,
