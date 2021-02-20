@@ -2,6 +2,8 @@
 -- következő BEAD:  magasabbrendű listafüggvény (BSc-szintű)
 --------------------------------------------------------------------------------
 
+-- feladatok01.hs
+
 
 f5 :: ((a, b) -> c) -> a -> b -> c      -- standard: curry
 f5 f a b = f (a, b)
@@ -33,15 +35,6 @@ f8 f = (\a -> f (Left a), \b -> f (Right b))
   --   _ :: (a -> c, b -> c)
   --  (_, _)   -- _ :: a -> c   _ :: b -> c
   --  (\a -> _, \b -> _)  -- _ :: c     _ :: c
-
-f9 :: (a -> c, b -> c) -> (Either a b -> c)
-f9 = undefined
-
-f10 :: Either (a, b) (a, c) -> (a, Either b c)
-f10 = undefined
-
-f11 :: (a, Either b c) -> Either (a, b) (a, c)
-f11 = undefined
 
 -- bónusz feladat (nehéz)
 f12 :: (a -> a -> b) -> ((a -> b) -> a) -> b
@@ -133,7 +126,6 @@ composeAll''' = foldr (.) id
 -- rendezett listát összefésül úgy, hogy az eredmény is rendezett maradjon.
 merge :: Ord a => [a] -> [a] -> [a]
 merge = undefined
-
 
 -- (bónusz) Definiáld a "mergeSort :: Ord a => [a] -> [a]" függvényt, ami a "merge"
 -- iterált felhasználásával rendez egy listát.
