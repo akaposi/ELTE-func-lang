@@ -8,6 +8,23 @@ module Notes03 where
 -- class Functor f where
 --   fmap :: (a -> b) -> f a -> f b
 
+-- Already defined in Prelude:
+--   instance Functor [] 
+--   instance Functor (Either a)
+--   instance Functor ((,) a)
+--   instance Functor Maybe
+
+data Pair a b = Pair a b
+              deriving (Show)
+instance Functor (Pair a) where
+  fmap = undefined
+
+data Either' a b = Left' a
+                 | Right' b
+                 deriving (Show)
+instance Functor (Either' a) where
+  fmap = undefined
+
 data BinTree a = BLeaf a
                | BNode (BinTree a) (BinTree a)
                deriving (Show, Eq)
@@ -15,11 +32,13 @@ data BinTree a = BLeaf a
 instance Functor BinTree where
   fmap = undefined
 
+
 data K a b = Const a
            deriving (Show)
 
 instance Functor (K a) where
   fmap = undefined
+
 
 data T1 a = Leaf1 a
           | Node1 [T1 a]
@@ -28,10 +47,12 @@ data T1 a = Leaf1 a
 instance Functor T1 where
   fmap = undefined
 
+
 data Fun a b = MkFun (a -> b)
 
 instance Functor (Fun a) where
   fmap = undefined
+
 
 data T2 a = Leaf2 a
           | Node2 (Int -> a)
