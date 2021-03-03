@@ -1,6 +1,8 @@
 
 {-# options_ghc -Wincomplete-patterns #-}
 
+import Data.List (foldl')
+
 -- Gyakorló feladatok (ismétlés, függvények, mintaillesztés, ADT-k, osztályok)
 --------------------------------------------------------------------------------
 
@@ -199,17 +201,31 @@ sublists' (a:as) = let as' = sublists as in map (a:) as' ++ as'
 
 -- Vegyük a következő ADT-t:
 data RTree a = RNode a [RTree a]
+  deriving Show
 
--- Írj "Eq a => Eq (RTree a)" instance-t
--- Írj "mapTree :: (a -> b) -> RTree a -> RTree b" függvényt
-mapRTree :: (a -> b) -> RTree a -> RTree b
-mapRTree = undefined
+-- fa: minden node-nak 0 vagy több gyereke van
+--  ("trie" adatstruktúra)
 
+t1 :: RTree Int
+t1 = RNode 100 [RNode 0 [], RNode 1 [], RNode 2 []]
+
+t2 :: RTree Int
+t2 = RNode 1000 (replicate 10 t1)
+
+instance Functor RTree where
+  -- fmap :: (a -> b) -> RTree a -> RTree b
+  fmap f (RNode a ts) = RNode (f a) (fmap (fmap f) ts)
+                                   -- []   RTree
+
+  -- minden ADT Functor instance-ra:
+  --   minden konstruktorból ugyanolyan konstruktort adunk vissza.
+  --     (fmap-elés nem változtahtaja meg a struktúrát, kizárólag "a" fölött map-elhet)
 
 -- Írj "size :: RTree a -> Int" függvényt, ami megszámolja a fában levő
 -- "a"-kat. Pl. size (Node 0 [Node 1 []]) == 2
 size :: RTree a -> Int
-size = undefined
+size (RNode _ ts) = foldl' (\acc t -> acc + size t) 1 ts
+    -- 1 + sum (map size ts)
 
 -- osztályok
 --------------------------------------------------------------------------------
@@ -267,4 +283,13 @@ instance Ord' a => Ord' (Tree a) where
   lte = undefined
 
 instance Show' a => Show' (Tree a) where
+  show' = undefined
+
+instance Eq' a => Eq' (RTree a) where
+  eq = undefined
+
+instance Ord' a => Ord' (RTree a) where
+  lte = undefined
+
+instance Show' a => Show' (RTree a) where
   show' = undefined

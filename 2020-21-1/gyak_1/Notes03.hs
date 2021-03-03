@@ -163,5 +163,5 @@ second = undefined
 
 -- bónusz bónusz: mire használható ez a függvény? Tipp: a megoldáshoz
 -- rekurzió szükséges.
-löb :: Functor f => f (f a -> a) -> f a   -- ■ (■ A → A) → ■ A
+löb :: Functor f => f (f a -> a) -> f a
 löb = undefined
