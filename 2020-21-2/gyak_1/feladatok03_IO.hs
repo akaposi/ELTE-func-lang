@@ -13,8 +13,13 @@ io1 = do
 io1' :: IO ()
 io1' = getLine >>= \l -> print $ length l
 
+io1'' :: IO ()
+io1'' = getLine >>= print . length
+  -- print . length =<< getLine            -- print(length(getLine()))
+
 -- Addig olvass be ismételten sorokat stdin-ről, amíg a sor nem tartalmaz 'x' karaktert.  Ha a
 -- sorban 'x' van, akkor nyomtasd ki az összes eddig beolvasott sort.
+
 io2 :: IO ()
 io2 = go [] where
   go lines = do
@@ -52,6 +57,10 @@ io3' =
 
   in go (length l)
 
+io3''' :: IO ()
+io3''' = go . length =<< getLine where
+  go 0 = pure ()
+  go n = getLine >> go (n - 1)
 
 -- Control.Monad-ból
 replicateM_ :: Monad m => Int -> m a -> m ()
@@ -75,8 +84,15 @@ io4' =
   getLine >>= \l ->
   pure $ length l
 
+io4'' :: IO Int
+io4'' = fmap length getLine
 
--- A következőt ismételd végteleül: olvass be egy sort, majd nyomtasd ki a sorban a kisbetűk számát.
+io4''' :: IO Int
+io4''' = length <$> getLine  -- fmap operátorként írva: (<$>)
+
+
+
+-- A következőt ismételd végtelenül: olvass be egy sort, majd nyomtasd ki a sorban a kisbetűk számát.
 -- A Ctrl-c-c -vel lehet megszakítani a futtatást ghci-ben.
 io5 :: IO ()
 io5 = do
@@ -93,6 +109,9 @@ io5' =
 -- Control.Monad-ból
 forever :: Monad m => m a -> m b
 forever ma = ma >> forever ma
+
+-- loop :: a    -- forever, mellékhatás nélkül
+-- loop = loop
 
 -- harmadik verzió forever-el
 io5'' :: IO ()
