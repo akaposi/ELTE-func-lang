@@ -6,7 +6,9 @@ module Notes06 where
 
 import Control.Monad
 
-newtype State s a = State {runState :: s -> (a, s)} 
+-- State monad
+
+newtype State s a = State { runState :: s -> (a, s) } 
                   deriving(Functor)
 
 instance Applicative (State s) where
@@ -20,11 +22,17 @@ instance Monad (State s) where
 get :: State s s
 get = State (\s -> (s, s))
 
+-- In imperative programming      
+--    put expr    ~       state := expr
 put :: s -> State s ()
 put s = State (\_ -> ((), s))
 
 modify :: (s -> s) -> State s ()
 modify f = do {s <- get; put (f s)}
+
+-- Example: 
+incr :: State Int ()
+incr = modify (+1)
 
 evalState :: State s a -> s -> a
 evalState ma = fst . runState ma
@@ -93,6 +101,7 @@ runGcd :: Integer -> Integer -> Integer
 runGcd x y = fst $ execState impGcd (x, y)
 
 
+
 -- Stack machine interpreter / Reverse Polish notation
 
 -- Here the state is a list (or a stack) of integers.
@@ -142,3 +151,13 @@ p2 = do
   plus     -- [59]
   pop
 -- evalState [] p2 == 59
+
+-- Bonus:
+newtype StateMaybe s a = StateMaybe { runStateMaybe :: s -> Maybe (s, a) }
+                       deriving (Functor)
+-- StateMaybe s should generalize both the state monad and the Maybe monad.
+
+-- Define Applicative and Monad instances for StateMaybe.
+
+-- Define an operation `pop' :: StateMaybe [Integer] Integer` 
+--  that does not throw an exception when the stack is empty.
