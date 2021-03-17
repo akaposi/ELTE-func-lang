@@ -92,9 +92,9 @@ eqEither' eqA eqB _           _           = False
 -- Maybe a ~ Either a ()
 
 eqMaybe :: (a -> a -> Bool) -> Maybe' a -> Maybe' a -> Bool
-eqMaybe eqA Nothing Nothing = True
-eqMaybe eqA (Just x) (Just y) = x == y
-eqMaybe eqA _ _ = Nothing
+eqMaybe eqA Nothing' Nothing' = True
+eqMaybe eqA (Just' x) (Just' y) = eqA x y
+eqMaybe eqA _ _ = False
 
 eqList :: (a -> a -> Bool) -> List a -> List a -> Bool
 eqList eqA Empty         Empty         = True
@@ -102,8 +102,8 @@ eqList eqA (Cons a1 as1) (Cons a2 as2) = eqA a1 a2 && eqList eqA as1 as2
 eqList eqA _              _            = False
 
 eqBinTree :: (a -> a -> Bool) -> BinTree a -> BinTree a -> Bool
-eqBinTree eqA (Leaf x)     (Leaf y)     = x == y
-eqBinTree eqA (Node l1 r1) (Node l2 r2) = l1 == l2 && r1 == r2
+eqBinTree eqA (Leaf x)     (Leaf y)     = eqA x y
+eqBinTree eqA (Node l1 r1) (Node l2 r2) = eqBinTree eqA l1 l2 && eqBinTree eqA r1 r2
 eqBinTree eqA _            _            = False
 
 -- Eq typeclass:
