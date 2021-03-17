@@ -73,7 +73,10 @@ runEx n = execState (ex n) 1
 --      x := x * i
 
 impFactorial :: Integer -> State Integer ()
-impFactorial n = undefined
+impFactorial n = do
+  put 1
+  forM_ [1..n] $ \i -> do
+    modify (* i)
 
 runFactorial :: Integer -> Integer
 runFactorial n = execState (impFactorial n) 1
@@ -84,7 +87,9 @@ runFactorial n = execState (impFactorial n) 1
 --      (a, b) := (b, a+b)
 
 impFibo :: Integer -> State (Integer, Integer) ()
-impFibo n = undefined
+impFibo n = do
+  forM_ [1..n] $ \_ -> do
+    modify (\(a, b) -> (b, a+b))
 
 runFibo :: Integer -> Integer
 runFibo n = fst (execState (impFibo n) (1, 1))
@@ -95,7 +100,8 @@ runFibo n = fst (execState (impFibo n) (1, 1))
 --     (a, b) := (b, a `mod` b)
 
 impGcd :: State (Integer, Integer) ()
-impGcd = undefined
+impGcd = whileM_ (do (a,b) <- get; pure (b /= 0))                 -- (/= 0) . snd <$> get
+                 (modify (\(a,b) -> (b, a `mod` b)))
 
 runGcd :: Integer -> Integer -> Integer
 runGcd x y = fst $ execState impGcd (x, y)
@@ -110,23 +116,46 @@ runGcd x y = fst $ execState impGcd (x, y)
 
 type M a = State [Integer] a
 
+
 push :: Integer -> M ()
-push = undefined
+push x = modify (\xs -> x : xs)
 
 pop :: M Integer
-pop = undefined
+pop = do
+  ~(x:xs) <- get 
+  put xs
+  pure x
+
+-- pop = do
+--   xs <- get
+--   put (tail xs)
+--   pure (head xs)
+
+-- {-# LANGUAGE LambdaCase #-}
+-- pop = get >>= \case
+--          x:xs -> do put xs; pure x
+--          []   -> undefined
+
 
 plus :: M ()
-plus = undefined
+plus = do
+  x <- pop
+  y <- pop
+  push (x + y)
 
 unaryOp :: (Integer -> Integer) -> M ()
-unaryOp = undefined
+unaryOp f = do
+  x <- pop
+  push (f x)
 
 negate' :: M ()
 negate' = unaryOp negate
 
 binaryOp :: (Integer -> Integer -> Integer) -> M ()
-binaryOp = undefined
+binaryOp f = do
+  x <- pop
+  y <- pop
+  push (f x y)
 
 -- plus' = binaryOp (+)
 
@@ -137,7 +166,7 @@ p1 = do
   push 20  -- [20,10]
   plus     -- [30]
   pop   
--- evalState [] p1 == 30
+-- evalState p1 [] == 30
 
 p2 :: M Integer
 p2 = do
@@ -150,7 +179,7 @@ p2 = do
   plus     -- [49,10]
   plus     -- [59]
   pop
--- evalState [] p2 == 59
+-- evalState p2 [] == 59
 
 -- Bonus:
 newtype StateMaybe s a = StateMaybe { runStateMaybe :: s -> Maybe (s, a) }
