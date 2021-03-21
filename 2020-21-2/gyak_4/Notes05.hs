@@ -2,6 +2,7 @@
 {-# LANGUAGE InstanceSigs, ScopedTypeVariables, TypeApplications #-}
 {-# LANGUAGE DeriveFunctor #-}
 module Notes05 where
+import Prelude hiding (mapM)
 
 -- Evaluation of expressions
 data IntExpr = Value Int
@@ -19,7 +20,7 @@ expr3 :: IntExpr
 expr3 = Value 10 `Div` Value 0 -- (10 `div` 0)
 
 expr4 :: IntExpr
-expr4 = Div (Value 1) (Plus (Value 10) (Value (-10)))
+expr4 = Div (Value 1) (Plus (Value 10) (Value (-10))) -- 1 / (10 - 10)
 
 -- Define `evalIntExpr :: IntExpr -> Int`
 -- Examples: 
@@ -29,7 +30,9 @@ expr4 = Div (Value 1) (Plus (Value 10) (Value (-10)))
 --   evalIntExpr expr4 == ???
 
 evalIntExpr :: IntExpr -> Int
-evalIntExpr = undefined
+evalIntExpr (Value x)  = x
+evalIntExpr (Plus x y) = evalIntExpr x + evalIntExpr y
+evalIntExpr (Div x y)  = evalIntExpr x `div` evalIntExpr y
 
 -- Define `evalIntExprMaybe :: IntExpr -> Maybe Int`
 -- Examples: 
@@ -37,29 +40,92 @@ evalIntExpr = undefined
 --   evalIntExprMaybe expr2 == Just 2
 --   evalIntExprMaybe expr3 == Nothing
 --   evalIntExprMaybe expr4 == Nothing
+
 -- Hint: first define
 --   safeDiv :: Int -> Int -> Maybe Int
+
 evalIntExprMaybe :: IntExpr -> Maybe Int
-evalIntExprMaybe = undefined
+evalIntExprMaybe (Value x)  = pure x -- undefined -- x
+-- evalIntExprMaybe (Plus x y) = case (evalIntExprMaybe x, evalIntExprMaybe y) of
+--   (Just x', Just y') -> Just (x' + y')
+--   _                  -> Nothing 
+
+-- evalIntExprMaybe (Plus x y) = do
+--   x' <- evalIntExprMaybe x
+--   y' <- evalIntExprMaybe y
+--   pure (x' + y')
+
+evalIntExprMaybe (Plus x y) = liftM2 (+) (evalIntExprMaybe x) (evalIntExprMaybe y)
+evalIntExprMaybe (Div x y)  = do
+  x' <- evalIntExprMaybe x
+  y' <- evalIntExprMaybe y
+  safeDiv x' y'
+
+safeDiv :: Integral a => a -> a -> Maybe a
+safeDiv x y = if y == 0 then Nothing else Just (x `div` y)  
 
 -- General monadic operations (in Control.Monad)
+
+
 liftM :: Monad m => (a -> b) -> m a -> m b
-liftM = undefined
+liftM f x = fmap f x
+
+-- liftM f x = do 
+--   x' <- x
+--   return (f x')
+
+-- liftM f x = f <$> x
 
 liftM2 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
-liftM2 = undefined
+liftM2 f x y = do
+  x' <- x
+  y' <- y
+  return (f x' y')
+
+-- liftM2 f x y = (f <$> x) <*> y
+-- f <$> x  :: m (b -> c)
+-- (<*>) :: m (b -> c) -> m b -> mc
+-- f <$> x <*> y :: m c
 
 liftM3 :: Monad m => (a -> b -> c -> d) -> m a -> m b -> m c -> m d
-liftM3 = undefined
+liftM3 f x y z = f <$> x <*> y <*> z
 
+-- forever ma  in Haskell   ~    while(true) { ma }   in C / ...
 forever :: Monad m => m a -> m b
-forever = undefined
+forever ma = do
+  ma
+  forever ma
 
-mapM :: Monad m => (a -> m b) -> [a] -> m [a]
-mapM = undefined
+-- whileM cond ma        ~    while(cond) { ma }
+whileM :: Monad m => m Bool -> m a -> m [a]
+whileM cond ma = do
+  b <- cond 
+  case b of
+    False -> pure []
+    True  -> do
+      a  <- ma
+      as <- whileM cond ma
+      pure (a:as)
+
+mapM :: Monad m => (a -> m b) -> [a] -> m [b]
+mapM f []     = pure []
+mapM f (x:xs) = (:) <$> f x <*> mapM f xs
+
+-- forM xs f       ~    for(x in xs) { f x }    in C / ...
+forM :: Monad m => [a] -> (a -> m b) -> m [b]
+forM = flip mapM
+
+foldr' :: (a -> b -> b) -> b -> [a] -> b
+foldr' f e [] = e
+foldr' f e (x:xs) = 
+  let b = foldr' f e xs
+  in f x b
 
 foldrM :: Monad m => (a -> b -> m b) -> b -> [a] -> m b
-foldrM = undefined
+foldrM f e []     = pure e
+foldrM f e (x:xs) = do
+  b <- foldrM f e xs
+  f x b
 
 -- Other monad exercises:
 f2 :: Monad m => m a -> m b -> m (a, b)
