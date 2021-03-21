@@ -2,7 +2,7 @@
 -- BEAD : IO függvény, van benne rekurzió
 --   holnap: első házi (4 pont), State monad feladat (határidő szorg időszak vége)
 
-{-# language DeriveFunctor #-}
+{-# language DeriveFunctor, InstanceSigs #-}
 
 import Control.Monad
 import Data.List (minimumBy)
@@ -111,7 +111,6 @@ execState ma = snd . runState ma
 -- evalState :: State s a -> s -> a         -- csak értéket ad vissza
 -- execState :: State s a -> s -> s         -- csak végső állapotot ad vissza
 
-
 -- ki tudjuk fejezni:
 
 -- f() :
@@ -146,8 +145,6 @@ res2 = evalState modInt2 10
 
 res3 :: (Int, Int)
 res3 = runState modInt2 10
-
-
 
 data Tree a = Leaf a | Node (Tree a) (Tree a)
   deriving (Functor, Show)
@@ -212,27 +209,22 @@ modIntPair' = do
   modify $ \(x, y) -> (y, x)         -- (x, y) = (y, x)    értékadás (csere)
   modify $ first (+10)
   modify $ second (*200)
-
-  x <- fst <$> get                   --
+  x <- fst <$> get
   y <- snd <$> get
   (x, y) <- get
-
   if x == 0 then do
     modify $ first (+y)
   else
     pure ()
 
 
-
 -- További feladatok
 --------------------------------------------------------------------------------
 
-{-
-
-push :: Int -> State [Int] ()
+push :: a -> State [a] ()
 push n = modify (n:)
 
-pop :: State [Int] (Maybe Int)
+pop :: State [a] (Maybe a)
 pop = do
   ns <- get
   case ns of
@@ -255,32 +247,16 @@ maxs as = undefined
 
 --------------------------------------------------------------------------------
 
-data Tree a = Leaf a | Node (Tree a) (Tree a)
-  deriving (Functor, Show)
-
--- Definiálj egy függvényt, ami kicsérli egy fa leveleiben tárolt értékeket
--- balról jobbra haladva egy megadott lista elemeire.
--- Használj State monádot!
-
--- pl: replaceLeaves [10, 20, 30] (Node (Leaf 2) (Leaf 3)) == Node (Leaf 10) (Leaf 20)
---     replacereplaceLeaves [5] (Leaf 10) == Leaf 5
---     replacereplaceLeaves [5] (Node (Leaf 0) (Node (Leaf 0) (Leaf 0))) ==
---        (Node (Leaf 5) (Node (Leaf 0) (Leaf 0)))
-
-replaceLeaves :: [a] -> Tree a -> Tree a
-replaceLeaves = undefined
-
--- Ugyanezt jobbról balra is implementáld! Azaz jobbról balra haladj
--- a fában, és úgy illeszd a lista elemeit a fába.
+-- A replaceLeaves függvényt jobbról balra is implementáld! Azaz jobbról balra haladj a fában, és
+-- úgy illeszd a lista elemeit a fába.
 replaceLeaves' :: [a] -> Tree a -> Tree a
 replaceLeaves' = undefined
 
 
 -- Definiáld a függvényt, ami megfordítja a fa leveleiben tárolt értékek sorrendjét!
--- tipp: használd a replaceLeaves függvényt.
+-- tipp: használhatod a replaceLeaves függvényt.
 reverseElems :: Tree a -> Tree a
 reverseElems = undefined
-
 
 --------------------------------------------------------------------------------
 
@@ -302,7 +278,6 @@ runOps = undefined
 -- ne használj.
 --------------------------------------------------------------------------------
 
-
 modify' :: (s -> s) -> State s ()
 modify' f = do
   s <- get
@@ -321,5 +296,18 @@ modifyNTimes :: Int -> (s -> s) -> State s ()
 modifyNTimes 0 f = pure ()
 modifyNTimes n f = modify f >> modifyNTimes (n - 1) f
 
+-- Foldable & Traversable
 --------------------------------------------------------------------------------
--}
+
+instance Foldable Tree where
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr = undefined
+
+-- írd meg a következő instance-okat!
+instance Traversable Tree where
+  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  traverse = undefined
+
+-- impementáld újra a replaceLeaves függvényt a traverse felhasználásával!
+replaceLeaves'' :: [a] -> Tree a -> Tree a
+replaceLeaves'' as t = evalState (traverse undefined t) as
