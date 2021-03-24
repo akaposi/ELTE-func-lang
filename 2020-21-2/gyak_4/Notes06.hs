@@ -182,9 +182,32 @@ p2 = do
 -- evalState p2 [] == 59
 
 -- Bonus:
-newtype StateMaybe s a = StateMaybe { runStateMaybe :: s -> Maybe (s, a) }
+newtype StateMaybe s a = StateMaybe { runStateMaybe :: s -> Maybe (a, s) }
                        deriving (Functor)
 -- StateMaybe s should generalize both the state monad and the Maybe monad.
+
+
+liftState :: State s a -> StateMaybe s a
+liftState (State f) = StateMaybe $ \s -> Just (f s)
+
+liftMaybe :: Maybe a -> StateMaybe s a
+liftMaybe (Just a) = StateMaybe $ \s -> Just (a, s)
+liftMaybe Nothing  = StateMaybe $ \s -> Nothing
+
+get' :: StateMaybe s s
+get' = undefined
+
+put' :: s -> StateMaybe s ()
+put' = undefined
+
+-- similar Nothing
+fail' :: StateMaybe s a
+fail' = undefined
+
+-- get' >>= put   ~   pure ()
+-- fail' >>= _    ~   fail' 
+
+
 
 -- Define Applicative and Monad instances for StateMaybe.
 
