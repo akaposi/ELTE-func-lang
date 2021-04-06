@@ -263,16 +263,14 @@ map'' f as = do
 map''' f as =
   concatMap (\a -> [f a]) as
 
--- szűrőfeltételek listakifejezében?
+-- szűrőfeltételek listakifejezésben?
 l2 :: [(Int, Int)]
 l2 = [(x, y) | x <- [0..10], even x, y <- [0..x], even (x + y)]
 
 -- standard : guard   (Control.Monad-ból)
-
 guard' :: Bool -> [()]
-guard' True  = [()]    -- "továbengedi" a concatMap-et
+guard' True  = [()]    -- "továbengedi" a concatMap-et       (concatMap :: (a -> [b]) -> [a] -> [b]
 guard' False = []      -- "elvágja" a concatMap-et
-
 
 l2' :: [(Int, Int)]
 l2' = do

@@ -398,3 +398,36 @@ instance Traversable Tree where
 -- impementáld újra a replaceLeaves függvényt a traverse felhasználásával!
 replaceLeaves'' :: [a] -> Tree a -> Tree a
 replaceLeaves'' as t = evalState (traverse undefined t) as
+
+
+-- BEAD feladat (máricus 26) megoldás
+--------------------------------------------------------------------------------
+
+-- minden páratlan számot cseréljünk ki a korábbi páratlan számok össszegére
+-- Használjunk State Int -et
+
+bead :: [Int] -> [Int]
+bead ns = evalState (go ns) 0 where
+
+  go :: [Int] -> State Int [Int]
+  go []     = pure []
+  go (n:ns) = do
+    ns' <- go ns
+    if odd n then do
+      s <- get
+      put (n + s)
+      pure (s:ns')
+    else do
+      pure (n:ns')
+
+bead' :: [Int] -> [Int]
+bead' ns = evalState (traverse go ns) 0 where
+
+  go :: Int -> State Int Int
+  go n =
+    if odd n then do
+      s <- get
+      put (n + s)
+      pure s
+    else do
+      pure n
