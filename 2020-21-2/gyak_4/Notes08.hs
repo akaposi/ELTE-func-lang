@@ -9,6 +9,44 @@ import Data.List
 import Control.Applicative
 import Control.Monad 
 
+--------------------------------------------------------------------------------
+-- Define Foldable and Traversable instances for:
+
+data Pair a b = Pair a b
+              deriving (Show)
+
+instance Functor (Pair a) where
+  fmap f (Pair x y) = Pair x (f y)
+
+data Either' a b = Left' a
+                 | Right' b
+                 deriving (Show)
+instance Functor (Either' a) where
+  fmap f (Left' x)  = Left' x
+  fmap f (Right' y) = Right' (f y)
+
+
+data BinTree a = BLeaf a
+               | BNode (BinTree a) (BinTree a)
+               deriving (Show, Eq)
+instance Functor BinTree where
+  fmap f (BLeaf x)   = BLeaf (f x)
+  fmap f (BNode l r) = BNode (fmap f l) (fmap f r)
+
+data T1 a = Leaf1 a
+          | Node1 [T1 a]
+          deriving (Show)
+instance Functor T1 where
+  fmap f (Leaf1 x)  = Leaf1 (f x)
+  fmap f (Node1 xs) = Node1 (fmap @[] (fmap @T1 f) xs)
+
+data T3 a = Leaf3 a
+          | Node3 (T1 [T3 a])
+          deriving (Show)
+instance Functor T3 where
+  fmap f (Leaf3 x)  = Leaf3 (f x)
+  fmap f (Node3 xs) = Node3 (fmap @T1 (fmap @[] (fmap @T3 f)) xs)
+
 -------------------------------------------------------------------------------
 
 newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
