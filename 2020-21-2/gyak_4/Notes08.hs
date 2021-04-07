@@ -6,11 +6,26 @@ module Notes08 where
 
 import Data.Char
 import Data.List
+import Data.Functor
 import Control.Applicative
 import Control.Monad 
 
 --------------------------------------------------------------------------------
 -- Define Foldable and Traversable instances for:
+
+data F a = A 
+         | B (Maybe a) (F a) 
+         deriving (Show, Eq, Ord)
+instance Functor F where
+  fmap f A       = A
+  fmap f (B a x) = B (fmap f a) (fmap f x)
+instance Foldable F where
+  foldMap f A       = mempty
+  foldMap f (B a x) = foldMap f a <> foldMap f x
+instance Traversable F where
+  traverse f A       = pure A
+  traverse f (B a x) = B <$> traverse f a <*> traverse f x 
+
 
 data Pair a b = Pair a b
               deriving (Show)
@@ -33,12 +48,14 @@ instance Functor BinTree where
   fmap f (BLeaf x)   = BLeaf (f x)
   fmap f (BNode l r) = BNode (fmap f l) (fmap f r)
 
+
 data T1 a = Leaf1 a
           | Node1 [T1 a]
           deriving (Show)
 instance Functor T1 where
   fmap f (Leaf1 x)  = Leaf1 (f x)
   fmap f (Node1 xs) = Node1 (fmap @[] (fmap @T1 f) xs)
+
 
 data T3 a = Leaf3 a
           | Node3 (T1 [T3 a])
@@ -93,7 +110,10 @@ satisfy f = Parser $ \s -> case s of
 --   runParser (char 'a') "abc" == Just ((), "bc")
 --   runParser (char 'a') "bcd" == Nothing
 char :: Char -> Parser ()
-char c = undefined
+-- char c = do
+--   satisfy (== c)
+--   pure ()
+char c = satisfy (== c) $> ()
 
 -- The parser anyChar should succeed if the input string is not empty, and return its first character.
 -- Examples:
@@ -101,14 +121,20 @@ char c = undefined
 --   runParser anyChar "()" == Just ('(', ")")
 --   runParser anyChar "abc" == Just ('a', "bc")
 anyChar :: Parser Char
-anyChar = undefined
+-- anyChar = satisfy (\_ -> True)
+anyChar = satisfy (const True)
 
 -- The parser `string s` should succeed if the input string starts with the string s.
 --   runParser (string "abc") "abdef" == Nothing
 --   runParser (string "") "abcdef" == Just ((), "abcdef")
 --   runParser (string "abc") "abcdef" == Just ((), "def")
 string :: String -> Parser ()
-string s = undefined
+-- string []     = pure ()
+-- string (c:cs) = do
+--   char c
+--   string cs
+
+string cs = forM_ cs char
 
 -------------------------------------------------------------------------------
 
