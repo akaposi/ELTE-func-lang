@@ -147,4 +147,4 @@ instance Monoid m => Applicative (Writer m) where
   Writer a <*> Writer b = Writer (a <> b)
 
 foldMap' :: (Traversable f, Monoid m) => (a -> m) -> f a -> m
-foldMap'  t = getWriter (traverse (Writer . f) t)
+foldMap' f t = getWriter (traverse (Writer . f) t)
