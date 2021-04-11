@@ -70,17 +70,27 @@ top = head <$> get
 {- Tasks -}
 
 -- Define a new stack operation that checks if a stack is empty!
-isEmpty :: Stack a Bool
-isEmpty = undefined
+empty' :: Stack a Bool
+-- empty = do
+--   stack <- get
+--   if length stack == 0 then pure True else pure False
+-- empty = ((==0) . length) <$> get
+empty' = null <$> get
 
 -- Define a new stack operation that counts the number of stored elements!
 depth :: Stack a Int
-depth = undefined
+depth = length <$> get
 
 -- Write a function that maps a function over a stack of elements, without
 -- pattern matching, using only the stack operations!
 mapStack :: (a -> a) -> Stack a ()
-mapStack = undefined
+mapStack f = do
+  e <- empty'
+  when (not e) (do
+    c <- pop
+    mapStack f
+    push (f c)
+    )
 
 -- execStack mapStackTest == [16, 14, 10]
 mapStackTest :: Stack Int ()
@@ -92,14 +102,23 @@ mapStackTest = do
 
 -- Swap the elements of a pair!
 pairSwap :: State (a, a) ()
-pairSwap = undefined
+pairSwap = do
+  -- pair <- get
+  -- case pair of (a, b) -> put (b, a)
+  -- put (snd pair, fst pair)
+  (a, b) <- get
+  put (b, a)
 
 -- execState pairSwap (3, 7) == (7, 3)
 
 -- Execute an action in a local scope, returning to the original state
 -- after it's done!
 locally :: State s a -> State s a
-locally = undefined
+locally sa = do
+  pre <- get
+  a <- sa
+  put pre
+  pure a
 
 -- evalState locallyTest 5 == (10, 15)
 locallyTest :: State Int (Int, Int)
@@ -143,7 +162,13 @@ t'' = Node
 
 instance Traversable Tree where
   traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
-  traverse = undefined
+  traverse f (Leaf e)   = Leaf <$> (f e)
+  traverse f (Node l r) = Node <$> (traverse f l) <*> (traverse f r)
+  -- traverse f (Node l r) = let
+  --   left = traverse f l
+  --   right = traverse f r
+  --   in
+  --     liftA2 Node left right
 
 
 removeDuplicates :: (Tree Char, [Char]) -> (Tree Char, [Char])
@@ -168,61 +193,33 @@ removeDuplicates' t = evalState (go t) [] where
        else do
          put (e:prev)
          pure (Leaf e)
-  go (Node l r) = do
-    cleanL <- go l
-    cleanR <- go r
-    pure (Node cleanL cleanR)
+  go (Node l r) = Node <$> go l <*> go r
+  -- go (Node l r) = do
+  --   cleanL <- go l
+  --   cleanR <- go r
+  --   pure (Node cleanL cleanR)
 
 removeDuplicates'' :: Tree Char -> Tree Char
-removeDuplicates'' = undefined
+removeDuplicates'' t = evalState (traverse go t) [] where
+  go :: Char -> State [Char] Char
+  go c = do
+    prev <- get
+    if elem c prev
+       then pure ' '
+       else do
+         put (c:prev)
+         pure c
 
+-- t''' :: Tree Int
+t''' :: Num a => Tree a
+t''' = Node (Node (Leaf 3) (Leaf 7)) (Node (Leaf 19) (Leaf 2))
 
-{- List monad -}
--- http://learnyouahaskell.com/a-fistful-of-monads
+flipSigns :: Tree Int -> Tree Int
+flipSigns t = evalState (traverse go t) False where
+  go :: Int -> State Bool Int
+  go c = do
+    flip <- get
+    put (not flip)
+    if flip then (pure (-c)) else pure c
 
-type Position = (Char, Int)
-
-{-
-    -----------------
-  8 | | | | | | | | |
-    -----------------
-  7 | | | | | | | | |
-    -----------------
-  6 | | | | | | | | |
-    -----------------
-  5 | | | | | | | | |
-    -----------------
-  4 | | | | | | | | |
-    -----------------
-  3 | | | | | | | | |
-    -----------------
-  2 | | | | | | | | |
-    -----------------
-  1 | |x| | | | | | |
-    -----------------
-     a b c d e f g h
--}
-
-
--- Transpose a character in the alphabet
--- Examples:
---   + transposeChar   3  'a' == 'd'
---   + transposeChar (-2) 'h' == 'f'
-transposeChar :: Int -> Char -> Char
-transposeChar = undefined
-
--- Check if a position is valid on the board!
-isValidOnBoard :: Position -> Bool
-isValidOnBoard = undefined
-
--- List all the possible moves for a knight!
-possibleKnightMoves :: [(Int, Int)]
-possibleKnightMoves = undefined
-
--- List all the legal moves for a knight from a certain position!
-knightMove :: Position -> [Position]
-knightMove = undefined
-
--- List all the positions a knight can reach from B1 in two moves!
-positionsInTwoMovesFromB1 :: [Position]
-positionsInTwoMovesFromB1 = undefined
+-- a = flipSigns t'''

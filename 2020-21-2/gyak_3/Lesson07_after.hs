@@ -71,16 +71,33 @@ top = head <$> get
 
 -- Define a new stack operation that checks if a stack is empty!
 isEmpty :: Stack a Bool
-isEmpty = undefined
+isEmpty = null <$> get
 
 -- Define a new stack operation that counts the number of stored elements!
 depth :: Stack a Int
-depth = undefined
+depth = length <$> get
+-- depth = do
+--   e <- isEmpty
+--   if e then pure 0
+--        else do
+--          x <- pop
+--          d <- depth
+--          push x
+--          pure (d + 1)
+
 
 -- Write a function that maps a function over a stack of elements, without
 -- pattern matching, using only the stack operations!
 mapStack :: (a -> a) -> Stack a ()
-mapStack = undefined
+mapStack f = do
+  e <- isEmpty
+  if e
+    then do
+      pure ()
+    else do
+      x <- pop
+      mapStack f
+      push (f x)
 
 -- execStack mapStackTest == [16, 14, 10]
 mapStackTest :: Stack Int ()
@@ -92,14 +109,23 @@ mapStackTest = do
 
 -- Swap the elements of a pair!
 pairSwap :: State (a, a) ()
-pairSwap = undefined
+pairSwap = do
+  ab <- get
+  case ab of
+    (a, b) -> put (b, a)
+  -- (a, b) <- get
+  -- put (b, a)
 
 -- execState pairSwap (3, 7) == (7, 3)
 
 -- Execute an action in a local scope, returning to the original state
 -- after it's done!
 locally :: State s a -> State s a
-locally = undefined
+locally sa = do
+  pre <- get
+  a <- sa
+  put pre
+  pure a
 
 -- evalState locallyTest 5 == (10, 15)
 locallyTest :: State Int (Int, Int)
@@ -140,11 +166,23 @@ t'' = Node
           (Node (Leaf 'b') (Leaf 'a'))
           (Node (Leaf 'c') (Leaf 'a')))
 
+--    [] Int -> [] (Tree Int)
+-- asdf :: [Int] -> [Tree Int]
+-- asdf = map Leaf
+-- asdf [] = []
+-- asdf (x:xs) = (Leaf x):(asdf xs)
 
 instance Traversable Tree where
   traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
-  traverse = undefined
-
+  -- traverse f (Leaf a)   = let tmp = f a in fmap Leaf tmp
+  traverse f (Leaf a)   = Leaf <$> f a
+  -- traverse f (Leaf a)   = liftA Leaf (f a)
+  traverse f (Node l r) = Node <$> (traverse f l) <*> (traverse f r)
+    -- let
+    --   left = traverse f l
+    --   right = traverse f r
+    -- in
+    --   liftA2 Node left right
 
 removeDuplicates :: (Tree Char, [Char]) -> (Tree Char, [Char])
 removeDuplicates ((Leaf e), prev)   =
@@ -168,61 +206,19 @@ removeDuplicates' t = evalState (go t) [] where
        else do
          put (e:prev)
          pure (Leaf e)
-  go (Node l r) = do
-    cleanL <- go l
-    cleanR <- go r
-    pure (Node cleanL cleanR)
+  go (Node l r) = Node <$> go l <*> go r
+  -- go (Node l r) = do
+  --   cleanL <- go l
+  --   cleanR <- go r
+  --   pure (Node cleanL cleanR)
 
 removeDuplicates'' :: Tree Char -> Tree Char
-removeDuplicates'' = undefined
-
-
-{- List monad -}
--- http://learnyouahaskell.com/a-fistful-of-monads
-
-type Position = (Char, Int)
-
-{-
-    -----------------
-  8 | | | | | | | | |
-    -----------------
-  7 | | | | | | | | |
-    -----------------
-  6 | | | | | | | | |
-    -----------------
-  5 | | | | | | | | |
-    -----------------
-  4 | | | | | | | | |
-    -----------------
-  3 | | | | | | | | |
-    -----------------
-  2 | | | | | | | | |
-    -----------------
-  1 | |x| | | | | | |
-    -----------------
-     a b c d e f g h
--}
-
-
--- Transpose a character in the alphabet
--- Examples:
---   + transposeChar   3  'a' == 'd'
---   + transposeChar (-2) 'h' == 'f'
-transposeChar :: Int -> Char -> Char
-transposeChar = undefined
-
--- Check if a position is valid on the board!
-isValidOnBoard :: Position -> Bool
-isValidOnBoard = undefined
-
--- List all the possible moves for a knight!
-possibleKnightMoves :: [(Int, Int)]
-possibleKnightMoves = undefined
-
--- List all the legal moves for a knight from a certain position!
-knightMove :: Position -> [Position]
-knightMove = undefined
-
--- List all the positions a knight can reach from B1 in two moves!
-positionsInTwoMovesFromB1 :: [Position]
-positionsInTwoMovesFromB1 = undefined
+removeDuplicates'' t = evalState (traverse go t) [] where
+  go :: Char -> State [Char] Char
+  go c = do
+    prev <- get
+    if elem c prev
+       then pure ' '
+       else do
+         put (c:prev)
+         pure c
