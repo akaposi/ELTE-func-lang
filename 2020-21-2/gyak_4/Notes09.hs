@@ -98,8 +98,8 @@ instance Alternative Parser where
 -------------------------------------------------------------------------------
 
 -- The parser `some p` and `many p` both try to use the parser p as many times as possible.
---  `many p` always succeeds.
---  `some p` succeeds if the first run of p succeeded.
+--  `many p` always succeeds.                           -- many p       p*
+--  `some p` succeeds if the first run of p succeeded.  -- some p       p+
 
 some' :: Alternative f => f a -> f [a]
 many' :: Alternative f => f a -> f [a]
