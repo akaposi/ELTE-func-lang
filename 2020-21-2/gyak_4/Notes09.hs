@@ -1,4 +1,5 @@
 {-# options_ghc -Wincomplete-patterns #-}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE InstanceSigs, ScopedTypeVariables, TypeApplications #-}
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
@@ -105,16 +106,20 @@ some' :: Alternative f => f a -> f [a]
 many' :: Alternative f => f a -> f [a]
 -- `some' p` uses p at least 1 times
 --   => `some' p` uses p once, and then uses p again any number of times.
-some' p = undefined
+-- some' p = do
+--   x  <- p
+--   xs <- many' p
+--   pure (x:xs)
+some' p = (:) <$> p <*> many' p
 -- `many' p` uses p any number of times
 --   => `many' p` uses p either (at least 1 times) or doesn't use p.
-many' p = undefined
+many' p = some' p <|> pure []
 
 -- Examples:
---   runParser (some (char 'a')) "aaabbb" = Just ("aaa", "bbb")
---   runParser (some (char 'a')) "bbb" = Nothing
---   runParser (many (char 'a')) "aaabbb" = Just ("aaa", "bbb")
---   runParser (many (char 'a')) "bbb" = Just ("", "bbb")
+--   runParser (some (char 'a')) "aaabbb" == Just ("aaa", "bbb")
+--   runParser (some (char 'a')) "bbb" == Nothing
+--   runParser (many (char 'a')) "aaabbb" == Just ("aaa", "bbb")
+--   runParser (many (char 'a')) "bbb" == Just ("", "bbb")
 
 --------------------------------------------------------------------------------
 
@@ -126,23 +131,23 @@ digit = fromIntegral.digitToInt <$> satisfy isDigit
 --   Example: runParser posInt "123" == Just (123, "")
 --            runParser posInt "92476abc" == Just (92476, "abc")
 posInt :: Parser Integer
-posInt = undefined
+posInt = foldl1 (\a b -> a*10+b) <$> some' digit
 
 -- The parser int should parse a positive or negative integer
 --   Example: runParser int "123" == Just (123, "")
 --            runParser int "92476abc" == Just (92476, "abc")
 --            runParser int "-92476abc" == Just (-92476, "abc")
 int :: Parser Integer
-int = undefined
+int = (do char '-'; negate <$> posInt) <|> posInt
 
 -- The parser `space` should parse a single whitespace character.
 --  Hint: use `isSpace :: Char -> Bool`
 space :: Parser ()
-space = undefined
+space = satisfy isSpace $> ()
 
 -- The parser `ws` should parse as many whitespace characters as possible.
 ws :: Parser ()
-ws = undefined
+ws = many space $> ()
 
 --------------------------------------------------------------------------------
 
@@ -154,7 +159,11 @@ ws = undefined
 --     ...
 -- It fails if it cannot parse p at least once.  
 sepBy1 :: Parser a -> Parser sep -> Parser [a]
-sepBy1 p sep = undefined
+-- sepBy1 p sep = do 
+--   x <- p
+--   xs <- many (sep *> p)
+--   pure (x:xs)
+sepBy1 p sep = (:) <$> p <*> many (sep *> p)
 
 -- sepBy p sep parses either any sequence of the form
 --     p 
@@ -162,7 +171,7 @@ sepBy1 p sep = undefined
 --     ...
 --   or returns the empty list.
 sepBy :: Parser a -> Parser sep -> Parser [a]
-sepBy p sep = undefined
+sepBy p sep = sepBy1 p sep <|> pure []
 
 -- Write a parser that parses a list of integers (in the same format as a haskell list)
 --  runParser haskellList "[1,2,3]" == (Just [1,2,3], "")
@@ -170,8 +179,13 @@ sepBy p sep = undefined
 --  runParser haskellList "[12,,]" == Nothing
 --  runParser haskellList "[1,2][]" == (Just [1,2], "[]")
 
-haskellList :: Parser [Int]
-haskellList = undefined
+haskellList :: Parser [Integer]
+-- haskellList = do
+--   char '['
+--   xs <- sepBy int (char ',')
+--   char ']'
+--   pure xs
+haskellList = char '[' *> sepBy int (char ',') <* char ']'
 
 data Tree a = Leaf a 
             | Node [Tree a]
@@ -185,6 +199,7 @@ data Tree a = Leaf a
 --   runParser pIntTree "[[],[2]]"       ~~>  Node [Node [], Node [Leaf 2]]
 --   runParser pIntTree "[0,[1],[[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
 pIntTree :: Parser (Tree Integer)
-pIntTree = undefined
+pIntTree = Node <$> (char '[' *> sepBy pIntTree (char ',') <* char ']')
+       <|> Leaf <$> int
 
 -------------------------------------------------------------------------------
