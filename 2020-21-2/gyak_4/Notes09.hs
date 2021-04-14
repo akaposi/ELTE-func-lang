@@ -120,13 +120,18 @@ many' p = undefined
 
 -- The parser digit should parse a single digit between 0 and 9.
 digit :: Parser Integer
-digit = undefined
+digit = fromIntegral.digitToInt <$> satisfy isDigit
 
--- The parser digit should parse a positive integer
+-- The parser posInt should parse a positive integer
+--   Example: runParser posInt "123" == Just (123, "")
+--            runParser posInt "92476abc" == Just (92476, "abc")
 posInt :: Parser Integer
 posInt = undefined
 
 -- The parser int should parse a positive or negative integer
+--   Example: runParser int "123" == Just (123, "")
+--            runParser int "92476abc" == Just (92476, "abc")
+--            runParser int "-92476abc" == Just (-92476, "abc")
 int :: Parser Integer
 int = undefined
 
