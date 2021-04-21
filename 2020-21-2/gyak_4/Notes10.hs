@@ -130,8 +130,14 @@ sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy p sep = sepBy1 p sep <|> pure []
 
 -------------------------------------------------------------------------------
-
 -- Helpers to handle left/right associative binary operators:
+
+--    1 + 6 + 2 + 6
+-- infixLeft int (char '+') (+)   -> (((1 + 6) + 2) + 6)
+-- infixRight int (char '+') (+)  -> (1 + (6 + (2 + 6)))
+
+-- We often want left associativity
+--   1 + 2 - 7 + 5
 
 infixLeft :: Parser a -> Parser sep -> (a -> a -> a) -> Parser a
 infixLeft pa psep combine = foldl1 combine <$> sepBy1 pa psep
@@ -159,6 +165,7 @@ string' s = string s <* ws
 int' :: Parser Integer
 int' = int <* ws
 
+
 parens :: Parser a -> Parser a
 parens p = char' '(' *> p <* char' ')'
 
@@ -173,6 +180,7 @@ data BoolExpr = Value Bool
               | And   BoolExpr BoolExpr
               deriving (Eq, Ord, Show)
 
+-- a value or an expression inside parentheses
 pAtom :: Parser BoolExpr
 pAtom = undefined
 
@@ -186,15 +194,15 @@ pBoolExpr :: Parser BoolExpr
 pBoolExpr = undefined
 
 -- Examples:
---  runParser pExpr  "((((True))))"  
+--  runParser pBoolExpr  "((((True))))"  
 --    == Value True
---  runParser pExpr  "True && False && False && True"   
+--  runParser pBoolExpr  "True && False && False && True"   
 --    == ((Value True `And` Value False) `And` Value False) `And` Value True
---  runParser pExpr  "True || False || False || True"   
+--  runParser pBoolExpr  "True || False || False || True"   
 --    == ((Value True `Or` Value False) `Or` Value False) `Or` Value True
---  runParser pExpr  "True && False || False && True"  
+--  runParser pBoolExpr  "True && False || False && True"  
 --    == (Value True `And` Value False) `Or` (Value False `And` Value True)
---  runParser pExpr  "True && (False || False) && True" 
+--  runParser pBoolExpr  "True && (False || False) && True" 
 --    == Value True `And` (Value False `Or` Value False) `And` Value True
 
 -------------------------------------------------------------------------------
@@ -222,7 +230,7 @@ pIdent = do
 data Expr = Var String           --   x
           | App Expr Expr        --   u v                 (left associative)
           | Let String Expr Expr --   let x = u in v
-          | Lam String Expr      --   \x -> u   
+          | Lam String Expr      --   \x -> u
           deriving(Show, Ord, Eq)
 
 pHAtom :: Parser Expr
