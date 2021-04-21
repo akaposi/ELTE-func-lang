@@ -241,8 +241,6 @@ data Expr = Var String           --   x
           | Lam String Expr      --   \ x -> u
           deriving(Show, Ord, Eq)
 
--- let x = z in y -> ...
-
 pHAtom :: Parser Expr
 pHAtom = parens pExpr
      <|> (Var <$> pIdent)
