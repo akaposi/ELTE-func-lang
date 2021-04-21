@@ -165,7 +165,6 @@ string' s = string s <* ws
 int' :: Parser Integer
 int' = int <* ws
 
-
 parens :: Parser a -> Parser a
 parens p = char' '(' *> p <* char' ')'
 
@@ -180,18 +179,23 @@ data BoolExpr = Value Bool
               | And   BoolExpr BoolExpr
               deriving (Eq, Ord, Show)
 
+pBool :: Parser Bool
+pBool = (string' "True" $> True) 
+    <|> (do string' "False"; pure False)
+
 -- a value or an expression inside parentheses
 pAtom :: Parser BoolExpr
-pAtom = undefined
+pAtom = parens pBoolExpr      -- an expression inside parentheses 
+    <|> (Value <$> pBool)     -- a boolean constant
 
 pAnd :: Parser BoolExpr
-pAnd = undefined
+pAnd = infixRight pAtom (string' "&&") And
 
 pOr :: Parser BoolExpr
-pOr = undefined
+pOr = infixRight pAnd (string' "||") Or
 
 pBoolExpr :: Parser BoolExpr
-pBoolExpr = undefined
+pBoolExpr = pOr
 
 -- Examples:
 --  runParser pBoolExpr  "((((True))))"  
@@ -212,13 +216,17 @@ keywords = ["let", "in", "where"]
 
 pKeyword :: String -> Parser ()
 pKeyword kw = do
-  s <- some (satisfy isAlpha)
+  c <- satisfy isAlpha
+  cs <- many (satisfy isAlphaNum)
+  let s = c:cs
   guard (s == kw)
   ws
 
 pIdent :: Parser String
 pIdent = do
-  s <- some (satisfy isAlpha)
+  c <- satisfy isAlpha
+  cs <- many (satisfy isAlphaNum)
+  let s = c:cs
   guard (not $ s `elem` keywords)
   ws
   pure s
@@ -230,23 +238,41 @@ pIdent = do
 data Expr = Var String           --   x
           | App Expr Expr        --   u v                 (left associative)
           | Let String Expr Expr --   let x = u in v
-          | Lam String Expr      --   \x -> u
+          | Lam String Expr      --   \ x -> u
           deriving(Show, Ord, Eq)
 
+-- let x = z in y -> ...
+
 pHAtom :: Parser Expr
-pHAtom = undefined
+pHAtom = parens pExpr
+     <|> (Var <$> pIdent)
 
 pApps :: Parser Expr
-pApps = undefined
+pApps = foldl1 App <$> some pHAtom
 
 pLet :: Parser Expr 
-pLet = undefined
+pLet = do
+  pKeyword "let"
+  x <- pIdent
+  string' "="
+  u <- pExpr
+  pKeyword "in"
+  v <- pExpr
+  pure $ Let x u v
 
 pLam :: Parser Expr 
-pLam = undefined
+pLam = do
+  char' '\\'
+  x <- pIdent
+  string' "->"
+  u <- pExpr
+  pure $ Lam x u
 
 pExpr :: Parser Expr
-pExpr = undefined
+pExpr = pLam
+    <|> pLet
+    <|> pApps
+
 
 -- Examples:
 --   runParser pExpr "x y z" 
