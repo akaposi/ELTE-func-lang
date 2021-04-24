@@ -10,9 +10,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Char
 import Control.Monad.State
-
 import Debug.Trace -- trace, traceM
-
 
 newtype Parser a = Parser {runParser :: String -> Maybe (a, String)}
   deriving Functor  -- sikeres parse végeredményén függvény alkalmazása

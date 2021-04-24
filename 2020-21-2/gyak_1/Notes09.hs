@@ -1,5 +1,4 @@
 
-
 {-# LANGUAGE DeriveFunctor #-}
 
 -- BEAD: egyszerű operátor szintaxis, infixLeft/infixRight/infixNonAssoc segítségével megoldható
@@ -62,10 +61,6 @@ sepBy1 pa psep = (:) <$> pa <*> many (psep >> pa)
 
 sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy pa psep = sepBy1 pa psep <|> pure []
-
--- + Control.Applicative-ból importálva:
---  - many   : nulla vagy több érték olvasása
---  - some   : egy vagy több érték olvasása
 
 many_ :: Parser a -> Parser ()
 many_ p = () <$ many p
