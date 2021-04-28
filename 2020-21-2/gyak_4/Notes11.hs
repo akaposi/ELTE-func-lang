@@ -242,5 +242,16 @@ pExpr = pLam
     <|> pLet
     <|> pApps
 
+-- Examples:
+--   runParser pExpr "(x, y)"         ~~>    Pair (Var "x") (Var "y")
+--   runParser pExpr "(\z -> z, y)"   ~~>    Pair (Lam "z" (Var "z")) (Var "y")
+--   runParser pExpr "(x, let a = b in c)"   ~~>    Pair (Var "x") (Let "a" (Var "b") (Var "c"))
+--   runParser pExpr "let a = (x, y) in z"   ~~>    Let "a" (Pair (Var "x") (Var "y")) (Var "z")
 
---------------------------------------------------------------------------------
+--   runParser pExpr "if x then y else z"   ~~>    IfThenElse (Var "x") (Var "y") (Var "z")
+--   runParser pExpr "if if a then b else c then y else z"   ~~>    
+--     IfThenElse (IfThenElse (Var "a") (Var "b") (Var "c")) (Var "y") (Var "z")
+
+slow :: [Char]
+slow = "((((((((((((((((((((((((((((((((x,x)),x)),x)),x)),x)),x)),x)),x)),x)),x)),x)),x)),x)),x)),x)),x))"
+-- `runParser pExpr slow` may be slow.
