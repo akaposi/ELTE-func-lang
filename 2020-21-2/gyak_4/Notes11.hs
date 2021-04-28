@@ -198,7 +198,7 @@ data Expr = Var String                --   x
           | Let String Expr Expr      --   let x = u in v
           | Lam String Expr           --   \ x -> u
 
-          | Pair                      --  (u, v)
+          | Pair Expr Expr            --  (u, v)
           | Fst Expr                  --  fst u
           | Snd Expr                  --  snd u
 
