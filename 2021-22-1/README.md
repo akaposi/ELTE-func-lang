@@ -36,7 +36,7 @@
 - Feladatok és vizsgák beadásának helye: https://canvas.elte.hu
   + A feladatok beadásának technikai részleteit az első héten tisztázzuk.
 
-- Órai jegyzetek helye:
+- Órai jegyzetek helye: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2021-22-1
 
 #### Előzetes ismeretek
 

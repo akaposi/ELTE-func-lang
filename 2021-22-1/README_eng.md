@@ -26,14 +26,14 @@
   + You can register on Teams with inf account and password.
   + Every students gets an email with an invitation link to the course Teams group.
 
-- Discord: *tutorials* take place on [Discord](https://discord.com/)
+- Discord: *tutorials* take place on [Discord](https://discord.com/), also synchronously with in-per  son lab.
   + There is one Discord server for the course, each tutorial group has a separate voice channel.
   + Every student gets an email with an invitation.
 
 - Assignment/homework submission: https://canvas.elte.hu
   + We will publish technical details of the submission in the first week
 
-- Lecture tutorial notes are found at:
+- Lecture and tutorial notes are found at: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2021-22-1
 
 #### Prerequisites
 
