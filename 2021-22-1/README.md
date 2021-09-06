@@ -5,8 +5,9 @@
 - Előadás (Kovács András): szerda 16:00-17:30 (LD-1-820 Hajós György terem)
 - Gyakorlatok:
   + Kód: 1, Kovács András, csütörtök 16:00-17:30 (LD-2-710 (PC10))
-  + Kód: 2, Rafaël Bocquet, csütörtök 17:45-19:15 (LD-2-710 (PC10))
-  + Kód: 3, Rafaël Bocquet, csütörtök 19:30-21:00 (LD-00-503)
+  + Kód: 2, Rafaël Bocquet, csütörtök 19:30-21:00 (LD-00-503)
+  + Kód: 3, Rafaël Bocquet, csütörtök 17:45-19:15 (LD-2-710 (PC10))
+
  - Konzultáció: hamasoran kitűzzük az időpontot
 
 #### Elérhetőségek
