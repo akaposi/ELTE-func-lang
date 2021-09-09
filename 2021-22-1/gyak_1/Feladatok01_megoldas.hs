@@ -1,65 +1,62 @@
-
 {-# options_ghc -Wincomplete-patterns #-}
-
-import Data.List (foldl')
-
 
 -- Gyakorló feladatok (ismétlés, függvények, mintaillesztés, ADT-k, osztályok)
 --------------------------------------------------------------------------------
+
 -- Definiáld a "xor" műveletet Bool típuson. Használj mintaillesztést,
 -- vagy Prelude-ből standard függvényt.
 xor :: Bool -> Bool -> Bool
-xor = undefined
+xor = (/=)
+
 
 -- függvények
 --------------------------------------------------------------------------------
 
 -- Definiáld a következő függvényeket tetszőlegesen, de
--- típushelyesen és totális függvényként (azaz nem lehet végtelen loop
--- vagy kivétel dobás!).
+-- típushelyesen és totális függvényként (nem lehet végtelen loop
+-- vagy exception).
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (a, (b, (c, d))) = (b, c)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 f a = f a  -- f2 = id
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 f g a = f (g a)  -- f3 = (.)
 
-f3' :: (b -> c) -> (a -> b) -> a -> c
-f3' = undefined
+f4 :: (a -> b -> c) -> (b -> a -> c)
+f4 f b a = f a b  -- f4 = flip
 
-f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
-
-f5 :: ((a, b) -> c) -> a -> b -> c
-f5 = undefined
+f5 :: ((a, b) -> c) -> (a -> b -> c)
+f5 f a b = f (a, b)  -- f5 = curry
 
 f6 :: (a -> b -> c) -> (a, b) -> c
-f6 = undefined
+f6 f (a, b) = f a b  -- f5 = uncurry
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (fst . f, snd . f)
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
-f8 = undefined
+f8 (f, g) a = (f a, g a)
 
 f9 :: (Either a b -> c) -> (a -> c, b -> c)
-f9 = undefined
+f9 f = (f . Left, f . Right)
 
 f10 :: (a -> c, b -> c) -> (Either a b -> c)
-f10 = undefined
+f10 (f, g) (Left a)  = f a
+f10 (f, g) (Right b) = g b
 
 f11 :: Either (a, b) (a, c) -> (a, Either b c)
-f11 = undefined
-
+f11 (Left (a, b))  = (a, Left b)
+f11 (Right (a, c)) = (a, Right c)
 
 f12 :: (a, Either b c) -> Either (a, b) (a, c)
-f12 = undefined
+f12 (a, Left b)  = Left (a, b)
+f12 (a, Right c) = Right (a, c)
 
 -- bónusz feladat (nehéz)
 f13 :: (a -> a -> b) -> ((a -> b) -> a) -> b
-f13 = undefined
+f13 f g = f (g (\a -> f a a)) (g (\a -> f a a))
 
 
 -- listák
@@ -68,49 +65,62 @@ f13 = undefined
 -- Írj egy "applyMany :: [a -> b] -> a -> [b]" függvényt, ami egy
 -- listában található minden függvényt alkalmaz egy
 -- értékre. Pl. "applyMany [(+10), (*10)] 10 == [20, 100]".
--- applyMany :: [a -> b] -> a -> [b]
--- applyMany = undefined
-
 applyMany :: [a -> b] -> a -> [b]
-applyMany = undefined
+applyMany fs a = map (\f -> f a) fs
 
 
 -- Definiálj egy "NonEmptyList a" típust, akár ADT-ként, akár
 -- típusszinonímaként, aminek az értékei nemüres listák.
+type NonEmptyList a = (a, [a])
 
---   - Írj egy "toList :: NonEmptyList a -> [a]" függvényt!
+-- Írj egy "fromList :: [a] -> Maybe (NonEmptyList a)" függvényt, ami
+-- nemüres listát ad vissza egy standard listából, ha az input nem
+-- üres.
+fromList :: [a] -> Maybe (NonEmptyList a)
+fromList []     = Nothing
+fromList (x:xs) = Just (x, xs)
 
---   - Írj egy "fromList :: [a] -> Maybe (NonEmptyList a)" függvényt, ami
---     nemüres listát ad vissza egy standard listából, ha az input nem
---     üres.
+--    Írj egy "toList :: NonEmptyList a -> [a]" függvényt, ami értelemszerűen
+--    működik
+toList :: NonEmptyList a -> [a]
+toList (x, xs) = x : xs
 
 
 -- Definiáld a "composeAll :: [a -> a] -> a -> a" függvényt. Az eredmény legyen
 -- az összes bemenő függvény kompozíciója,
 -- pl. "composeAll [f, g, h] x == f (g (h x))"
 composeAll :: [a -> a] -> a -> a
-composeAll = undefined
+composeAll = foldr (.) id
 
 
 -- Definiáld a "merge :: Ord a => [a] -> [a] -> [a]" függvényt, ami két nemcsökkenő
 -- rendezett listát összefésül úgy, hogy az eredmény is rendezett maradjon.
 merge :: Ord a => [a] -> [a] -> [a]
-merge = undefined
+merge (x:xs) (y:ys)
+  | x < y     = x : merge xs (y:ys)
+  | otherwise = y : merge (x:xs) ys
+merge xs ys = xs ++ ys
 
 
 -- (bónusz) Definiáld a "mergeSort :: Ord a => [a] -> [a]" függvényt, ami a "merge"
 -- iterált felhasználásával rendez egy listát.
 mergeSort :: Ord a => [a] -> [a]
-mergeSort = undefined
+mergeSort = mergeAll . map (\x -> [x]) where
+  mergePairs (xs:ys:yss) = merge xs ys : mergePairs yss
+  mergePairs yss         = yss
+
+  mergeAll [as] = as
+  mergeAll as   = mergeAll (mergePairs as)
+
 
 
 -- (bónusz) Definiáld a "sublists :: [a] -> [[a]]" függvényt, ami a bemenő lista
 -- minden lehetséges részlistáját visszaadja. Pl. "sublists [1, 2] == [[],
 -- [1], [2], [1, 2]]".  A részlisták sorrendje az eredményben tetszőleges, a
 -- fontos, hogy az össze részlista szerepeljen.
--- Kapcsolódó fogalom: hatványhalmaz
 sublists :: [a] -> [[a]]
-sublists = undefined
+sublists []     = [[]]
+sublists (a:as) = let as' = sublists as in map (a:) as' ++ as'
 
 
 -- osztályok
@@ -122,6 +132,12 @@ class Eq' a where
 class Eq' a => Ord' a where
   lte :: a -> a -> Bool
 
+fun1 :: Ord' a => a -> a -> a -> Bool
+fun1 x y z = lte y z
+
+fun2 :: Ord' a => a -> a -> a -> Bool
+fun2 x y z = eq x y
+
 class Show' a where
   show' :: a -> String
 
@@ -130,37 +146,63 @@ data Color = Red | Green | Blue
 
 -- írd meg a következő instance-okat
 instance Eq' Color where
-  eq = undefined
+  eq Red   Red   = True
+  eq Green Green = True
+  eq Blue  Blue  = True
+  eq _     _     = False
 
 instance Ord' Color where
-  lte = undefined
+  lte Red   _     = True
+  lte Green Green = True
+  lte Green Blue  = True
+  lte Blue  Blue  = True
+  lte _     _     = False
 
 instance Show' Color where
-  show' = undefined
+  show' Red   = "Red"
+  show' Green = "Green"
+  show' Blue  = "Blue"
 
 instance Eq' a => Eq' (Maybe a) where
-  eq = undefined
+  eq Nothing  Nothing   = True
+  eq (Just a) (Just a') = eq a a'
+  eq _        _         = False
 
 instance Ord' a => Ord' (Maybe a) where
-  lte = undefined
+  lte Nothing  _         = True
+  lte (Just a) (Just a') = lte a a'
+  lte _        _         = False
 
 instance Show' a => Show' (Maybe a) where
-  show' = undefined
+  show' Nothing  = "Nothing"
+  show' (Just a) = "Just " ++ show' a
 
 instance Eq' a => Eq' [a] where
-  eq = undefined
+  eq []     []     = True
+  eq (x:xs) (y:ys) = eq x y && eq xs ys
+  eq _      _      = False
 
 instance Ord' a => Ord' [a] where
-  lte = undefined
+  lte []     _      = True
+  lte (x:xs) (y:ys) = lte x y && lte xs ys
+  lte _      _      = False
 
 instance Show' a => Show' [a] where
-  show' = undefined
+  show' []     = "[]"
+  show' (a:as) = "[" ++ show' a ++ concatMap (\a -> ", " ++ show' a) as ++ "]"
 
 instance Eq' a => Eq' (Tree a) where
-  eq = undefined
+  eq (Leaf a)   (Leaf a')    = eq a a'
+  eq (Node l r) (Node l' r') = eq l l' && eq r r'
+  eq _          _            = False
 
 instance Ord' a => Ord' (Tree a) where
-  lte = undefined
+  lte (Leaf a)   (Leaf a')    = lte a a'
+  lte (Leaf a)   _            = True
+  lte (Node l r) (Node l' r') = lte l l' && lte r r'
+  lte _          _            = False
 
 instance Show' a => Show' (Tree a) where
-  show' = undefined
+  show' (Leaf a)   = "Leaf " ++ show' a
+  show' (Node l r) = "Node " ++ par (show' l) ++ " " ++ par (show' r)
+    where par str = "(" ++ str ++ ")"
