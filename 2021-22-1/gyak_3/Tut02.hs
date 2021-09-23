@@ -1,4 +1,4 @@
-{-# GHC_OPTIONS -fwarn-incomplete-patterns #-} 
+{-# OPTIONS -fwarn-incomplete-patterns #-} 
 module Tut02 where
 import Prelude hiding (Eq(..), Ord(..), Functor(..))
 
@@ -9,83 +9,102 @@ class Eq a where
   (==) :: a -> a -> Bool
 
 instance Eq Bool where
-  (==) = undefined
+  -- False == False = True
+  -- False == True  = False
+  -- True  == True  = False
+  -- True  == True  = True
+
+  False == False = True
+  True  == True  = True
+  _     == _     = False
 
 instance Eq a => Eq (Maybe a) where
-  (==) = undefined
+  Nothing == Nothing = True
+  Just x  == Just y  = x == y
+  _       == _       = False
 
 instance Eq a => Eq [a] where
-  (==) = undefined
+  []     == []     = True
+  (x:xs) == (y:ys) = (x == y) && (xs == ys)
+  --                  (Eq a)      (Eq [a])
+  _      == _      = False
 
 instance (Eq a, Eq b) => Eq (Either a b) where
-  (==) = undefined
+  Left x == Left y = x == y
+  Right x == Right y = x == y
+  _ == _ = False
 
 instance (Eq a, Eq b) => Eq (a, b) where
-  (==) = undefined
+  (x,y) == (x',y') = x==x'&&y==y'
 
 -- ghci> :i Ord
-class Ord a where
+class Eq a => Ord a where
   (<=) :: a -> a -> Bool
 
 instance Ord Bool where
-  (<=) = undefined
+  -- False <= False = True
+  -- False <= True  = True
+  -- True  <= False = False
+  -- True  <= True  = True
+
+  False <= False = True
+  False <= _     = True -- compare False with every constructor we have not handled yet
+  _     <= False = False
+
+  True  <= True  = True
 
 instance Ord a => Ord (Maybe a) where
-  (<=) = undefined
+  Nothing <= Nothing = True
+  Nothing <= _       = True
+  _       <= Nothing = False
 
+  Just x  <= Just y  = x <= y
+
+instance Ord a => Ord [a] where
+  [] <= [] = True
+  [] <= _  = True
+  _  <= [] = False
+
+  (x:xs) <= (y:ys) 
+    | x == y       = xs <= ys
+    | otherwise    = x <= y
+
+  -- compare :: Ord a => a -> a -> Ordering
+  --   instead of (<=)
+  -- more efficient
+
+-- [1,2] <= [2,1]
+
+-- forall a, b, c.      either (a<=b)
+                           --  (a == b)
+                           --  (b <= a)
 
 ----- The Functor typeclass:
 
-
 -- ghci> :i Functor
+
+map' :: (a -> b) -> [a] -> [b]
+map' f []     = []
+map' f (x:xs) = f x : map' f xs
+
+-- data T a = T1 (...)
+--            T2 (...)
+
+-- fmap :: (a -> b) -> (T a -> T b)
+-- fmap f (T1 x y z) = T1 (fx x) (fy y) (fz z)
+--    fx = id      (x :: Int)
+--    fx = f       (x :: a)
+--    fx = map f   (x :: [a])
+-- fmap f (T2 x y) = T2 ...
+
 class Functor f where
   fmap :: (a -> b) -> f a -> f b
 
 instance Functor [] where
   -- fmap :: (a -> b) -> [a] -> [b]
-  fmap = undefined
+  fmap = map'
 
 instance Functor Maybe where
   -- fmap :: (a -> b) -> Maybe a -> Maybe b
-  fmap = undefined
-
-mapNested :: (a -> b) -> [[[a]]] -> [[[b]]]
-mapNested = undefined
-
-data Id a = Id a
-          deriving (Show)
-
-instance Functor Id where
-  -- fmap :: (a -> b) -> Id a -> Id b
-  fmap = undefined
-
-data Const a b = Const a
-               deriving (Show)
-
-instance Functor (Const a) where
-  -- fmap :: (a -> b) -> Const x a -> Const x b
-  fmap = undefined
-
-data BinTree a = BinLeaf a
-               | BinNode (BinTree a) (BinTree a)
-               deriving (Show)
-
-instance Functor BinTree where
-  -- fmap :: (a -> b) -> BinTree a -> BinTree b
-  fmap = undefined
-
-data Tree1 a = Leaf1 a
-             | Node1 [Tree1 a]
-             deriving (Show)
-
-instance Functor Tree1 where
-  -- fmap :: (a -> b) -> Tree1 a -> Tree1 b
-  fmap = undefined
-
-data Tree2 a = Leaf2 a
-             | Node2 (Int -> Tree2 a)
--- Remark: it is not possible to define Show, Eq or Ord for `Tree2`
-
-instance Functor Tree2 where
-  -- fmap :: (a -> b) -> Tree2 a -> Tree2 b
-  fmap = undefined
+  fmap f Nothing  = Nothing
+  fmap f (Just x) = Just (f x)
