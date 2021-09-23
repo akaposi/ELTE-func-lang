@@ -3,6 +3,7 @@ module Tut03 where
 import Prelude hiding (Functor(..))
 
 ----- The Functor typeclass:
+
 -- ghci> :i Functor
 class Functor f where
   fmap :: (a -> b) -> f a -> f b
@@ -27,12 +28,25 @@ map' f (x:xs) = f x : map' f xs
 --   fx = f      (if x :: a)
 --   fx = map f  (if x :: [a])
 
+data T a = T1 Int a [a]
+
+instance Functor T where
+  fmap f (T1 x y z) = T1 (fx x) (fy y) (fz z)
+    where fx = id
+          fy = f
+          fz = map f
+
 instance Functor Maybe where
   -- fmap :: (a -> b) -> Maybe a -> Maybe b
-  fmap f Nothing = Nothing
+  fmap f Nothing  = Nothing
   fmap f (Just x) = Just (f x)
 
 -- Define without pattern matching, using only fmap:
+-- mapNested (+1) [[0], [1, 2]] = [[1], [2, 3]]
+
+mapNested' :: (a -> b) -> [[a]] -> [[b]]
+mapNested' f = map (map f) 
+
 mapNested :: (a -> b) -> [[[a]]] -> [[[b]]]
 mapNested = undefined
 
@@ -48,7 +62,10 @@ data Const a b = Const a
 
 instance Functor (Const a) where
   -- fmap :: (a -> b) -> Const x a -> Const x b
-  fmap = undefined
+  fmap f (Const x) = Const _
+      -- f :: a -> b 
+      -- x :: x
+      -- _ :: x
 
 data BinTree a = BinLeaf a
                | BinNode (BinTree a) (BinTree a)
@@ -73,3 +90,30 @@ data Tree2 a = Leaf2 a
 instance Functor Tree2 where
   -- fmap :: (a -> b) -> Tree2 a -> Tree2 b
   fmap = undefined
+
+
+-- Additional exercises:
+ 
+returnList :: a -> [a]
+returnList x = [x]
+
+bindList :: (a -> [b]) -> [a] -> [b]
+bindList f xs = [ y | x <- xs, y <- f x ]
+
+concatList :: [[a]] -> [a]
+concatList = concat
+
+-- Define the following functions for Maybe:
+---- An element of (Maybe a) can be seen as a list of 'a's with at most one element.
+
+returnMaybe :: a -> Maybe a
+returnMaybe = undefined
+
+bindMaybe :: (a -> Maybe b) -> Maybe a -> Maybe b
+bindMaybe = undefined
+
+concatMaybe :: Maybe (Maybe a) -> Maybe a
+concatMaybe = undefined
+
+-- Use bindMaybe to redefine concatMaybe
+-- Also concatMaybe to redefine bindMaybe
