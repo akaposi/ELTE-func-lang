@@ -1,4 +1,4 @@
-{-# GHC_OPTIONS -fwarn-incomplete-patterns #-} 
+{-# OPTIONS -fwarn-incomplete-patterns #-} 
 module Tut01 where
 import Prelude hiding (Eq(..), Ord(..))
 
