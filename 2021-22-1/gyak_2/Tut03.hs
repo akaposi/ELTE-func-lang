@@ -48,21 +48,23 @@ mapNested' :: (a -> b) -> [[a]] -> [[b]]
 mapNested' f = map (map f) 
 
 mapNested :: (a -> b) -> [[[a]]] -> [[[b]]]
-mapNested = undefined
+mapNested f = map (mapNested' f)
 
 data Id a = Id a
           deriving (Show)
 
 instance Functor Id where
   -- fmap :: (a -> b) -> Id a -> Id b
-  fmap = undefined
+  fmap f (Id x) = Id (f x)
 
 data Const a b = Const a
                deriving (Show)
 
+data ConstInt b = ConstInt Int
+
 instance Functor (Const a) where
   -- fmap :: (a -> b) -> Const x a -> Const x b
-  fmap f (Const x) = Const _
+  fmap f (Const x) = Const x
       -- f :: a -> b 
       -- x :: x
       -- _ :: x
@@ -73,7 +75,8 @@ data BinTree a = BinLeaf a
 
 instance Functor BinTree where
   -- fmap :: (a -> b) -> BinTree a -> BinTree b
-  fmap = undefined
+  fmap f (BinLeaf x)   = BinLeaf (f x)
+  fmap f (BinNode l r) = BinNode (fmap f l) (fmap f r)
 
 data Tree1 a = Leaf1 a
              | Node1 [Tree1 a]
@@ -81,39 +84,30 @@ data Tree1 a = Leaf1 a
 
 instance Functor Tree1 where
   -- fmap :: (a -> b) -> Tree1 a -> Tree1 b
-  fmap = undefined
+  fmap f (Leaf1 x)  = Leaf1 (f x)
+  -- fmap f (Node1 xs) = Node1 (fxs xs)
+  --   where -- fxs :: [Tree1 a] -> [Tree1 b]
+  --         fxs []     = []
+  --         fxs (x:xs) = fmap f x : fxs xs
+  fmap f (Node1 xs) = Node1 (map (fmap f) xs)
+
+  -- fmap f (Node1 (x:xs)) = ...
+  --    ^^^ this cannot work
 
 data Tree2 a = Leaf2 a
              | Node2 (Int -> Tree2 a)
 -- Remark: it is not possible to define Show, Eq or Ord for `Tree2`
 
+instance Functor ((->) b) where
+  fmap = (.)
+
 instance Functor Tree2 where
   -- fmap :: (a -> b) -> Tree2 a -> Tree2 b
-  fmap = undefined
-
-
--- Additional exercises:
- 
-returnList :: a -> [a]
-returnList x = [x]
-
-bindList :: (a -> [b]) -> [a] -> [b]
-bindList f xs = [ y | x <- xs, y <- f x ]
-
-concatList :: [[a]] -> [a]
-concatList = concat
-
--- Define the following functions for Maybe:
----- An element of (Maybe a) can be seen as a list of 'a's with at most one element.
-
-returnMaybe :: a -> Maybe a
-returnMaybe = undefined
-
-bindMaybe :: (a -> Maybe b) -> Maybe a -> Maybe b
-bindMaybe = undefined
-
-concatMaybe :: Maybe (Maybe a) -> Maybe a
-concatMaybe = undefined
-
--- Use bindMaybe to redefine concatMaybe
--- Also concatMaybe to redefine bindMaybe
+  fmap f (Leaf2 x) = Leaf2 (f x)
+  -- fmap f (Node2 g) = Node2 (fg g)
+  --   where -- fg :: (Int -> Tree2 a) -> (Int -> Tree2 b)
+  --         fg h i = fmap f (h i)
+  --             -- h :: Int -> Tree2 a
+  --             -- i :: Int
+  fmap f (Node2 g) = Node2 (fmap f . g)
+  -- fmap f (Node2 g) = Node2 (fmap (fmap f) g)
