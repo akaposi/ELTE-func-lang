@@ -69,5 +69,5 @@ zipWithMaybe = undefined
 
 --------------------------------------------------------------------------------
 
-kleisli :: (a -> Maybe b) -> (b -> Maybe c) -> (a -> Mabye c)
+kleisli :: (a -> Maybe b) -> (b -> Maybe c) -> (a -> Maybe c)
 kleisli = undefined
