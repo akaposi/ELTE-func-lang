@@ -4,19 +4,12 @@ module Tut04 where
 
 -- Maybe monad
 
--- Monad operations and combinators:
+--   (a -> b)       : "pure" functions
+--   (a -> Maybe b) : functions from a to b that can fail
 
-returnMaybe :: a -> Maybe a
-returnMaybe = undefined
-
-bindMaybe :: (a -> Maybe b) -> Maybe a -> Maybe b
-bindMaybe = undefined
-
-joinMaybe :: Maybe (Maybe a) -> Maybe a
-joinMaybe = undefined
-
-apMaybe :: Maybe (a -> b) -> Maybe a -> Maybe b
-apMaybe = undefined
+--    f :: a -> Maybe b
+--       f x ~~> Just y    <-- `f x` has succeeded, and returned y
+--       f x ~~> Nothing   <-- `f x` has failed
 
 -- Exercises: 
 --  1) Define the functions sequenceMaybe, mapMaybe, mapMaybeTree, filterMaybe, zipWithMaybe
@@ -68,6 +61,20 @@ zipWithMaybe = undefined
 --    == [1, 5]
 
 --------------------------------------------------------------------------------
+
+-- Monad operations and combinators:
+
+returnMaybe :: a -> Maybe a
+returnMaybe = undefined
+
+bindMaybe :: (a -> Maybe b) -> Maybe a -> Maybe b
+bindMaybe = undefined
+
+joinMaybe :: Maybe (Maybe a) -> Maybe a
+joinMaybe = undefined
+
+apMaybe :: Maybe (a -> b) -> Maybe a -> Maybe b
+apMaybe = undefined
 
 kleisli :: (a -> Maybe b) -> (b -> Maybe c) -> (a -> Maybe c)
 kleisli = undefined
