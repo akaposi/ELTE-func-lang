@@ -244,7 +244,7 @@ fmap3 f fa fb fc = f <$> fa <*> fb <*> fc
 -- fmapN f x_i = f <$> x_0 <*> ... <*> x_N
 
 
--- Applicative: nem muszáhj minden részeredményt bind-olni.
+-- Applicative: nem muszáj minden részeredményt bind-olni.
 label'' :: Tree a -> Tree (a, Int)
 label'' t = evalState (go t) 0 where
 
