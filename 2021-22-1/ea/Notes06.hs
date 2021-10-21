@@ -10,11 +10,7 @@
 import Control.Monad
 
 newtype State s a = State {runState :: s -> (a, s)}
-
-instance Functor (State s) where
-
-  fmap :: (a -> b) -> State s a -> State s b
-  fmap f (State g) = State (\s -> case g s of (a, s) -> (f a, s))
+  deriving Functor
 
 instance Applicative (State s) where
   pure  = return
