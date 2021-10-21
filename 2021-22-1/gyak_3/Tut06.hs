@@ -28,7 +28,7 @@ put :: s -> State s ()
 put s = State (\_ -> ((), s))
 
 modify :: (s -> s) -> State s ()
-modify f = do {s <- get; put (f s)}
+modify f = do s <- get; put (f s)
 
 -- Examples: 
 incr :: State Int ()
@@ -77,13 +77,18 @@ ex n = do
 runEx :: Integer -> Integer
 runEx n = execState (ex n) 1
 
+
+
 -- impFactorial should be a translation of the imperative program
 --    x := 1
 --    for i from 1 to n
 --      x := x * i
 
 impFactorial :: Integer -> State Integer ()
-impFactorial n = undefined
+impFactorial n = do
+  -- put 1
+  forM_ [1..n] $ \i -> do
+    modify (\x -> x * i)
 
 runFactorial :: Integer -> Integer
 runFactorial n = execState (impFactorial n) 1
@@ -94,7 +99,12 @@ runFactorial n = execState (impFactorial n) 1
 --      (a, b) := (b, a+b)
 
 impFibo :: Integer -> State (Integer, Integer) ()
-impFibo n = undefined
+impFibo n = do
+  -- put (1,1)
+  forM_ [1..n] $ \_ -> do
+    -- (a,b) <- get
+    -- put (b, a+b)
+    modify $ \(a,b) -> (b, a+b)
 
 runFibo :: Integer -> Integer
 runFibo n = fst (execState (impFibo n) (1, 1))
@@ -105,12 +115,23 @@ runFibo n = fst (execState (impFibo n) (1, 1))
 --     (a, b) := (b, a `mod` b)
 
 impGcd :: State (Integer, Integer) ()
-impGcd = undefined
+impGcd = whileM_ 
+           (do (a,b) <- get 
+               return (b /= 0) -- b /= 0
+           )
+           (do modify $ \(a,b) -> (b, a `mod` b)) -- (a, b) := (b, a `mod` b)
 
 runGcd :: Integer -> Integer -> Integer
 runGcd x y = fst $ execState impGcd (x, y)
 
 --- Foldable
+
+-- class Monoid m where
+--   mempty :: m
+--   (<>)   :: m -> m -> m
+
+--   mempty <> x = x = x <> mempty     -- mempty is neutral for (<>)
+--   (x <> y) <> z == x <> (y <> z)    -- (<>) is associative
 
 class Functor f => Foldable f where
   foldMap :: Monoid m => (a -> m) -> f a -> m
@@ -118,35 +139,50 @@ class Functor f => Foldable f where
 foldr :: Foldable f => (a -> b -> b) -> b -> f a -> b
 foldr f e t = foldMap (Endo . f) t `appEndo` e
 
+-- There is no: "instance Foldable ((->) x)"
+
+-- fmap f []     = []
+-- fmap f (x:xs) = (:) (f x) (fmap f xs)
+
 instance Foldable [] where
   foldMap f []     = mempty
   foldMap f (x:xs) = f x <> foldMap f xs
                 -- = mconcat [f x, foldMap f xs]
 
 null :: Foldable f => f a -> Bool
-null = undefined
+null = foldr (\_ _ -> False) True
+
+toList :: Foldable f => f a -> [a]
+-- toList = foldr (\x xs -> x:xs) []
+toList = foldr (:) []
 
 length' :: Foldable f => f a -> Int
-length' = undefined
+length' = foldr (\_ l -> l+1) 0
 
 sum' :: (Foldable f, Num a) => f a -> a
-sum' = undefined
+sum' = foldr (\x s -> x + s) 0
 
 instance Foldable Maybe where
-  foldMap = undefined
+  foldMap f Nothing  = mempty
+  foldMap f (Just x) = f x
 
 instance Foldable (Either x) where
-  foldMap = undefined
+  foldMap f (Left c)  = mempty
+  foldMap f (Right b) = f b
 
 data Tree a = Leaf a | Node (Tree a) (Tree a)
   deriving (Functor)
 
 instance Foldable Tree where
-  foldMap = undefined
+  foldMap f (Leaf x) = f x
+  foldMap f (Node l r) = foldMap f l <> foldMap f r
 
 data Tree2 a = Leaf2 a | Node2 [Tree2 a]
   deriving (Functor)
 
+-- fmap f (Node2 xs) = Node2 (fmap (fmap f) xs)
+
 instance Foldable Tree2 where
-  foldMap = undefined
+  foldMap f (Leaf2 x)  = f x
+  foldMap f (Node2 xs) = foldMap (foldMap f) xs
 
