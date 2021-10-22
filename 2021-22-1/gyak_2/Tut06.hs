@@ -3,6 +3,7 @@
 module Tut06 where
 
 import Prelude hiding (Foldable(..))
+import Prelude (sum, length)
 import Control.Monad
 import Data.Monoid
 
@@ -28,7 +29,7 @@ put :: s -> State s ()
 put s = State (\_ -> ((), s))
 
 modify :: (s -> s) -> State s ()
-modify f = do {s <- get; put (f s)}
+modify f = do s <- get; put (f s)
 
 -- Examples: 
 incr :: State Int ()
@@ -71,7 +72,7 @@ whileM_ cond ma = whileM cond ma >> pure ()
 ex :: Integer -> State Integer ()
 ex n = do
   put 1                   -- x := 1
-  forM_ [1..n] $ \_ -> do -- for i from 1 to n
+  forM_ [1..n] $ \i -> do -- for i from 1 to n
     modify (\x -> x + 1)  --   x := x+1
 
 runEx :: Integer -> Integer
@@ -83,7 +84,10 @@ runEx n = execState (ex n) 1
 --      x := x * i
 
 impFactorial :: Integer -> State Integer ()
-impFactorial n = undefined
+impFactorial n = do
+  -- put 1
+  forM_ [1..n] $ \i -> do
+    modify (\x -> x * i)
 
 runFactorial :: Integer -> Integer
 runFactorial n = execState (impFactorial n) 1
@@ -94,7 +98,9 @@ runFactorial n = execState (impFactorial n) 1
 --      (a, b) := (b, a+b)
 
 impFibo :: Integer -> State (Integer, Integer) ()
-impFibo n = undefined
+impFibo n = do
+  forM_ [1..n] $ \_ -> do
+    modify (\(a,b) -> (b,a+b))
 
 runFibo :: Integer -> Integer
 runFibo n = fst (execState (impFibo n) (1, 1))
@@ -105,12 +111,22 @@ runFibo n = fst (execState (impFibo n) (1, 1))
 --     (a, b) := (b, a `mod` b)
 
 impGcd :: State (Integer, Integer) ()
-impGcd = undefined
+impGcd = whileM_ 
+           (do (_,b) <- get; return (b /= 0))
+           (do modify (\(a,b) -> (b, a`mod`b)))
 
 runGcd :: Integer -> Integer -> Integer
 runGcd x y = fst $ execState impGcd (x, y)
 
 --- Foldable
+
+-- class Monoid m where
+--   mempty :: m
+--   (<>)   :: m -> m -> m
+
+--   mconcat :: [m] -> m
+--   mconcat [] = mempty
+--   mconcat (x:xs) = x <> mconcat xs
 
 class Functor f => Foldable f where
   foldMap :: Monoid m => (a -> m) -> f a -> m
@@ -118,34 +134,55 @@ class Functor f => Foldable f where
 foldr :: Foldable f => (a -> b -> b) -> b -> f a -> b
 foldr f e t = foldMap (Endo . f) t `appEndo` e
 
+-- fmap f []     = []
+-- fmap f (x:xs) = (:) (f x) (fmap f xs)
+
 instance Foldable [] where
   foldMap f []     = mempty
   foldMap f (x:xs) = f x <> foldMap f xs
                 -- = mconcat [f x, foldMap f xs]
 
 null :: Foldable f => f a -> Bool
-null = undefined
+null = foldr (\x _ -> False) True
+            -- x :: a
+
+toList :: Foldable f => f a -> [a]
+toList = foldr (\x xs -> x:xs) []
+    -- = foldr (:) []
 
 length' :: Foldable f => f a -> Int
-length' = undefined
+length' = foldr (\_ len -> 1+len) 0
+
+length'' :: Foldable f => f a -> Int
+length'' = length . toList
 
 sum' :: (Foldable f, Num a) => f a -> a
-sum' = undefined
+sum' = foldr (\x s -> x + s) 0
+
+sum'' :: (Foldable f, Num a) => f a -> a
+sum'' = sum . toList
 
 instance Foldable Maybe where
-  foldMap = undefined
+  foldMap f Nothing  = mempty
+  foldMap f (Just x) = f x
 
 instance Foldable (Either x) where
-  foldMap = undefined
+  foldMap f (Left _)  = mempty
+  foldMap f (Right b) = f b
 
-data Tree a = Leaf a | Node (Tree a) (Tree a)
+data Tree a = Leaf a 
+            | Node (Tree a) (Tree a)
   deriving (Functor)
 
 instance Foldable Tree where
-  foldMap = undefined
+  foldMap f (Leaf x) = f x
+  foldMap f (Node l r) = foldMap f l <> foldMap f r
 
-data Tree2 a = Leaf2 a | Node2 [Tree2 a]
+data Tree2 a = Leaf2 a 
+             | Node2 [Tree2 a]
   deriving (Functor)
 
+-- fmap f (Node2 xs) = fmap (fmap f) xs
 instance Foldable Tree2 where
-  foldMap = undefined
+  foldMap f (Leaf2 x)  = f x
+  foldMap f (Node2 xs) = foldMap (foldMap f) xs
