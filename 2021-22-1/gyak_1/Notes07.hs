@@ -1,6 +1,13 @@
 
 {-# language DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
+------------------------------------------------------------
+
+-- Következő órai eleji feladat:
+--    State + fa/lista
+
+------------------------------------------------------------
+
 import Control.Monad
 
 newtype State s a = State {runState :: s -> (a, s)} deriving Functor
@@ -37,7 +44,48 @@ pop = do
       put as
       return (Just a)
 
---------------------------------------------------------------------------------
+------------------------------------------------------------
+-- canvas feladat
+
+data Tree' a = Leaf1' a | Leaf2' a a | Node' (Tree' a) (Tree' a)
+  deriving (Eq, Show, Functor, Foldable, Traversable)
+
+-- State [a] ()
+-- állapot: [a]
+
+toList :: Tree' a -> [a]
+toList t = execState (go t) [] where
+
+  -- -- naiv: balról jobbra járjuk a fát (nem hatékony ++)
+  -- go :: Tree' a -> State [a] ()
+  -- go (Leaf1' a) = do
+  --   as <- get
+  --   put (as ++ [a])
+  -- go (Leaf2' a1 a2) = do
+  --   as <- get
+  --   put (as ++ [a1, a2])
+  -- go (Node' l r) = go l >> go r
+
+  -- jobbról járjuk be a fát, lista elejére tesszük
+  -- az értéket (hatékony, mivel (:)-ot használunk csak)
+  -- (jobbra zárójelezett ++ lineáris idejű, balra: kvadratikus)
+  go :: Tree' a -> State [a] ()
+  go (Leaf1' a) = do
+    as <- get
+    put (a:as)
+  go (Leaf2' a1 a2) = do
+    as <- get
+    put (a1:a2:as)
+  go (Node' l r) = go r >> go l
+
+toList' :: Tree' a -> [a]
+toList' t = execState (traverse go t) [] where
+  go :: a -> State [a] ()
+  go a = do
+    as <- get
+    put (as ++ [a])
+
+------------------------------------------------------------
 
 data Tree a = Leaf a | Node (Tree a) (Tree a)
   deriving (Show, Functor, Foldable, Traversable)
@@ -51,11 +99,51 @@ traverseRightToLeft = go where
   go f (Node l r) = (\l r -> Node r l) <$> go f r <*> go f l
 
 -- definiáld újra az előzői órai függvényeket "traverse" felhasználásával!
-maxs' :: [Int] -> [Int]
-maxs' = undefined
 
+-- cseréljük ki minden elemet az előző elemek maximumára
+maxs' :: [Int] -> [Int]
+maxs' ns = evalState (traverse go ns) 0 where
+  go :: Int -> State Int Int
+  go n = do
+    m <- get     -- eddigi maximum
+    put (max n m)
+    pure m       --
+
+-- evalState :: State Int [Int] -> Int -> [Int]
+
+-- traverse : map + mellékhatás
+-- map      :: (Int ->           Int) -> [Int] ->           [Int]
+-- traverse :: (Int -> State Int Int) -> [Int] -> State Int [Int]
+
+-- maxs' ns = evalState (go ns) 0 where
+--   go :: [Int] -> State Int [Int]
+--   go [] = pure []
+--   go (n:ns) = do
+--     m <- get
+--     put (max n m)
+--     ns' <- go ns
+--     pure (m:ns')
+
+-- leveleket cseréljük ki egy lista elemeire
+-- állapot : [a]
+-- Traversable struktúra : Tree a
 replaceLeaves' :: [a] -> Tree a -> Tree a
-replaceLeaves' = undefined
+replaceLeaves' as t = evalState (traverse go t) as where
+
+  -- fmap     :: (a ->           a) -> Tree a ->            Tree a
+  -- traverse :: (a -> State [a] a) -> Tree a -> State [a] (Tree a)
+
+  -- használjuk a hole-t!
+  --     traverse _ t        _ :: a -> State [a] a
+
+  go :: a -> State [a] a
+  go a = do
+    ma <- pop     -- pop :: State [a] (Maybe a)
+    case ma of
+      Nothing -> pure a
+      Just a' -> pure a'
+
+-- házi + feladatsor lesz
 
 reverseElems' :: Tree a -> Tree a
 reverseElems' = undefined
@@ -73,18 +161,30 @@ labelRightToLeft' = undefined
 -- (Applicative m) legyen használva. A függvények viselkedése ne változzon!
 -- Tipp: Control.Applicative kombinátorait érdemes megnézni.
 
+-- Feladat: program, ami *nem interaktív*, (nincsenek valódi
+--   függőségek mellékhatások között, futtatás előtt látjuk,
+--   hogy mik a hatások)
+
 f1 :: Monad m => b -> m a -> m b
 f1 b ma = do
   a <- ma
   return b
 
--- f1' :: Applicative m => b -> m a -> m b   -- ugyanígy a többi függvényre
+-- Functor elég!
+f1' :: Functor m => b -> m a -> m b   -- ugyanígy a többi függvényre
+f1' b ma = fmap (\_ -> b) ma
 
 f2 :: Monad m => m Bool -> m a -> m a -> m a
 f2 mb ma ma' = do
   b <- mb
   if b then do {a <- ma; ma'; return a}
        else do {ma; ma'}
+
+-- Tipp: megnézzük, hogy mik a mellékhatásos műveletek
+-- írunk egy N-aritású Applicative map-et
+f2' :: Applicative m => m Bool -> m a -> m a -> m a
+f2' mb ma ma' =
+  (\b a a' -> if b then a else a') <$> mb <*> ma <*> ma'
 
 f3 :: Monad m => (a -> m b) -> [a] -> m [b]
 f3 f []     = return []
@@ -93,12 +193,23 @@ f3 f (a:as) = do
   bs <- f3 f as
   return (b : bs)
 
+f3' :: Applicative m => (a -> m b) -> [a] -> m [b]
+f3' = traverse
+
+-- std függvény: filterM, lista szűrés + mellékhatás
 f4 :: Monad m => (a -> m Bool) -> [a] -> m [a]
 f4 f []     = return []
 f4 f (a:as) = do
   b <- f a
   if b then do {as' <- f4 f as; return (a:as')}
        else f4 f as
+  -- sorban (f a) és (f4 f as) műveletet hajtja végre
+  --   (minden ágon ugyanazok a műveletek hajtódnak végre)
+
+f4' :: Applicative m => (a -> m Bool) -> [a] -> m [a]
+f4' f [] = pure []
+f4' f (a:as) =
+  (\b as' -> if b then a:as' else as') <$> f a <*> f4' f as
 
 f5 :: Monad m => m a -> m b -> m c -> m d -> m (a, c)
 f5 ma mb mc md = do
@@ -157,3 +268,5 @@ evalOps = undefined
 -- Add meg ennek segítségével az állapotot módosító (Int -> Int) függvényt.
 runOps :: [Op] -> Int -> Int
 runOps = undefined
+
+------------------------------------------------------------
