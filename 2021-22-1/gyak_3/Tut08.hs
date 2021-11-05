@@ -57,11 +57,14 @@ debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
 char :: Char -> Parser ()
 char c = () <$ satisfy (==c)
 
+alpha :: Parser Char
+alpha = satisfy (\c -> 'a' <= c && c <= 'z')
+
 -- The parser anyChar accepts any character.
 anyChar :: Parser Char
 anyChar = satisfy (\_ -> True)
 
--- The parser `char c` recognizes exactly the string s.
+-- The parser `string s` recognizes exactly the string s.
 string :: String -> Parser ()
 string = traverse_ char
 
@@ -74,9 +77,14 @@ string = traverse_ char
 --   `some p` tries to run the parser p as many times as possible.
 --   The parser p should suceed at least once.
 
+many' :: Parser a -> Parser [a]
+many' p = some' p <|> pure []
+
+some' :: Parser a -> Parser [a]
+some' p = do x <- p; xs <- many' p; pure (x:xs)
+
 -- `sepBy pa psep` runs the parser pa as many times as possible, 
 --   separated by the parser psep.
-
 sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy pa psep = sepBy1 pa psep <|> pure []
 
@@ -94,21 +102,32 @@ sepBy1 pa psep = (:) <$> pa <*> many (psep *> pa)
 --  isDigit :: Char -> Bool
 --  digitToInt :: Char -> Int
 digit :: Parser Int
-digit = undefined
+-- digit = do
+--   x <- satisfy isDigit
+--   pure (digitToInt x)
+-- digit = fmap digitToInt (satisfy isDigit)
+digit = digitToInt <$> satisfy isDigit
 
 -- The parser `posInt` should parse a positive integer.
---  Ex: runParser posInt "-10" == Just (-10, "")
+--  Ex: runParser posInt "10" == Just (10, "")
+--  Ex: runParser posInt "-10" == Nothing
 posInt :: Parser Int
-posInt = undefined
+posInt = fmap (foldl' (\x d -> 10*x+d) 0) (some digit)
 
 -- The parser `negInt` should parse a negative integer (starting with a minus sign).
 --  Ex: runParser negInt "-10" == Just (-10, "")
 negInt :: Parser Int
-negInt = undefined
+-- negInt = do
+--   char '-'
+--   negate <$> posInt
+negInt = char '-' *> (negate <$> posInt)
+
+-- (<*) :: Parser a -> Parser b -> Parser b
+-- (*>) :: Parser a -> Parser b -> Parser a
 
 -- The parser `int` should parse any integer.
 int :: Parser Int
-int = undefined
+int = posInt <|> negInt
 
 -- The parser `intList` should parse a list of integers, 
 --   separated by commas and enclosed in square brackets.
@@ -118,7 +137,13 @@ int = undefined
 --  Ex: runParser "[-7]" == Just ([-7], "")
 --  Ex: runParser "[;]" == Nothing
 intList :: Parser [Int]
-intList = undefined
+intList = do
+  char '['
+  xs <- sepBy int
+              (char ',')
+  char ']'
+  return xs
+-- intList = char '[' *> sepBy int (char ',') <* char ']'
 
 data Tree a = Leaf a 
             | Node [Tree a]

@@ -11,7 +11,8 @@ import Data.Char
 
 import Debug.Trace
 
-newtype Parser a = Parser {runParser :: String -> Maybe (a, String)}
+
+newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
   deriving(Functor)
 
 instance Applicative Parser where
@@ -57,9 +58,6 @@ debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
 char :: Char -> Parser ()
 char c = () <$ satisfy (==c)
 
-alpha :: Parser Char
-alpha = satisfy (\c -> 'a' <= c && c <= 'z')
-
 -- The parser anyChar accepts any character.
 anyChar :: Parser Char
 anyChar = satisfy (\_ -> True)
@@ -102,32 +100,46 @@ sepBy1 pa psep = (:) <$> pa <*> many (psep *> pa)
 --  isDigit :: Char -> Bool
 --  digitToInt :: Char -> Int
 digit :: Parser Int
-digit = undefined
+-- digit = let p = satisfy isDigit
+--         in fmap digitToInt p
+digit = digitToInt <$> satisfy isDigit
 
 -- The parser `posInt` should parse a positive integer.
 --  Ex: runParser posInt "10" == Just (10, "")
 --  Ex: runParser posInt "-10" == Nothing
 posInt :: Parser Int
-posInt = undefined
+posInt = fmap (foldl' (\acc d -> acc*10+d) 0) (some digit)
 
 -- The parser `negInt` should parse a negative integer (starting with a minus sign).
 --  Ex: runParser negInt "-10" == Just (-10, "")
 negInt :: Parser Int
-negInt = undefined
+negInt = do
+  char '-'
+  negate <$> posInt
 
 -- The parser `int` should parse any integer.
 int :: Parser Int
-int = undefined
+int = posInt <|> negInt
+-- int = choice [posInt, negInt]
 
 -- The parser `intList` should parse a list of integers, 
 --   separated by commas and enclosed in square brackets.
---  Ex: runParser "[]" == Just ([], "")
---  Ex: runParser "[0]" == Just ([0], "")
---  Ex: runParser "[11,90]" == Just ([11,90], "")
---  Ex: runParser "[-7]" == Just ([-7], "")
---  Ex: runParser "[;]" == Nothing
+--  Ex: runParser intList "[]" == Just ([], "")
+--  Ex: runParser intList "[0]" == Just ([0], "")
+--  Ex: runParser intList "[11,90]" == Just ([11,90], "")
+--  Ex: runParser intList "[-7]" == Just ([-7], "")
+--  Ex: runParser intList "[;]" == Nothing
+
+brackets :: Parser a -> Parser a
+-- brackets p = do
+--   char '['
+--   x <- p
+--   char ']'
+--   return x
+brackets p = char '[' *> p <* char ']'
+
 intList :: Parser [Int]
-intList = undefined
+intList = brackets $ sepBy int (char ',')
 
 data Tree a = Leaf a 
             | Node [Tree a]
@@ -143,9 +155,7 @@ data Tree a = Leaf a
 intTree :: Parser (Tree Int)
 intTree = undefined
 
-
 -- Define variants `intList'` and `intTree'` of `intList` and `intTree` that also handle whitespace.
-
 
 -- The parser `ws` removes whitespaces from the beginning of the input string.
 ws :: Parser ()
