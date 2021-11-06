@@ -1,8 +1,8 @@
 
-{-# LANGUAGE InstanceSigs, DeriveFunctor #-}
+{-# LANGUAGE InstanceSigs, DeriveFunctor, DeriveFoldable,
+    DeriveTraversable #-}
 
--- PARSER LIBRARY
---------------------------------------------------------------------------------
+-- következő óra elei feladat: egyszerű regex
 
 import Data.Foldable
 import Data.Traversable
@@ -14,10 +14,49 @@ import Data.Char           -- isDigit :: Char -> Bool
 import Debug.Trace         -- trace :: String -> a -> a
                            -- traceShow :: Show b => b -> a -> a
 
+import Control.Monad.State  -- (miért nem ezt írjuk?)
+                            -- (az itteni definíció bonyolultabb,
+                            --  a típushibák nem azok, mint amit mi néztünk)
+
+-- canvas:
+data Tree = Leaf Int | Node Tree Tree
+  deriving (Show)
+
+f :: Tree -> (Int, Int)
+f t = execState (go t) (0, 0) where
+
+  go :: Tree -> State (Int, Int) ()
+  go (Leaf n) =
+    modify (\(s1, s2) -> if n < 0 then (s1 + n, s2)
+                                  else (s1, s2 + n))
+  go (Node l r) = go l >> go r
+
+traverseLeaves_ :: Applicative f => (Int -> f ()) -> Tree -> f ()
+traverseLeaves_ f (Leaf n)   = f n
+traverseLeaves_ f (Node l r) = traverseLeaves_ f l *> traverseLeaves_ f r
+
+-- másik :
+--   Applicative f => (Int -> f Int) -> Tree -> f Tree
+
+f' :: Tree -> (Int, Int)
+f' t = execState (traverseLeaves_ go t) (0, 0) where
+
+  go :: Int -> State (Int, Int) ()
+  go n =
+    modify (\(s1, s2) -> if n < 0 then (s1 + n, s2)
+                                  else (s1, s2 + n))
+
+
+-- PARSER LIBRARY
+--------------------------------------------------------------------------------
 
 -- Parser a : String-ből "a" típusú értéket próbál olvasni
 newtype Parser a = Parser {runParser :: String -> Maybe (a, String)}
   deriving Functor
+
+-- Parser a : State String + Maybe
+-- library: kisebb Parser függvényekből nagyobbakat összerakni
+--   (parser "kombinátor" library)
 
 instance Applicative Parser where
   pure  = return
@@ -57,13 +96,16 @@ satisfy f = Parser $ \s -> case s of
   c:s | f c -> Just (c, s)   -- output String 1-el rövidebb!
   _         -> Nothing
 
--- parser hívásakor kiír egy String üzenetet
-debug :: String -> Parser a -> Parser a
-debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
+satisfy_ :: (Char -> Bool) -> Parser ()
+satisfy_ f = () <$ satisfy f
 
 -- konkrét Char olvasása
 char :: Char -> Parser ()
 char c = () <$ satisfy (==c)
+
+-- parser hívásakor kiír egy String üzenetet
+debug :: String -> Parser a -> Parser a
+debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
 
 -- bármilyen Char olvasása
 anyChar :: Parser Char
@@ -73,15 +115,91 @@ anyChar = satisfy (\_ -> True)
 string :: String -> Parser ()
 string = traverse_ char
 
--- Control.Applicative-ból:
+-- példák instance metódusokkal
+--   Functor, Applicative, Monad, Alternative
+
+--  fmap : függvényt alkalmazunk az eredményre
+--  Applicative : N aritású függvényt, N darab kimenetre
+--  pure a : visszaadja a-t, nem olvas semmit
+--  (>>=) : egymás után két parser-t futtatunk
+--  Alternative metódusok:
+--      empty : rögtön Nothing-ot adó parser
+--      (<|>) : próbálunk egy parser-t futtatni, ha hibázik, akkor
+--              a másik adott parser-t próbáljuk ("choice")
+
+pr1 = string "kutya" <|> string "macska"
+pr2 = (char 'x' <|> char 'y') >> (char 'x' <|> char 'y')
+pr3 = replicateM_ 3 (string "kutya")
+
+-- Control.Applicative-ból (iterálás):
 -- many :: Parser a -> Parser [a]        -- 0-szor vagy többször olvasás
 -- some :: Parser a -> Parser [a]        -- 1-szer vagy többször olvasás
 
 many_ :: Parser a -> Parser ()
-many_ pa = () <$ many pa
+many_ pa = some_ pa <|> pure ()
 
 some_ :: Parser a -> Parser ()
-some_ pa = () <$ some pa
+some_ pa = pa >> many_ pa
+
+-- Parser () : "validáló" függvény
+--   fenti műveletekkel tetszőleges regex-et definiálhatunk
+-- char, <|>, many_, some_, eof, (>>)  (lefedi a klasszikus regex definíciót)
+------------------------------------------------------------
+
+-- implementáld a következő regex-eket. Szükség szerint definiálj
+-- segédfüggvényeket.
+
+-- (foo|bar)*kutya
+p01 :: Parser ()
+p01 = many_ (string "foo" <|> string "bar") >> string "kutya"
+
+-- tipp: bármi minta van, ami ismétlődik, akkor
+-- azt nyugodtan lehet segéd-kombinátorral megoldani
+
+-- runParser p01 "fookutya" == Just ((),"")
+
+-- \[foo(, foo)*\]         -- nemüres ,-vel választott foo lista
+p02 :: Parser ()
+p02 = string "[foo" >> many_ (string ", foo") >> char ']'
+
+-- (ac|bd)*
+p1 :: Parser ()
+p1 = many_ (string "ac" <|> string "bd")
+
+inList_ :: [Char] -> Parser ()
+inList_ str = satisfy_ (\c -> elem c str)
+
+inList_' :: [Char] -> Parser ()
+inList_' str = foldr (\c p -> char c <|> p) empty str
+          -- = () <$ choice (map char) str
+-- std függvény:
+choice :: [Parser a] -> Parser a
+choice ps = foldr (<|>) empty ps
+
+lowercase :: Parser ()
+lowercase = satisfy_ (\c -> 'a' <= c && c <= 'z')
+
+-- [a..z]+@foobar\.(com|org|hu)
+p2 :: Parser ()
+p2 = do
+  some_ lowercase
+  string "@foobar."
+  (string "com" <|> string "org" <|> string "hu")
+
+-- -?[0..9]+           -- a -? opcionális '-'-t jelent
+p3 :: Parser ()
+p3 = (char '-' <|> pure ()) >> some_ (satisfy isDigit)
+
+-- ([a..z]|[A..Z])([a..z]|[A..Z]|[0..9])*
+p4 :: Parser ()
+p4 = undefined
+
+-- ([a..z]+=[0..9]+)(,[a..z]+=[0..9]+)*
+-- példa elfogadott inputra:   foo=10,bar=30,baz=40
+p5 :: Parser ()
+p5 = undefined
+
+------------------------------------------------------------
 
    -- Functor/Applicative operátorok
    --   (<$)       kicserélni parser végeredményét adott értékre
@@ -109,36 +227,7 @@ digit = digitToInt <$> satisfy isDigit
 -- FELADATOK
 --------------------------------------------------------------------------------
 
--- implementáld a következő regex-eket. Szükség szerint definiálj segédfüggvényeket.
 
--- (foo|bar)*kutya
-p01 :: Parser ()
-p01 = undefined
-
--- \[foo(, foo)*\]         -- nemüres ,-vel választott foo lista
-p02 :: Parser ()
-p02 = undefined
-
--- (ac|bd)*
-p1 :: Parser ()
-p1 = undefined
-
--- [a..z]+@foobar\.(com|org|hu)
-p2 :: Parser ()
-p2 = undefined
-
--- -?[0..9]+           -- a -? opcionális '-'-t jelent
-p3 :: Parser ()
-p3 = undefined
-
--- ([a..z]|[A..Z])([a..z]|[A..Z]|[0..9])*
-p4 :: Parser ()
-p4 = undefined
-
--- ([a..z]+=[0..9]+)(,[a..z]+=[0..9]+)*
--- példa elfogadott inputra:   foo=10,bar=30,baz=40
-p5 :: Parser ()
-p5 = undefined
 
 --------------------------------------------------------------------------------
 
