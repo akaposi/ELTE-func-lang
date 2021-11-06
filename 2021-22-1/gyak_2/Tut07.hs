@@ -48,9 +48,18 @@ data Tree a = Leaf a
 --     == Node (Node (Leaf 0) (Leaf 1)) (Leaf 2)
 
 labelTree :: Tree a -> Tree Int
-labelTree t = undefined
+labelTree t = evalState (go t) 0
   where go :: Tree a -> State Int (Tree Int)
-        go = undefined 
+        go (Leaf x)   = do
+          n <- get
+          put (n+1)
+          pure (Leaf n)
+        go (Node l r) = do
+          l' <- go l
+          r' <- go r
+          pure (Node l' r')
+        -- go (Node l r) = liftM2 Node (go l) (go r)
+        -- go (Node l r) = Node <$> go l <*> go r
         
 -- `relabelTree xs t` should label the leaves using the values of xs.
 --  (You can assume that length xs >= length t)
@@ -62,9 +71,21 @@ labelTree t = undefined
 --     == Node (Node (Leaf 9) (Leaf 2)) (Leaf 7)
 
 relabelTree :: [b] -> Tree a -> Tree b
-relabelTree xs t = undefined
+relabelTree xs t = evalState (go t) xs
   where go :: Tree a -> State [b] (Tree b)
-        go = undefined
+        go (Leaf _)   = do
+          -- ~(x:xs) <- get
+          xxs <- get
+          let x:xs = xxs
+          put xs
+          pure (Leaf x)
+        go (Node l r) = do
+          l' <- go l
+          r' <- go r
+          pure (Node l' r')
+
+-- labelTree' :: (Num b, Enum b) => Tree a -> Tree b
+-- labelTree' = relabelTree [0..]
 
 --
 
@@ -84,7 +105,8 @@ relabelTree xs t = undefined
 --   if any of the lookups fails.
 
 mapLookup :: Eq a => [(a,b)] -> Tree a -> Maybe (Tree b)
-mapLookup = undefined 
+mapLookup xs (Leaf x)   = Leaf <$> lookup x xs
+mapLookup xs (Node l r) = Node <$> mapLookup xs l <*> mapLookup xs r
 
 --------------------------------------------------------------------------------
 
@@ -98,19 +120,32 @@ instance Traversable [] where
   traverse f (x:xs) = (:) <$> f x <*> traverse f xs
 
 relabel' :: Traversable f => [b] -> f a -> f b
-relabel' = undefined
+relabel' xs t = evalState (go t) xs
+  where go :: Traversable f => f a -> State [b] (f b)
+        go = traverse $ \_ -> do
+          xxs <- get
+          let x:xs = xxs
+          put xs
+          pure x
+
+-- mapLookup :: Eq a => [(a,b)] -> Tree a -> Maybe (Tree b)
+-- mapLookup xs (Leaf x)   = Leaf <$> lookup x xs
+-- mapLookup xs (Node l r) = Node <$> mapLookup xs l <*> mapLookup xs r
 
 mapLookup' :: (Eq a, Traversable f) => [(a,b)] -> f a -> Maybe (f b)
-mapLookup' xs = undefined 
+mapLookup' xs = traverse $ \x -> lookup x xs
 
 instance Traversable Maybe where
-  traverse = undefined
+  traverse f Nothing  = pure Nothing
+  traverse f (Just x) = Just <$> f x
 
 instance Traversable (Either x) where
-  traverse = undefined
+  traverse f (Left x) = pure (Left x)
+  traverse f (Right y) = Right <$> f y
 
 instance Traversable Tree where
-  traverse f (Leaf x)   = undefined
+  traverse f (Leaf x)   = Leaf <$> f x
+  traverse f (Node l r) = Node <$> traverse f l <*> traverse f r
 
 data Tree2 a = Leaf2 a 
              | Node2 [Tree2 a]
@@ -118,11 +153,12 @@ data Tree2 a = Leaf2 a
 
 -- fmap f (Node2 xs) = Node2 (fmap (fmap f) xs)
 instance Traversable Tree2 where
-  traverse f (Leaf2 x)  = undefined
+  traverse f (Leaf2 x)   = Leaf2 <$> f x
+  traverse f (Node2 xs)  = Node2 <$> traverse (traverse f) xs
 
 -- Bonus (fmapDefault and foldMapDefault in Data.Traversable):
-fmapFromTraverse :: (Traversable f, Monoid m) => (a -> m) -> f a -> m
+fmapFromTraverse :: Traversable f => (a -> b) -> f a -> f b
 fmapFromTraverse = undefined
 
-foldMapFromTraverse :: Traversable f => (a -> b) -> f a -> f b
+foldMapFromTraverse :: (Traversable f, Monoid m) => (a -> m) -> f a -> m
 foldMapFromTraverse = undefined
