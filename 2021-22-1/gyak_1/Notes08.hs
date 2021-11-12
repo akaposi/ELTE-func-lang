@@ -247,8 +247,6 @@ balancedPar = undefined
 
 
 
-
-
 -- Írj egy parser-t ami, zárójeleket, +-t és pozitív Int literálokat tartalmazó
 -- kifejezéseket olvas!
 --------------------------------------------------------------------------------
@@ -263,8 +261,6 @@ data Exp = Lit Int | Plus Exp Exp deriving Show
 
 pExp :: Parser Exp
 pExp = undefined
-
-
 
 
 -- bónusz (nehéz): írj parser-t típusozatlan lambda kalkulushoz!
