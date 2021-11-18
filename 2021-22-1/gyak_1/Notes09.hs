@@ -219,7 +219,6 @@ p3 :: Parser [(Int, Maybe Int)]
 p3 = topLevel (listOf intMaybeInt)
 
 
-
 -- FELADATOK (operátor parsing)
 --------------------------------------------------------------------------------
 
