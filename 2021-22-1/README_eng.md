@@ -7,7 +7,7 @@
   + Code: 1, András Kovács,  Thursday 16:00-17:30 (LD-2-710 (PC10))
   + Code: 2, Rafaël Bocquet, Thursday 17:45-19:15 (LD-2-710 (PC10))
   + Code: 3, Rafaël Bocquet, Thursday 19:30-21:00 (LD-00-503)
- - Consultation: Wednesday 15:00-16:00, 2.620 room and discord (at the same time)
+ - Consultation: Wednesday 15:00-16:00, discord server
 
 #### Contact
 

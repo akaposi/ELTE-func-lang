@@ -8,7 +8,7 @@
   + Kód: 2, Rafaël Bocquet, csütörtök 19:30-21:00 (LD-00-503)
   + Kód: 3, Rafaël Bocquet, csütörtök 17:45-19:15 (LD-2-710 (PC10))
 
- - Konzultáció: szerda 15:00-16:00, 2.620 szoba és discord (egyszerre)
+ - Konzultáció: szerda 15:00-16:00, discord szerver
 
 #### Elérhetőségek
 
