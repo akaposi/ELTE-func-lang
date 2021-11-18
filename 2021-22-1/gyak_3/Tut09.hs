@@ -131,25 +131,48 @@ data Tree a = Leaf a
 --   runParser intTree "[[],[2]]"       ~~>  Node [Node [], Node [Leaf 2]]
 --   runParser intTree "[0,[1],[[2]]]"  ~~>  Node [Leaf 0, Node [Leaf 1], Node [Node [Leaf 2]]]
 intTree :: Parser (Tree Int)
-intTree = undefined
+intTree = leaf <|> node
+  where leaf :: Parser (Tree Int)
+        leaf = Leaf <$> int
+
+        node :: Parser (Tree Int)
+        node = Node <$> (char '[' *> sepBy intTree (char ',') <* char ']')
 
 -- Define a parser for integer expressions built from constants and additions.
+-- (+) should be left associative: 
+--       a+b+c   =  (a+b)+c
+--       a+b-c   =  (a+b)-c
 
 data Expr1 = Value1 Int
            | Add1 Expr1 Expr1
            deriving(Eq, Show)
 
+-- Either values or parentheses
 pAtom1 :: Parser Expr1
-pAtom1 = undefined
+pAtom1 = pValue 
+     <|> pParens
+  where pValue  = Value1 <$> posInt
+        pParens = char '(' *> pExpr1 <* char ')'
 
+-- Arbitrary expressions
+--  Built out of + and atomic expressions.
 pExpr1 :: Parser Expr1
-pExpr1 = undefined
+pExpr1 = do
+  exprs <- sepBy1 pAtom1 (char '+')
+  return (foldl1 Add1 exprs)
+
+pExpr1' :: Parser Expr1
+pExpr1' = do
+  let go acc = (do char '+'; y <- pAtom1; go (Add1 acc y))
+           <|> pure acc
+  x <- pAtom1
+  go x
 
 tests1 :: [Bool]
 tests1 = [ runParser pExpr1 "1+2+3"
-           == Just (((Value1 1 `Add1` Value1 2) `Add1` Value1 3), "")
+           == Just ((Value1 1 `Add1` Value1 2) `Add1` Value1 3, "")
          , runParser pExpr1 "1+(2+3)"
-           == Just ((Value1 1 `Add1` (Value1 2 `Add1` Value1 3)), "")
+           == Just (Value1 1 `Add1` (Value1 2 `Add1` Value1 3), "")
          ]
 
 -- Define a parser for integer expressions built from constants, additions and multiplications.
@@ -158,14 +181,20 @@ data Expr2 = Value2 Int
            | Mul2 Expr2 Expr2
            deriving(Eq, Show)
 
+-- Either values or parentheses
 pAtom2 :: Parser Expr2
-pAtom2 = undefined
+pAtom2 = pValue 
+     <|> pParens
+  where pValue  = Value2 <$> posInt
+        pParens = char '(' *> pExpr2 <* char ')'
 
-pExpr2_add :: Parser Expr2
-pExpr2_add = undefined
+--  Built out of * and atomic expressions.
+pExpr2_mul :: Parser Expr2
+pExpr2_mul = foldl1 Mul2 <$> sepBy1 pAtom2 (char '*')
 
+--  Built out of + and of the results of `pExpr2_mul`.
 pExpr2 :: Parser Expr2
-pExpr2 = undefined
+pExpr2 = foldl1 Add2 <$> sepBy1 pExpr2_mul (char '+')
 
 tests2 :: [Bool]
 tests2 = [ runParser pExpr2 "1+2+3"
@@ -184,3 +213,20 @@ data Expr3 = Value3 Int
            | Sub3 Expr3 Expr3
            | Mul3 Expr3 Expr3
            | Div3 Expr3 Expr3
+
+pAtom3 :: Parser Expr3
+pAtom3 = pValue <|> pParens
+  where pValue  = Value3 <$> posInt
+        pParens = char '(' *> pExpr3 <* char ')'
+
+pExpr3_mul :: Parser Expr3
+pExpr3_mul = pAtom3 >>= go
+  where go x = (do char '*'; y <- pAtom3; go (Mul3 x y))
+           <|> (do char '/'; y <- pAtom3; go (Div3 x y))
+           <|> pure x
+
+pExpr3 :: Parser Expr3
+pExpr3 = pExpr3_mul >>= go
+  where go x = (do char '+'; y <- pExpr3_mul; go (Add3 x y))
+           <|> (do char '-'; y <- pExpr3_mul; go (Sub3 x y))
+           <|> pure x
