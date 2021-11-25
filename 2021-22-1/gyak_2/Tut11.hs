@@ -55,9 +55,9 @@ execState ma = snd . runState ma
 --------------------------------------------------------------------------------
 -- Define Functor, Foldable and Traversable instances for the following types:
 
-data AndOr a b = Left a 
-               | Right b
-               | Both a b
+data AndOr a b = Left' a 
+               | Right' b
+               | Both' a b
                deriving (Eq, Ord, Show)
 
 data Tree1 a = LeafA1 Int a
