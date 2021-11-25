@@ -1,5 +1,5 @@
 {-# OPTIONS -Wincomplete-patterns #-}
-{-# LANGUAGE InstanceSigs, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
+{-# LANGUAGE InstanceSigs, DeriveFunctor, DeriveFoldable, DeriveTraversable, BlockArguments #-}
 
 --------------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ keywords = [ "if", "then", "else", "while", "do", "end"
            , "true", "false"
            , "let", "in"
            ]
-
+          
 pKeyword :: String -> Parser ()
 pKeyword str = do
   string str
@@ -158,6 +158,7 @@ data Statement
   | While Exp Program               -- while e do p end
   deriving (Eq, Show)
 
+
 -- precedence levels for expressions:
 --  variables, literals, parentheses
 --  *, left associative
@@ -186,10 +187,12 @@ pAdd :: Parser Exp
 pAdd = foldl1 Add <$> sepBy1 pMul (char' '+')
 
 pEq :: Parser Exp
-pEq = undefined
+pEq = do
+  x <- pAdd
+  (do string' "=="; y <- pAdd; pure (Eq x y)) <|> pure x
 
 pAnd :: Parser Exp
-pAnd = undefined
+pAnd = foldr1 And <$> sepBy1 pEq (string' "&&")
 
 pOr :: Parser Exp
 pOr = foldr1 Or <$> sepBy1 pAnd (string' "||")
@@ -197,8 +200,29 @@ pOr = foldr1 Or <$> sepBy1 pAnd (string' "||")
 pExp :: Parser Exp
 pExp = pOr
 
+choice = foldr (<|>) empty
+
 pStatement :: Parser Statement 
-pStatement = undefined 
+pStatement = choice 
+  [ do x <- pIdent
+       string' ":="
+       e <- pExp
+       pure (Assign x e)
+  , do pKeyword "if"
+       x <- pExp
+       pKeyword "then"
+       p1 <- pProgram
+       pKeyword "else"
+       p2 <- pProgram
+       pKeyword "end"
+       pure (IfThenElse x p1 p2)
+  , do pKeyword "while"
+       x <- pExp
+       pKeyword "do"
+       p <- pProgram
+       pKeyword "end"
+       pure (While x p)
+  ]
 
 pProgram :: Parser Program
 pProgram = sepBy1 pStatement (char' ';')
@@ -221,20 +245,32 @@ data Exp2
   deriving (Eq, Show)
 
 pAtom2 :: Parser Exp2
-pAtom2 = undefined
+pAtom2 = (Var2 <$> pIdent)
+     <|> (char '(' *> pExp2 <* char ')')
 
 pApp2 :: Parser Exp2
-pApp2 = undefined
+pApp2 = foldl1 App2 <$> some pAtom2
 
 pLam2 :: Parser Exp2
-pLam2 = undefined
+pLam2 = do
+  char' '\\'
+  x <- pIdent
+  string' "->"
+  e <- pExp2
+  pure (Lambda2 x e)
 
 pLet2 :: Parser Exp2
-pLet2 = undefined
+pLet2 = do
+  pKeyword "let"
+  x <- pIdent
+  char' '='
+  u <- pExp2
+  pKeyword "in"
+  e <- pExp2
+  pure (Let2 x u e)
 
 pExp2 :: Parser Exp2
 pExp2 = pLam2 <|> pLet2 <|> pApp2
-
 
 ex1 = "\\x -> \\y -> x y x"
 ex2 = "let x = y in \\z -> x z"

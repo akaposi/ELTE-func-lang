@@ -110,8 +110,8 @@ int = posInt <|> negInt
 
 --------------------------------------------------------------------------------
 
-ws :: Parser [Char]
-ws = many (satisfy isSpace)
+ws :: Parser ()
+ws = do many (satisfy isSpace); pure ()
 
 char' :: Char -> Parser ()
 char' c = char c <* ws
@@ -124,13 +124,14 @@ string' s = string s <* ws
 
 keywords :: [String]
 keywords = [ "if", "then", "else", "while", "do", "end"
+           , "true", "false"
            , "let", "in"
            ]
 
 pKeyword :: String -> Parser ()
 pKeyword str = do
   string str
-  (do satisfy isLetter; empty) <|> pure ()
+  (do satisfy isLetter; empty) <|> ws
 
 pIdent :: Parser String
 pIdent = do
@@ -165,23 +166,45 @@ data Statement
 --  +, left associative
 --  ==, not associative
 
+posInt' :: Parser Int
+posInt' = posInt <* ws
+
+bool :: Parser Bool
+bool = (pKeyword "true" *> pure True) 
+   <|> (pKeyword "false" *> pure False)
+
 pAtom :: Parser Exp
-pAtom = undefined
+pAtom = (char' '(' *> pExp <* char ')')
+    <|> (IntLit <$> posInt')
+    <|> (BoolLit <$> bool)
+    <|> (Var <$> pIdent)
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = foldl1 Mul <$> sepBy1 pAtom (char' '*')
 
 pAdd :: Parser Exp
-pAdd = undefined
+pAdd = foldl1 Add <$> sepBy1 pMul (char' '+')
 
 pEq :: Parser Exp
-pEq = undefined
+pEq = do
+  x <- pAdd
+  (Eq x <$> (string' "==" *> pAdd)) 
+    <|> pure x
 
 pExp :: Parser Exp
 pExp = pEq
 
 pStatement :: Parser Statement 
-pStatement = undefined
+pStatement = (Assign  -- x := e
+               <$> (pIdent <* string' ":=")
+               <*> pExp)
+         <|> (IfThenElse
+               <$> (pKeyword "if" *> pExp)
+               <*> (pKeyword "then" *> pProgram) 
+               <*> (pKeyword "else" *> pProgram <* pKeyword "end"))
+         <|> (While
+               <$> (pKeyword "while" *> pExp)
+               <*> (pKeyword "do" *> pProgram <* pKeyword "end"))
 
 pProgram :: Parser Program
 pProgram = sepBy pStatement (char' ';')
@@ -190,27 +213,43 @@ pTop :: Parser Program
 pTop = ws *> pProgram <* eof
 
 --------------------------------------------------------------------------------
-
 -- Parser for a small Haskell-like functional language
 
 data Exp2
-  = Var2 String           -- variables
-  | Lambda2 String Exp2   -- \x . e
-  | App2                  -- f t
-  | Let2 String Exp2 Exp2 -- let x = u in t
+  = Var2 String                 -- variables
+  | Lambda2 String Exp2         -- \x -> e
+  | App2 Exp2 Exp2              -- f t
+  | Let2 String Exp2 Exp2       -- let x = u in t
+  -- IfThenElse Exp2 Exp2 Exp2  -- if b then t else f
   deriving (Eq, Show)
 
 pAtom2 :: Parser Exp2
-pAtom2 = undefined
+pAtom2 = (Var2 <$> pIdent)
+     <|> (char '(' *> pExp2 <* char ')')
 
 pApp2 :: Parser Exp2
-pApp2 = undefined
+pApp2 = foldl1 App2 <$> some pAtom2
 
 pLam2 :: Parser Exp2
-pLam2 = undefined
+pLam2 = do
+  char' '\\'
+  x <- pIdent
+  string' "->"
+  e <- pExp2
+  pure (Lambda2 x e)
 
 pLet2 :: Parser Exp2
-pLet2 = undefined
+pLet2 = do
+  pKeyword "let"
+  x <- pIdent
+  char' '='
+  u <- pExp2
+  pKeyword "in"
+  e <- pExp2
+  pure (Let2 x u e)
 
 pExp2 :: Parser Exp2
-pExp2 = undefined
+pExp2 = pLam2 <|> pLet2 <|> pApp2
+
+ex1 = "\\x -> \\y -> x y x"
+ex2 = "let x = y in \\z -> x z"
