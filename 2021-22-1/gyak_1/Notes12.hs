@@ -15,10 +15,6 @@ import Debug.Trace         -- trace :: String -> a -> a
 import Control.Monad.State
 
 
--- Köv Canvas feladat: bármilyen kisfeladat, hasonló, mint a mi mintasorban
--- található (bármilyen feladat, ami nem parser/interpreter)
-
-
 -- PARSER LIBRARY
 --------------------------------------------------------------------------------
 
@@ -364,6 +360,7 @@ parseExp2 = topLevel orExp2
 -}
 
 -- Add hozzá az interpreterhez az új műveletek értelmezését!
+
 
 
 -- Feladat: String literálok és String műveletek
