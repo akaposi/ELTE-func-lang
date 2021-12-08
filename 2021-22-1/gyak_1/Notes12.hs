@@ -15,6 +15,38 @@ import Debug.Trace         -- trace :: String -> a -> a
 import Control.Monad.State
 
 
+-- Következő canvas feladat: ismétlő kisfeladat
+--------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------
+
+-- Canvas feladat
+
+data List a = Nil | Cons1 a (List a) | Cons2 a a (List a)
+  deriving (Eq, Show)
+
+instance Functor List where
+  fmap f Nil              = Nil
+  fmap f (Cons1 a as)     = Cons1 (f a) (fmap f as)
+  fmap f (Cons2 a1 a2 as) = Cons2 (f a1) (f a2) (fmap f as)
+
+instance Foldable List where
+  -- egyiket definiáld
+  foldr f b Nil              = b
+  foldr f b (Cons1 a as)     = f a (foldr f b as)
+  foldr f b (Cons2 a1 a2 as) = f a1 (f a2 (foldr f b as))
+
+  foldMap f Nil              = mempty
+  foldMap f (Cons1 a as)     = f a <> foldMap f as
+  foldMap f (Cons2 a1 a2 as) = f a1 <> f a2 <> foldMap f as
+
+instance Traversable List where
+  traverse f Nil              = pure Nil
+  traverse f (Cons1 a as)     = Cons1 <$> f a <*> traverse f as
+  traverse f (Cons2 a1 a2 as) = Cons2 <$> f a1 <*> f a2 <*> traverse f as
+
+
 -- PARSER LIBRARY
 --------------------------------------------------------------------------------
 
@@ -395,3 +427,5 @@ parseExp2 = topLevel orExp2
 
 -- Egészítsd ki az interpretert is! Az új műveletek működjenek úgy, mint Haskell-ben,
 -- nem megfelelő típusú értékek esetén dobj hibát.
+
+--------------------------------------------------------------------------------
