@@ -1,17 +1,17 @@
 # Funckionális nyelvek (IPM-18sztKVFPNYEG, IP-18KVFPNYEG, IPM-18EsztKVFPNYEG), 2022 tavasz, EA + GY
 
-#### Időpontok és helyszínek
-
-- Előadás (Kovács András): csütörtök 18:00-19:30 (LD-1-820 Hajós György terem)
-- Gyakorlatok:
-  + Kód: 1, Kovács András, kedd   19:30-21:00 (LD-2-202 (PC3))
-  + Kód: 2, Donkó István,  szerda 17:45-19:15 (LÉ-7-16 (PC12))
-  + Kód: 3, Donkó István,  szerda 19:30-21:00 (LD-2-202 (PC3))
-
 #### Online vs. jelenléti oktatás
 
 A szemeszter legalább három hét **távolléti** oktatással indul. Utána jelenléti
 oktatás várható, hogy pontosan mikor történik a váltás, az később derül ki.
+
+#### Időpontok és helyszínek
+
+- Előadás (Kovács András): csütörtök 18:00-19:30 (00-803 Programozási Nyelvi labor)
+- Gyakorlatok:
+  + Kód: 1, Kovács András, kedd   19:30-21:00 (LD-2-202 (PC3))
+  + Kód: 2, Donkó István,  szerda 17:45-19:15 (LÉ-7-16 (PC12))
+  + Kód: 3, Donkó István,  szerda 19:30-21:00 (LD-2-202 (PC3))
 
 #### Elérhetőségek
 
