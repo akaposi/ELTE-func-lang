@@ -10,13 +10,14 @@ oktatás várható, hogy pontosan mikor történik a váltás, az később derü
 - Előadás (Kovács András): csütörtök 18:00-19:30 (00-803 Programozási Nyelvi labor)
 - Gyakorlatok:
   + Kód: 1, Kovács András, kedd   19:30-21:00 (LD-2-202 (PC3))
-  + Kód: 2, Donkó István,  szerda 17:45-19:15 (LÉ-7-16 (PC12))
+  + Kód: 2, Bense Viktor,  szerda 17:45-19:15 (LÉ-7-16 (PC12))
   + Kód: 3, Donkó István,  szerda 19:30-21:00 (LD-2-202 (PC3))
 
 #### Elérhetőségek
 
 - Kovács András, email: kovacsandras @ inf.elte.hu (szóköz nélkül)
 - Donkó István, email: isti115 @ inf.elte.hu (szóköz nélkül)
+- Bense Viktor, email: qils07 @ inf.elte.hu (szóköz nélkül)
 
 #### Infrastruktúra, online oktatás
 
