@@ -21,6 +21,7 @@
 - Önálló feladatmegoldás: képernyőt osszatok
 - Ha valaki el van maradva: lambda.inf.elte.hu kezdő Haskell jegyzet
                             Learn you a Haskell! könyv, stb.
+- Órai fájlok: https://github.com/AndrasKovacs/ELTE-func-lang/
 - Előzetes ismeretek:
   - BSc "funkcionális programozás" ismerete (készség szinten)
     (lambda.inf.elte.hu "Kezdő Haskell" jegyzet ajánlott)
