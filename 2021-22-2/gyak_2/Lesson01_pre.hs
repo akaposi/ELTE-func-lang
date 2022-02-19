@@ -12,7 +12,7 @@
      - jegy ebből származik
      - 2 órás, feladatmegoldás
    - jelenlét:
-     - max 4 hiányzás
+     - max 3 hiányzás
      - óra eleji feladat (+/- néven ismert dolog, üresen is küldjétek be a feladatot!) + órai aktivitás (képernyőmegosztás és órai feladatok végzése) számít jelenlétnek (távoktatásban!)
        - jelenléti oktatás: jelenlét számít jelenlétnek
 - Távoktatás vs jelenléti oktatás?
@@ -21,7 +21,7 @@
 - Önálló feladatmegoldás: képernyőt osszatok
 - Ha valaki el van maradva: lambda.inf.elte.hu kezdő Haskell jegyzet
                             Learn you a Haskell! könyv, stb.
-- Órai fájlok: https://github.com/AndrasKovacs/ELTE-func-lang/
+- Órai fájlok: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2021-22-2/gyak_2
 - Előzetes ismeretek:
   - BSc "funkcionális programozás" ismerete (készség szinten)
     (lambda.inf.elte.hu "Kezdő Haskell" jegyzet ajánlott)
