@@ -38,7 +38,7 @@ instance Eq a => Eq (BinaryTree a) where
     1
    / \
   2   3
-sorrendben
+sorrendben (preorder bejárás)
 -}
 instance Ord a => Ord (BinaryTree a) where
     (<=) = undefined
