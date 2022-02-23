@@ -12,7 +12,7 @@
      - jegy ebből származik
      - 2 órás, feladatmegoldás
    - jelenlét:
-     - max 4 hiányzás
+     - max 3 hiányzás
      - óra eleji feladat (+/- néven ismert dolog, üresen is küldjétek be a feladatot!) + órai aktivitás (képernyőmegosztás és órai feladatok végzése) számít jelenlétnek (távoktatásban!)
        - jelenléti oktatás: jelenlét számít jelenlétnek
 - Távoktatás vs jelenléti oktatás?
