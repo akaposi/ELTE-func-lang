@@ -114,7 +114,12 @@ mergeSort = undefined
 -- fontos, hogy az össze részlista szerepeljen.
 -- Kapcsolódó fogalom: hatványhalmaz
 sublists :: [a] -> [[a]]
-sublists = undefined
+sublists []     = [[]] -- 2 ^ 0 = 1
+sublists (x:xs) =
+  let rest = sublists xs in
+    -- rest ++ [ x : sl | sl <- rest ]
+    -- rest ++ map (\sl -> x:sl) rest
+    rest ++ map (x:) rest
 
 
 -- osztályok
