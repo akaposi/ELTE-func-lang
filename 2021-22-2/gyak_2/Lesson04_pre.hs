@@ -3,7 +3,6 @@ module Lesson04 where
 data List a = Nil | Cons a (List a) -- rendes megszokott láncolt lista
 data BinaryTree a = Leaf a | Node (BinaryTree a) a (BinaryTree a)
 data RoseTree a = RoseNode a [RoseTree a]
--- RoseTree Foldable
 
 instance Foldable List where
     foldr f acc Nil         = acc
@@ -13,6 +12,8 @@ instance Foldable BinaryTree where
     foldr f acc (Leaf a)     = f a acc -- f :: a -> b -> b ; acc :: b ; a :: a
     foldr f acc (Node l a r) = f a (foldr f (foldr f acc r) l)
 
+instance Foldable RoseTree where
+    foldr f acc t = undefined
 
 --------------------------------------
 
@@ -51,19 +52,22 @@ class Functor' f where
     fmap' :: (a -> b) -> f a -> f b
     -- Mi a típusa f-nek?
 
-    
+
 -- Törvények:
 -- (Haskellben nem lehet kikényszeríteni a törvények teljesülését, ahhoz más nyelv kell)
+{-
+
+-}
 
 data    Foo1 a      = Foo1 Int a a a deriving Show
 data    Foo2 a      = Foo2 Bool a Bool deriving Show
 data    Foo3 a      = Foo3 a a a a a deriving Show
 data    Tree1 a     = Leaf1 a | Node1 (Tree1 a) (Tree1 a) deriving Show
-data    Pair a b    = Pair a b
-data    Either' a b = Left' a | Right' b
+data    Pair a b    = Pair a b deriving Show
+data    Either' a b = Left' a | Right' b deriving Show
 data    Tree3 i a   = Leaf3 a | Node3 (i -> Tree3 i a)  -- i-szeres elágazás
-newtype Id a        = Id a
-newtype Const a b   = Const a
+newtype Id a        = Id a deriving Show
+newtype Const a b   = Const a deriving Show
 newtype Fun a b     = Fun (a -> b)
 
 {-
@@ -105,4 +109,65 @@ instance Functor Const where
 
 instance Functor Fun where
     fmap = undefined
+-}
+
+-- Applicative: Minden "mellékhatás" statikusan ismert
+
+-- Törvények:
+{-
+
+-}
+
+{-
+instance Applicative List where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative BinaryTree where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Foo1 where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Foo2 where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Foo3 where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Tree1 where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Pair where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative RoseTree where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Tree3 where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Either' where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Id where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Const where
+    pure = undefined
+    (<*>) = undefined
+
+instance Applicative Fun where
+    pure = undefined
+    (<*>) = undefined
 -}

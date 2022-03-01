@@ -1,6 +1,6 @@
 module Lesson03 where
 
-import Data.Typeable
+import Data.Typeable -- extra a fájl alján lévő függvényhez, máshoz nem kell
 
 data List a = Nil | Cons a (List a) -- rendes megszokott láncolt lista
 
@@ -209,7 +209,8 @@ instance Functor Fun where
 -}
 
 ----------------------------------------
--- String-ek köré nem írja ki az idézőjelet kiíratáskor:
+-- extra rész:
+-- String-ek köré nem írja ki az idézőjelet kiíratáskor.
 
 showTree' :: (Show a, Typeable a) => BinaryTree a -> String
 showTree' xs = showTree'' xs 0 where
