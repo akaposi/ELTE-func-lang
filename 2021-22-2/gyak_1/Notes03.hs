@@ -144,13 +144,6 @@ t3 = Node3 (\n -> Node3 (\m -> (Leaf3 (n + m))))
 
 
 
-
-
-
-
-
-
-
 -- data Tree4 a b = Node4 a (Tree4 a b) (Tree4 a b) | Leaf4 a b
 
 instance Functor (Tree4 c) where
