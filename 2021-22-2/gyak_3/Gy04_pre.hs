@@ -3,6 +3,7 @@
 module Gy04 where
 
 data SparseList a = Nil | Skip (SparseList a) | Cons a (SparseList a)
+  deriving (Show)
 
 exampleList :: SparseList Char
 exampleList = Cons 's' (Cons 'a' (Skip (Cons 'j' (Skip (Cons 't' Nil)))))
@@ -10,7 +11,7 @@ exampleList = Cons 's' (Cons 'a' (Skip (Cons 'j' (Skip (Cons 't' Nil)))))
 exampleList' :: SparseList Int
 exampleList' = Cons 1 (Skip (Cons 4 Nil))
 
-data Tree a = Leaf a | Node (Tree a) (Tree a)
+data Tree a = Leaf a | Node (Tree a) (Tree a) deriving (Show)
 
 exampleTree :: Tree String
 exampleTree = Node
