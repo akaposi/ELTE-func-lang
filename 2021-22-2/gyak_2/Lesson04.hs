@@ -1,28 +1,60 @@
-{-# LANGUAGE InstanceSigs #-}
-module Lesson05 where
+{-# LANGUAGE InstanceSigs #-} -- ghc < 9.2.1 esetén
+module Lesson04 where
 
-data List a = Nil | Cons a (List a)
+data List a = Nil | Cons a (List a) -- rendes megszokott láncolt lista
 data BinaryTree a = Leaf a | Node (BinaryTree a) a (BinaryTree a)
 data RoseTree a = RoseNode a [RoseTree a]
 
+instance Foldable List where
+    foldr f acc Nil         = acc
+    foldr f acc (Cons x xs) = f x (foldr f acc xs)
+
+instance Foldable BinaryTree where
+    foldr f acc (Leaf a)     = f a acc -- f :: a -> b -> b ; acc :: b ; a :: a
+    foldr f acc (Node l a r) = f a (foldr f (foldr f acc r) l)
+
+instance Foldable RoseTree where
+    foldr f acc t = undefined
+
 --------------------------------------
+
+-- map :: (a -> b) -> [a] -> [b]
+-- sima map (List map)
+listMap :: (a -> b) -> List a -> List b
+listMap _ Nil = Nil
+listMap f (Cons x xs) = Cons (f x) (listMap f xs)
+
+-- tree map (BinaryTree-n)
+treeMap :: (a -> b) -> BinaryTree a -> BinaryTree b
+treeMap f (Leaf a) = Leaf $ f a
+treeMap f (Node l a r) = Node (treeMap f l) (f a) (treeMap f r)
+
+-- Maybe map
+maybeMap :: (a -> b) -> Maybe a -> Maybe b
+maybeMap _ Nothing  = Nothing
+maybeMap f (Just a) = Just $ f a
+
+-- pair map (melyik paraméter fölött lehet? (by nyelv deizájn))
+pairMap :: (a -> b) -> (c,a) -> (c,b)
+pairMap f (c,a) = (c,f a)
+
+pairMapV2 :: (a -> b) -> (c -> d) -> (a,c) -> (b,d)
+pairMapV2 f g (a,c) = (f a, g c) 
+
+pairMapV3 :: (a -> b) -> (a,c) -> (b,c)
+pairMapV3 f (a,c) = (f a,c) 
+-- Either map (szintén)
+
+eitherMap = undefined
 
 -- Functor:
 -- típusa, típusok típusa ((,), Maybe, Either, List ...)
--- (,) :: Type -> Type -> Type
--- Maybe :: Type -> Type
--- Either :: Type -> Type -> Type
--- List :: Type -> Type
--- List Int :: Type
+class Functor' f where
+    fmap' :: (a -> b) -> f a -> f b
+    -- Mi a típusa f-nek?
+    -- f :: Type -> Type
 
--- Functor paramétere (Type -> Type) kind-ú kell legyen.
--- kind = típus típusa
--- ghci-ben :k
-
--- A paramétereket lehet parciálisan applikálni, de csak sorban haladva (így működik haskellben a típusszint)
--- => ebből következően csak az utolsó típusparaméter fölött írhatunk Functor példányokat.
-
--- Functor törvények:
+-- Törvények:
 -- (Haskellben nem lehet kikényszeríteni a törvények teljesülését, ahhoz más nyelv kell)
 {-
 
@@ -38,6 +70,13 @@ data    Tree3 i a   = Leaf3 a | Node3 (i -> Tree3 i a)  -- i-szeres elágazás
 newtype Id a        = Id a deriving Show
 newtype Const a b   = Const a deriving Show
 newtype Fun a b     = Fun (a -> b)
+
+{-
+class Functor' f where
+    fmap' :: (a -> b) -> f a -> f b
+-}
+
+-- data SamePair a = SamePair a a
 
 instance Functor List where
     fmap :: (a -> b) -> List a -> List b
