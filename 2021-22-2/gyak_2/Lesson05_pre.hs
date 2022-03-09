@@ -1,4 +1,5 @@
 {-# LANGUAGE InstanceSigs #-}
+
 module Lesson05 where
 
 data List a = Nil | Cons a (List a)
