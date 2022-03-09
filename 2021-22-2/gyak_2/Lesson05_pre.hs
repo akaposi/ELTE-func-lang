@@ -150,3 +150,79 @@ instance Applicative Fun where
     pure = undefined
     (<*>) = undefined
 -}
+
+-- Monad: "Mellékhatások" dinamikusak, nem tudni, hogy mi történik addig, amíg meg nem történik.
+
+-- Törvények:
+{-
+
+-}
+
+{-
+instance Monad List where
+    (>>=) = undefined
+
+instance Monad BinaryTree where
+    (>>=) = undefined
+
+instance Monad Foo1 where
+    (>>=) = undefined
+
+instance Monad Foo2 where
+    (>>=) = undefined
+
+instance Monad Foo3 where
+    (>>=) = undefined
+
+instance Monad Tree1 where
+    (>>=) = undefined
+
+instance Monad Pair where
+    (>>=) = undefined
+
+instance Monad RoseTree where
+    (>>=) = undefined
+
+instance Monad Tree3 where
+    (>>=) = undefined
+
+instance Monad Either' where
+    (>>=) = undefined
+
+instance Monad Id where
+    (>>=) = undefined
+
+instance Monad Const where
+    (>>=) = undefined
+
+instance Monad Fun where
+    (>>=) = undefined
+-}
+
+{-
+
+f1 :: Monad m => (a -> b) -> m a -> m b
+f1 = undefined
+
+f2 :: Monad m => m a -> m b -> m (a, b)
+f2 = undefined
+
+f3 :: Monad m => m (m a) -> m a
+f3 = undefined
+
+f4 :: Monad m => m (a -> b) -> m a -> m b
+f4 = undefined
+
+f5 :: Monad m => (a -> m b) -> m a -> m b
+f5 = undefined
+
+f6 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
+f6 = undefined
+
+f7 :: Monad m => (a -> b -> c -> d) -> m a -> m b -> m c -> m d
+f7 = undefined
+
+f8 :: Monad m => (a -> m b) -> (b -> m c) -> a -> m c
+f8 = undefined
+
+-}
