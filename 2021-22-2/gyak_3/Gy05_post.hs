@@ -1,6 +1,7 @@
 {-# language InstanceSigs, DeriveFunctor #-}
 {-# options_ghc -Wincomplete-patterns #-}
 
+module Gy05 where
 import Control.Monad
 
 -- IO monád
@@ -57,7 +58,7 @@ io3 = do
     putStrLn "I found an 'x'!"
     return ()
   else
-    io3'
+    io3
 
 countLowerCase :: String -> Int
 countLowerCase s = length (filter (`elem` ['a'..'z']) s)
