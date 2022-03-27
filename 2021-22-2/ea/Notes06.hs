@@ -170,9 +170,9 @@ instance Alternative Parser where
 
 -- iteráció:
 --    many  :: Parser a -> Parser [a]       -- 0-szor vagy többször futtatja
---    some  :: Parser a -> Parser [a]       -- 0-szer vagy többször futtatja
+--    some  :: Parser a -> Parser [a]       -- 1-szer vagy többször futtatja
 --    many_ :: Parser a -> Parser ()        -- 0-szor vagy többször futtatja
---    some_ :: Parser a -> Parser ()        -- 0-szer vagy többször futtatja
+--    some_ :: Parser a -> Parser ()        -- 1-szer vagy többször futtatja
 
 -- many, some: Control.Applicative-ból importálhatók
 
