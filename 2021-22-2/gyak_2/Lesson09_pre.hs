@@ -7,7 +7,7 @@ import Data.Char
 -- PARSER LIBRARY
 --------------------------------------------------------------------------------
 
--- newtype Parser a
+newtype Parser a
 
 -- instance Functor Parser where
 -- instance Applicative Parser where
@@ -21,6 +21,10 @@ eof = undefined
 -- olvassunk egy karaktert az input elejéről, amire igaz egy feltétel
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy f = undefined
+
+-- olvassunk egy tetszőleges karaktert
+anyChar :: Parser Char
+anyChar = undefined
 
 -- olvassunk egy konkrét karaktert
 char :: Char -> Parser ()
@@ -36,11 +40,11 @@ string s = undefined
 --    many  :: Parser a -> Parser [a]       -- 0-szor vagy többször futtatja
 --    some  :: Parser a -> Parser [a]       -- 1-szer vagy többször futtatja
 
--- many' :: Parser a -> Parser [a]
+many' :: Parser a -> Parser [a]
+many' = undefined
 
-
--- some' :: Parser a -> Parser [a]
-
+some' :: Parser a -> Parser [a]
+some' = undefined
 
 many_ :: Parser a -> Parser ()
 many_ pa = () <$ many pa
@@ -54,6 +58,11 @@ some_ pa = () <$ some pa
 
 optional_ :: Parser a -> Parser ()
 optional_ pa = () <$ optional pa
+
+-- általában ezt úgy szokás megtalálni, hogy `between :: Parser open -> Parser close -> Parser a -> Parser a
+between :: Parser open -> Parser a -> Parser close -> Parser a
+between = undefined
+-- Ezt általánosabban is meg lehet írni.
 
 --------------------------------------------------------------------------------
 
