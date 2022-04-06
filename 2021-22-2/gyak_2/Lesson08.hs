@@ -7,6 +7,7 @@ import Control.Monad
 
 newtype State s a = State {runState :: s -> (a, s)}
 
+-- newtype State s a = State (s -> (a,s))
 evalState :: State s a -> s -> a
 evalState sa = fst . runState sa
 
@@ -36,7 +37,7 @@ sumIntegers :: IO Int -> IO Integer
 sumIntegers ioN = do
     n <- ioN
     l <- replicateM n getLine
-    pure $ sum [x | Just x <- l]
+    pure $ sum [x | Just x <- map readMaybe l]
 
 {-
 sumIntegers ioN = ioN >>= \n ->
@@ -47,6 +48,9 @@ sumIntegers ioN = ioN >>= \n -> fmap (map readMaybe) (replicateM n getLine) >>= 
 sumIntegers ioN = ioN >>= \n -> fmap ((\l -> sum [x | Just x <- l]) . map readMaybe) (replicateM n getLine)
 -}
 instance Monad (State s) where
+    (>>=) :: State s a -> (a -> State s b) -> State s b
+    -- f :: s -> (a,s)
+    -- g :: a -> State s b
     (State f) >>= g = State $ \s -> case f s of (a,s') -> runState (g a) s'
 
 -- get, put, modify
@@ -66,6 +70,12 @@ modify' :: (s -> s) -> State s ()
 modify' f = do
     s <- get
     put (f s)
+
+st :: State Int Int -- Int -> (Int, Int)
+st = do
+    n <- get -- n :: Int
+    put (n + 1)
+    pure n
 --------------------------------------------------------------------------------
 
 -- típus (2 paraméteres):   State :: Type -> Type -> Type
