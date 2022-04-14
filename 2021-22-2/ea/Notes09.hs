@@ -175,7 +175,7 @@ data Exp =
 {-
 Változónév: nemüres alfabetikus string
 
-Kötési erősségek csökken sorrendben:
+Kötési erősségek csökkenő sorrendben:
   - atom: zárójelezett kifejezés, literál, változónév
   - not alkalmazás
   - *  : jobbra asszoc

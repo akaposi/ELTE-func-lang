@@ -8,64 +8,12 @@ import Debug.Trace
 import Data.Char  -- isAlpha, isDigit, isAlphaNum, isLower, isUpper, isSpace
 
 --------------------------------------------------------------------------------
--- következő canvas feladat:
---   regex mint Parser definíció
 
--- canvas feladat
---------------------------------------------------------------------------------
+-- következő canvas:
+--   Haskell szintaxisú adat parsolás
+--     lista, Maybe, Either, Bool, párok
 
-data Tree a = Leaf a | Node2 (Tree a) (Tree a) | Node3 (Tree a) (Tree a) (Tree a)
-  deriving (Eq, Show, Functor, Foldable, Traversable)
-
-label :: Tree a -> Tree (Int, a)
-label t = evalState (traverse go t) 0 where
-  go :: a -> State Int (Int, a)
-  go a = do
-    n <- get
-    put (n + 1)
-    pure (n, a)
-
-label' :: Tree a -> Tree (Int, a)
-label' t = evalState (go t) 0 where
-  go :: Tree a -> State Int (Tree (Int, a))
-  go (Leaf a) = do
-    n <- get
-    put (n + 1)
-    pure (Leaf (n, a))
-  go (Node2 t1 t2) =
-    Node2 <$> go t1 <*> go t2
-  go (Node3 t1 t2 t3) =
-    Node3 <$> go t1 <*> go t2 <*> go t3
-
-
--- State monád
---------------------------------------------------------------------------------
-
-newtype State s a = State {runState :: s -> (a, s)} deriving Functor
-
-instance Applicative (State s) where
-  pure  = return
-  (<*>) = ap
-
-instance Monad (State s) where
-  return a = State (\s -> (a, s))
-  State f >>= g = State (\s -> case f s of (a, s') -> runState (g a) s')
-
-get :: State s s
-get = State (\s -> (s, s))
-
-put :: s -> State s ()
-put s = State (\_ -> ((), s))
-
-modify :: (s -> s) -> State s ()
-modify f = do {s <- get; put (f s)}
-
-evalState :: State s a -> s -> a
-evalState ma = fst . runState ma
-
-execState :: State s a -> s -> s
-execState ma = snd . runState ma
-
+-- Írj parser-t, ami megfelel a következő regex-nek: <[a-z]+>(,<[a-z]+>)*
 
 -- Parser library
 --------------------------------------------------------------------------------
@@ -149,9 +97,14 @@ sepBy1 pa psep = do
 sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy pa psep = sepBy1 pa psep <|> pure []
 
+sepBy1_ :: Parser a -> Parser sep -> Parser ()
+sepBy1_ pa psep = () <$ sepBy1 pa psep
+
+sepBy_ :: Parser a -> Parser sep -> Parser ()
+sepBy_ pa psep = () <$ sepBy pa psep
+
 debug :: String -> Parser a -> Parser a
 debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
-
 
 -- token/whitespace parsing segédfüggvények
 
@@ -186,143 +139,158 @@ nonAssoc f pa psep = do
     [e1,e2]  -> pure (f e1 e2)
     _        -> empty
 
-
--- FELADATOK
 --------------------------------------------------------------------------------
 
-{-
-
-emlékeztető:
-  pa       :: Parser a
-  () <$ pa :: Parser ()
-
-
-Megfelelés Parser () és regex között:
-
-  eof          $
-  e1|e2        e1 <|> e2
-  e*           many_ e
-  e+           some_ e
-  e?           optional_ e
-  c            char c
-  (string)     string str
-  e1e2         e1 *> e2         e1 >> e2          do {e1; e2}
-  [c1..c2]     TODO
--}
-
-
--- Implementáld a következő regex-eket! Szükség szerint definiálj
--- segédfüggvényeket.
-
--- (foo|bar)*kutya
--- példák:   kutya fookutya barfookutya
-p1 :: Parser ()
-p1 = many_ (string "foo" <|> string "bar") *> string "kutya"
-
--- \[foo(, foo)*\]     (nemüres ,-vel választott "foo" lista)
--- példák:   [foo] [foo, foo] [foo, foo, foo]
-p2 :: Parser ()
-p2 = char '[' *> string "foo" *> many_ (string ", foo") *> char ']'
-
--- (ac|bd)*
--- példák:   acac  acbdbd
-p3 :: Parser ()
-p3 = many_ (string "ac" <|> string "bd")
-
-range :: Char -> Char -> Parser ()
-range c1 c2 = () <$ satisfy (\c -> c1 <= c && c <= c2)
-
--- (b <$ pa) = fmap (\_ -> b) pa
-
-
--- [a..z]+@foobar\.(com|org|hu)
--- példák:   kutya@foobar.org  macska@foobar.org
-p4 :: Parser ()
-p4 =    some_ (range 'a' 'z')
-     *> string "@foobar."
-     *> (string "com" <|> string "org" <|> string "hu")
-
--- p4' = do
---   some_ (range 'a' 'z')
---   string "@foobar."
---   (string "com" <|> string "org" <|> string "hu")
-
-pDigit :: Parser ()
-pDigit = range '0' '9'
-
-pLower :: Parser ()
-pLower = range 'a' 'z'
-
-pUpper :: Parser ()
-pUpper = range 'A' 'Z'
-
-pLetter :: Parser ()
-pLetter = pLower <|> pUpper
-
--- -?[0..9]+
--- (?e azt jelenti, hogy e opcionális)
-p5 :: Parser ()
-p5 = optional_ (char '-') *> some_ pDigit
-
--- ([a..z]|[A..Z])([a..z]|[A..Z]|[0..9])*
-p6 :: Parser ()
-p6 = pLetter *> many_ (pLetter <|> pDigit)
-
--- ([a..z]+=[0..9]+)(,[a..z]+=[0..9]+)*
--- példák:  foo=10,bar=30,baz=40
-p7 :: Parser ()
-p7 = let
-  pInner = some_ pLower *> char '=' *> some_ pDigit
-  in pInner *> many_ (char ',' *> pInner)
-
-p7' :: Parser ()
-p7' = () <$ sepBy (some_ pLower *> char '=' *> some_ pDigit) (char ',')
-
-
---------------------------------------------------------------------------------
-
+-- -- csaló megoldás:
+-- posInt :: Parser Int
+-- posInt = do
+--   str <- some (satisfy isDigit)
+--   pure $ read str                  -- read :: String -> Int
 
 -- Olvass be egy pozitív Int-et! (Számjegyek nemüres sorozata)
 posInt :: Parser Int
-posInt = undefined
+posInt = do
+  str <- some (satisfy isDigit)  -- str :: String, digitToInt :: Char -> Int
+
+  -- 1.
+  let res = fst $ foldr (\c (sum, place) -> (sum + digitToInt c * place, place*10))
+                        (0, 1)
+                        str
+
+  -- 2.
+  -- let digits = map digitToInt str
+  -- let digitValues = zipWith (*) (iterate (*10) 1) (reverse digits)
+  -- let res = sum digitValues
+
+  -- 3.
+  -- let go []      = (0, 1)
+  --     go (c:str) = case go str of
+  --       (sum, place) -> (sum + digitToInt c * place, place*10)
+  -- let res = fst $ go str
+  pure res
+
+-- whitespace kezelése:
+--   - definiáljuk a whitespace parser-t
+--   - minden primitív parser maga után olvasson ws-t
+--   - használjuk a topLevel kombinátort a "top"-level parserhez
+
+posInt' :: Parser Int
+posInt' = posInt <* ws
 
 -- Írj egy parsert, ami felsimeri Int-ek vesszővel elválasztott listáit!
 -- Példák: "[]", "[    12 , 34555 ]", "[0,1,2,3]"
 intList :: Parser [Int]
-intList = undefined
+intList = topLevel go where
+  -- go :: Parser [Int]
+  -- go = do
+  --   char' '['
+  --   ns <- sepBy posInt' (char' ',')
+  --   char' ']'
+  --   pure ns
 
--- Írj egy parsert, ami [Maybe Int] értékeket olvas be Haskell szintaxis szerint!
--- Engedj meg bárhol whitespace-t.
+  go :: Parser [Int]
+  go = char' '[' *> sepBy posInt' (char' ',') <* char' ']'
+
+maybeInt' :: Parser (Maybe Int)
+maybeInt' = nothing <|> just where
+  nothing :: Parser (Maybe Int)
+  nothing = do
+    string' "Nothing"
+    pure Nothing
+
+  just :: Parser (Maybe Int)
+  just = do
+    string' "Just "
+    n <- posInt'
+    pure (Just n)
+
+-- maybeInt'' :: Parser (Maybe Int)
+-- maybeInt'' = (Nothing <$ string' "Nothing")
+--          <|> (Just <$> (string' "Just " *> posInt'))
+
 listMaybeInt :: Parser [Maybe Int]
-listMaybeInt = undefined
+listMaybeInt = topLevel go where
+
+  go :: Parser [Maybe Int]
+  go = char' '[' *> sepBy maybeInt' (char' ',') <* char' ']'
+
+-- opcionális házi:
+-- pList :: Parser a -> Parser [a]
+-- pMaybe :: Parser a -> Parser (Maybe a)
+-- listMaybeInt = pList (pMaybe posInt')
+
+-- vagy akár
+-- class ParserHaskell a where
+--   parse :: Parse a
+
+-- instance ParseHaskell Int
+-- instance ParseHaskell a => ParseHaskell [a]
+-- instance ParseHaskell a => ParseHaskell (Maybe a)
+-- parse :: Parser [Maybe Int]
 
 
 -- Írj egy parsert, ami [(Bool, Maybe Int)] értékeket olvas Haskell szintaxis szerint!
 -- Engedj meg bárhol whitespace-t.
 listBoolMaybeInt :: Parser [(Bool, Maybe Int)]
-listBoolMaybeInt = undefined
+listBoolMaybeInt = topLevel goList where
+  goList = char' '[' *> sepBy elem (char' ',') <* char' ']'
 
+  bool = (True  <$ string' "True") <|> (False <$ string' "False")
 
+  elem = (,) <$> (char' '(' *> bool <* char' ',')
+             <*> (maybeInt' <* char' ')')
+
+-- (bónusz)
 -- Írj egy parsert, ami pontosan a kiegyensúlyozott zárójel-sorozatokat ismeri fel!
 -- Helyes példák: "", "()", "()()", "(())()", "(()())", "((()())())"
 balancedPar :: Parser ()
-balancedPar = undefined
+balancedPar = many_ (char '(' *> balancedPar *> char ')')
 
 
--- Írj egy parser-t, ami zárójeleket, +-t és pozitív Int literálokat tartalmazó
--- kifejezéseket olvas! (Lásd előadás) Whitespace-t mindenhol engedj meg.
+
+
+-- Írj egy parser-t a következő kifejezésekhez:
 --------------------------------------------------------------------------------
---   példák: 10 + 20 + 30
---           (10 + 20) + 30
---           10 + ((20 + 5))
---
--- A + operátor jobbra asszociáljon, azaz pl. 1 + 2 + 3 olvasása legyen
---  (Plus (Lit 1) (Plus (Lit 2) (Lit 3)))
 
-data Exp = Lit Int | Plus Exp Exp deriving Show
+data Exp =
+    IntLit Int          -- int literál (pozitív)
+  | Add Exp Exp         -- e + e
+  | Sub Exp Exp         -- e - e
+  | Mul Exp Exp         -- e * e
+  | BoolLit Bool        -- true|false
+  | And Exp Exp         -- e && e
+  | Or Exp Exp          -- e || e
+  | Not Exp             -- not e
+  | Eq Exp Exp          -- e == e
+  | Var String          -- (változónév)
+  deriving (Eq, Show)
 
-pExp :: Parser Exp
-pExp = undefined
+-- Parser írása, operátor + változónevek + kulcsszavak
+
+{-
+   1. Definiáljuk a ws-t és a primitív parsereket (amik ws-olvasnak)
+
+   2. Definiáljuk a kulcsszó parsert és a változónevek parser-ét
+
+   3. sorojuk fel a nyelvi konstrukciókat kötési erősség szerint
+       - atom: zárójelezett kifejezés, literál, változónév   (végtelen kötési erősség)
+       - not alkalmazás
+       - *  : jobbra asszoc
+       - +  : jobbra asszoc
+       - -  : jobbra asszoc
+       - && : jobbra asszoc
+       - || : jobbra asszoc
+       - == : nem asszoc       (x == y == z)
+
+   4. Egy parser függvényt írunk minden erősségi szinthez
+      Felhasználjuk a library precedencia kombinátorokat.
+      Gyengébb függvény meghívja az egyel erősebb függvényt.
+      Zárójel belsejében a leggyengébb függvényt hívjuk
+      ("recursive precedence parsing" néven lehet rá keresni)
+
+   5. topLevel <leggyengébb parser>    maga a kívánt parser
+-}
+
 
 
 -- bónusz : írj parser-t típusozatlan lambda kalkulushoz! (whitespace megengedett)
@@ -332,7 +300,7 @@ pExp = undefined
 --          (\x. x) (\x. x)
 --          (\f x y. f) x (g x)
 
-data Tm = Var String | App Tm Tm | Lam String Tm deriving Show
+data Tm = TmVar String | App Tm Tm | Lam String Tm deriving Show
 
 pTm :: Parser Tm
 pTm = undefined
