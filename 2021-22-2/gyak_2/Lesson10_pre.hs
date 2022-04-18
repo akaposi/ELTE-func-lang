@@ -3,6 +3,7 @@ module Lesson10 where
 import Control.Monad
 import Control.Applicative
 import Data.Char
+import Debug.Trace
 
 -- PARSER LIBRARY
 --------------------------------------------------------------------------------
@@ -101,6 +102,8 @@ between :: Parser open -> Parser a -> Parser close -> Parser a
 between = undefined
 -- Ezt általánosabban is meg lehet írni.
 
+debug :: String -> Parser a -> Parser a
+debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
 --------------------------------------------------------------------------------
 
 -- Implementáld a következő regex-eket!
@@ -174,3 +177,51 @@ intList = undefined
 -- Helyes példák: "", "()", "()()", "(())()", "(()())", "((()())())"
 balancedPar :: Parser ()
 balancedPar = undefined
+
+data Exp = Lit Integer | Plus Exp Exp | Mul Exp Exp
+
+evalExp :: Exp -> Integer
+evalExp = undefined
+
+-- olvassunk 1 vagy több pa-t, psep-el elválasztva
+--   pa psep pa .... psep pa
+sepBy1 :: Parser a -> Parser sep -> Parser [a]
+sepBy1 pa psep = undefined
+
+-- olvassunk 0 vagy több pa-t, psep-el elválasztva
+sepBy :: Parser a -> Parser sep -> Parser [a]
+sepBy pa psep = undefined
+
+ws :: Parser ()
+ws = undefined
+
+satisfy' :: (Char -> Bool) -> Parser Char
+satisfy' f = satisfy f <* ws
+
+char' :: Char -> Parser ()
+char' c = char c <* ws
+
+string' :: String -> Parser ()
+string' s = string s <* ws
+
+topLevel :: Parser a -> Parser a
+topLevel pa = ws *> pa <* eof
+
+-- operátor segédfüggvények
+
+rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
+rightAssoc f pa psep = foldr1 f <$> sepBy1 pa psep
+
+leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
+leftAssoc f pa psep = foldl1 f <$> sepBy1 pa psep
+
+nonAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
+nonAssoc f pa psep = do
+  exps <- sepBy1 pa psep
+  case exps of
+    [e]      -> pure e
+    [e1,e2]  -> pure (f e1 e2)
+    _        -> empty
+
+pExp :: Parser Exp
+pExp = undefined
