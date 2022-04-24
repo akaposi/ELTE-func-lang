@@ -78,11 +78,14 @@ instance Alternative Parser where
 --    many  :: Parser a -> Parser [a]       -- 0-szor vagy többször futtatja
 --    some  :: Parser a -> Parser [a]       -- 1-szer vagy többször futtatja
 
-many' :: Parser a -> Parser [a]
-many' = undefined
+many' :: Parser a -> Parser [a] 
+many' pa = some' pa <|> pure []
 
 some' :: Parser a -> Parser [a]
-some' = undefined
+some' pa = do
+    a <- pa
+    as <- many' pa
+    pure (a:as)
 
 many_ :: Parser a -> Parser ()
 many_ pa = () <$ many pa
@@ -99,8 +102,15 @@ optional_ pa = () <$ optional pa
 
 -- általában ezt úgy szokás megtalálni, hogy `between :: Parser open -> Parser close -> Parser a -> Parser a
 between :: Parser open -> Parser a -> Parser close -> Parser a
-between = undefined
+between pOpen pa pClose = do
+    pOpen
+    a <- pa
+    pClose
+    pure a
 -- Ezt általánosabban is meg lehet írni.
+
+between' :: Parser open -> Parser a -> Parser close -> Parser a
+between' pOpen pa pClose = pOpen *> pa <* pClose
 
 debug :: String -> Parser a -> Parser a
 debug msg pa = Parser $ \s -> trace (msg ++ " : " ++ s) (runParser pa s)
@@ -119,32 +129,60 @@ p0 = do
 
 -- \[foo(, foo)*\]         -- nemüres ,-vel választott foo lista
 p1 :: Parser ()
-p1 = undefined
+p1 = between (char '[') (do
+    string "foo"
+    many_ (string ", foo")
+    ) (char ']')
 
 -- (ac|bd)+
 p2 :: Parser ()
 p2 = undefined
 
 inList :: [Char] -> Parser Char
-inList str = undefined
+inList [] = empty
+inList (x:xs) = (x <$ char x) <|> inList xs
 
 inList_ :: [Char] -> Parser ()
-inList_ str = undefined
+inList_ = void . inList
 
 -- std függvény:
 choice :: [Parser a] -> Parser a
-choice ps = undefined
+choice []     = empty
+choice (p:ps) = p <|> choice ps
 
 lowercase :: Parser ()
-lowercase = undefined
+lowercase = inList_ ['a'..'z']
+
+digit_ :: Parser ()
+digit_ = inList_ ['0'..'9']
+
+digit :: Parser Integer
+digit = fmap (\c -> fromIntegral (fromEnum c - fromEnum '0')) $ inList ['0'..'9']
 
 -- [a..z]+@foobar\.(com|org|hu)
 p3 :: Parser ()
-p3 = undefined
+p3 = do
+    some lowercase
+    char '@'
+    string "foobar"
+    char '.'
+    choice $ map string ["com","org","hu"]
+    eof
 
 -- -?[0..9]+           -- a -? opcionális '-'-t jelent
 p4 :: Parser ()
-p4 = undefined
+p4 = do
+    optional_ (char '-')
+    some digit_
+    eof
+
+p4' :: Parser ()
+p4' = do
+    optional_ (char '-')
+    some digit_
+    char '.'
+    some digit_
+    eof
 
 -- ([a..z]|[A..Z])([a..z]|[A..Z]|[0..9])*
 p5 :: Parser ()
@@ -166,34 +204,49 @@ p6 = undefined
 
 -- Olvass be egy Integer-t! (Számjegyek nemüres sorozata)
 integer :: Parser Integer
-integer = undefined
+integer = do
+    a <- optional $ char '-'
+    digits <- some digit
+    let summa = foldl (\acc x -> 10 * acc + x) 0 digits
+    pure $ case a of
+        Nothing -> summa
+        Just _  -> -summa
 
--- Írj egy parsert, ami felsimeri Integer-ek vesszővel elválasztott listáit!
--- Példák: "[]", "[    12 , 34555 ]", "[0,1,2,3]"
-intList :: Parser [Integer]
-intList = undefined
-
--- Írj egy parsert, ami pontosan a kiegyensúlyozott zárójel-sorozatokat ismeri fel!
--- Helyes példák: "", "()", "()()", "(())()", "(()())", "((()())())"
-balancedPar :: Parser ()
-balancedPar = undefined
-
-data Exp = Lit Integer | Plus Exp Exp | Mul Exp Exp
-
-evalExp :: Exp -> Integer
-evalExp = undefined
+ws :: Parser ()
+ws = many_ (satisfy isSpace)
 
 -- olvassunk 1 vagy több pa-t, psep-el elválasztva
 --   pa psep pa .... psep pa
 sepBy1 :: Parser a -> Parser sep -> Parser [a]
-sepBy1 pa psep = undefined
+sepBy1 pa psep = do
+    a <- pa
+    as <- many $ psep *> pa
+    pure $ a:as
 
 -- olvassunk 0 vagy több pa-t, psep-el elválasztva
 sepBy :: Parser a -> Parser sep -> Parser [a]
-sepBy pa psep = undefined
+sepBy pa psep = sepBy1 pa psep <|> pure []
 
-ws :: Parser ()
-ws = undefined
+-- Írj egy parsert, ami felsimeri Integer-ek vesszővel elválasztott listáit!
+-- Példák: "[]", "[    12 , 34555 ]", "[0,1,2,3]", "[      ]"
+intList :: Parser [Integer]
+intList = between (char '[' <* ws) (sepBy (integer <* ws) (char ',' <* ws)) (char ']')
+
+-- Írj egy parsert, ami pontosan a kiegyensúlyozott zárójel-sorozatokat ismeri fel!
+-- Helyes példák: "", "()", "()()", "(())()", "(()())", "((()())())"
+balancedPar :: Parser ()
+balancedPar = many_ balancedPar' *> eof
+    where
+        balancedPar' = between (char '(') (many_ balancedPar') (char ')')
+
+
+data Exp = Lit Integer | Plus Exp Exp | Mul Exp Exp deriving Show
+
+evalExp :: Exp -> Integer
+evalExp (Lit n) = n
+evalExp (Plus e1 e2) = evalExp e1 + evalExp e2
+evalExp (Mul e1 e2) = evalExp e1 * evalExp e2
+-- 12 * 12 + 9
 
 satisfy' :: (Char -> Bool) -> Parser Char
 satisfy' f = satisfy f <* ws
@@ -203,6 +256,9 @@ char' c = char c <* ws
 
 string' :: String -> Parser ()
 string' s = string s <* ws
+
+tokenize :: Parser a -> Parser a
+tokenize pa = pa <* ws
 
 topLevel :: Parser a -> Parser a
 topLevel pa = ws *> pa <* eof
