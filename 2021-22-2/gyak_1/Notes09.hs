@@ -7,6 +7,43 @@ import Control.Applicative
 import Debug.Trace
 import Data.Char  -- isAlpha, isDigit, isAlphaNum, isLower, isUpper, isSpace
 
+
+-- canvas feladat
+--------------------------------------------------------------------------------
+
+pBool :: Parser Bool
+pBool =  (True  <$ string' "True")
+     <|> (False <$ string' "False")
+
+pPairBool :: Parser (Bool, Bool)
+pPairBool = do
+  char' '('
+  b1 <- pBool
+  char' ','
+  b2 <- pBool
+  char' ')'
+  pure (b1, b2)
+
+-- p :: Parser (Maybe (Bool, Bool))
+-- p = topLevel (
+--       (Nothing <$ string' "Nothing")
+--   <|> (Just <$> (string' "Just" *> pPairBool)))
+
+pNothing = do
+  string' "Nothing"
+  pure Nothing
+
+pJust = do
+  string' "Just"
+  bools <- pPairBool
+  pure (Just bools)
+
+pMaybe = pNothing <|> pJust
+
+p :: Parser (Maybe (Bool, Bool))
+p = topLevel pMaybe
+
+
 --------------------------------------------------------------------------------
 
 -- következő canvas:
@@ -135,9 +172,9 @@ nonAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
 nonAssoc f pa psep = do
   exps <- sepBy1 pa psep
   case exps of
-    [e]      -> pure e
-    [e1,e2]  -> pure (f e1 e2)
-    _        -> empty
+    [e]      -> pure e          -- nem alkalmazunk op-t (default)
+    [e1,e2]  -> pure (f e1 e2)  -- pont egy op alkalmazás
+    _        -> empty           -- 0 vagy több mint 2 alkalmazás
 
 --------------------------------------------------------------------------------
 
@@ -262,35 +299,88 @@ data Exp =
   | Or Exp Exp          -- e || e
   | Not Exp             -- not e
   | Eq Exp Exp          -- e == e
-  | Var String          -- (változónév)
+  | Var String          -- (változónév: nemüres betűsorozat)
   deriving (Eq, Show)
 
--- Parser írása, operátor + változónevek + kulcsszavak
-
 {-
-   1. Definiáljuk a ws-t és a primitív parsereket (amik ws-olvasnak)
+  (definiáljuk ws-t, topLevel-t és a primitív parsereket)
 
-   2. Definiáljuk a kulcsszó parsert és a változónevek parser-ét
+  Kötési erősségek (csökkenő sorrendben)
+    - atom : int literál, bool literál, zárojelezett Exp, változók
+    - not exp
+    - *   (jobb asszociatív)
+    - +   (jobb asszociatív)
+    - -   (jobb asszociatív)
+    - &&  (jobb asszociatív)
+    - ||  (jobb asszociatív)
+    - ==  (nem asszociatív)
 
-   3. sorojuk fel a nyelvi konstrukciókat kötési erősség szerint
-       - atom: zárójelezett kifejezés, literál, változónév   (végtelen kötési erősség)
-       - not alkalmazás
-       - *  : jobbra asszoc
-       - +  : jobbra asszoc
-       - -  : jobbra asszoc
-       - && : jobbra asszoc
-       - || : jobbra asszoc
-       - == : nem asszoc       (x == y == z)
+  - Minden erősségi szinthez írunk egy függvényt
+  - Minden függvény a következő legerősebb függvényt hívja
+    (minden függvény a saját szintjét próbája olvasni,
+     viszont default esetként meghívja a következő függvényt)
+  - Zárójel belsejében a leggyengébb függvényt hívjuk
+  - topLevel parser a leggyengébb parser függvény lesz
 
-   4. Egy parser függvényt írunk minden erősségi szinthez
-      Felhasználjuk a library precedencia kombinátorokat.
-      Gyengébb függvény meghívja az egyel erősebb függvényt.
-      Zárójel belsejében a leggyengébb függvényt hívjuk
-      ("recursive precedence parsing" néven lehet rá keresni)
+  Kulcsszavak vs változók:
+    - listázzuk a kulcsszavakat
+    - változó nem lehet kulcsszó
+    - kulcsszó nem folytatódhat legális változó karakterekkel
+      (true, falsexx)
 
-   5. topLevel <leggyengébb parser>    maga a kívánt parser
+  lásd: "recursive precedence parsing"
 -}
 
+keywords :: [String]
+keywords = ["not", "true", "false"]
+
+ident' :: Parser String
+ident' = do
+  x <- some (satisfy isAlpha) <* ws
+  if elem x keywords
+    then empty
+    else pure x
+
+keyword' :: String -> Parser ()
+keyword' str = do
+  x <- some (satisfy isAlpha) <* ws
+  if x == str
+    then pure ()
+    else empty
+
+pAtom :: Parser Exp
+pAtom =  (IntLit <$> posInt')
+     <|> (BoolLit True <$ keyword' "true")
+     <|> (BoolLit False <$ keyword' "false")
+     <|> (Var <$> ident')
+     <|> (char' '(' *> pEq <* char' ')')
+
+pNot :: Parser Exp
+pNot =  (Not <$> (keyword' "not" *> pAtom))
+    <|> pAtom
+
+-- notExp * notExp * ... * notExp
+pMul :: Parser Exp
+pMul = rightAssoc Mul pNot (char' '*')
+
+-- mulExp + mulExp + ... + mulExp
+pAdd :: Parser Exp
+pAdd = rightAssoc Add pMul (char' '+')
+
+pSub :: Parser Exp
+pSub = rightAssoc Sub pAdd (char' '-')
+
+pAnd :: Parser Exp
+pAnd = rightAssoc And pSub (string' "&&")
+
+pOr :: Parser Exp
+pOr = rightAssoc Or pAnd (string' "||")
+
+pEq :: Parser Exp
+pEq = nonAssoc Eq pOr (string' "==")
+
+pExp :: Parser Exp
+pExp = topLevel pEq
 
 
 -- bónusz : írj parser-t típusozatlan lambda kalkulushoz! (whitespace megengedett)
