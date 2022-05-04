@@ -2,6 +2,9 @@
 {-# options_ghc -Wincomplete-patterns #-}
 module Gy12 where
 
+import Control.Monad
+import Control.Applicative
+import Debug.Trace
 
 -- State
 --------------------------------------------------------------------------------
