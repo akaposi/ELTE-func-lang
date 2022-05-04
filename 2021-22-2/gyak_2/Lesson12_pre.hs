@@ -179,10 +179,9 @@ sepBy pa psep = sepBy1 pa psep <|> pure []
 -- zárójel a legerősebb, aztán *, aztán +
 -- +,* balra kötő műveletek
 
-data Exp = Nice | Lit Integer | Plus Exp Exp | Minus Exp Exp | Mul Exp Exp | Pow Exp Exp deriving Show
+data Exp = Lit Integer | Plus Exp Exp | Minus Exp Exp | Mul Exp Exp | Pow Exp Exp deriving Show
 
 evalExp :: Exp -> Integer
-evalExp Nice         = 69
 evalExp (Lit n)      = n
 evalExp (Plus e1 e2) = evalExp e1 + evalExp e2
 evalExp (Mul e1 e2)  = evalExp e1 * evalExp e2
