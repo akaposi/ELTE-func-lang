@@ -106,6 +106,40 @@ labelAs (Node (Leaf False 10) (Node (Leaf True 20) (Leaf True 30))) == Node (Lea
 -}
 
 --------------------------------------------------------------------------------
+data Tree a = Leaf a | Node (Tree a) (Tree a) deriving (Show, Eq)
+
+instance Functor Tree where
+    fmap = undefined
+
+instance Foldable Tree where
+    foldr = undefined
+
+instance Traversable Tree where
+    -- traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+    traverse = undefined
+
+data RoseTree a = Branch a [RoseTree a] deriving (Show, Eq)
+
+r1 :: RoseTree Integer
+r1 = Branch 0 []
+
+r2 :: RoseTree Integer
+r2 = Branch 2
+    [Branch 3 [Branch 5 []]
+    ,Branch 7 [Branch 9 [], Branch 11 []]]
+
+instance Functor RoseTree where
+    fmap = undefined
+
+instance Foldable RoseTree where
+    foldr = undefined
+
+instance Traversable RoseTree where
+    -- traverse :: Applicative f => (a -> f b) -> RoseTree a -> f (RoseTree b)
+    traverse = undefined
+
+
+--------------------------------------------------------------------------------
 --                  While nyelv parser + interpreter
 --------------------------------------------------------------------------------
 
