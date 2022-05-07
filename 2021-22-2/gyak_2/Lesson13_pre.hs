@@ -106,16 +106,16 @@ labelAs (Node (Leaf False 10) (Node (Leaf True 20) (Leaf True 30))) == Node (Lea
 -}
 
 --------------------------------------------------------------------------------
-data Tree a = Leaf a | Node (Tree a) (Tree a) deriving (Show, Eq)
+data BinaryTree a = BinaryLeaf a | BinaryNode (BinaryTree a) (BinaryTree a) deriving (Show, Eq)
 
-instance Functor Tree where
+instance Functor BinaryTree where
     fmap = undefined
 
-instance Foldable Tree where
+instance Foldable BinaryTree where
     foldr = undefined
 
-instance Traversable Tree where
-    -- traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+instance Traversable BinaryTree where
+    -- traverse :: Applicative f => (a -> f b) -> Binary a -> f (Binary b)
     traverse = undefined
 
 data RoseTree a = Branch a [RoseTree a] deriving (Show, Eq)
