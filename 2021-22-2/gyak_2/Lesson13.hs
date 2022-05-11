@@ -47,20 +47,27 @@ data List a b
 -- Értelemszerűen kell ezeket megadni.
 
 instance (Eq a, Eq b) => Eq (List a b) where
-  (==) = undefined
+  Nil         == Nil         = True
+  Cons a b bs == Cons c d ds = a == c && b == d && bs == ds
+  _           == _           = False
 
 instance Functor (List a) where
-  fmap = undefined
+  fmap f Nil           = Nil
+  fmap f (Cons a b bs) = Cons a (f b) (fmap f bs)
 
 instance Foldable (List a) where
-  foldr = undefined
+  foldr f acc Nil           = acc
+  foldr f acc (Cons _ b bs) = f b (foldr f acc bs)
 
 instance Traversable (List a) where
-  traverse = undefined
-
+  -- traverse :: Applicative f => (b -> f c) -> List a b -> f (List a c)
+  traverse f Nil           = pure Nil
+  traverse f (Cons a b bs) = (Cons a) <$> (f b) <*> (traverse f bs)
+--                           f (List a c -> List a c) -> f (List a c) -> f (List a c)
 -- Írj egy függvényt, ami két listára bont egy List a b-t!
 unpack :: List a b -> ([a], [b])
-unpack = undefined
+unpack Nil           = ([],[])
+unpack (Cons a b bs) = let (xs,ys) = unpack bs in (a:xs, b:ys)
 {-
 Pl.
 unpack (Cons True 10 (Cons False 0 Nil)) == ([True, False], [10, 0])
@@ -70,7 +77,9 @@ unpack (Cons True False Nil) == ([True], [False])
 
 -- Írj egy függvényt, ami megfordítja az `a` típusú elemek sorrendjét a listában!
 reverseAs :: List a b -> List a b
-reverseAs = undefined
+reverseAs bs = let (xs,ys) = unpack bs in pack (reverse xs, ys) where
+    pack ([],    []    ) = Nil
+    pack ((l:ls),(k:ks)) = Cons l k (pack (ls, ks))
 {-
 Pl.
 reverseAs (Cons True 10 (Cons False 0 Nil)) == Cons False 10 (Cons True 0 Nil)
@@ -82,10 +91,16 @@ data Tree a b
   | Node (Tree a b) (Tree a b)
   deriving (Eq, Show)
 
+(+++) :: List a b -> List a b -> List a b
+Nil           +++ ys = ys
+(Cons x y xs) +++ ys = Cons x y (xs +++ ys)
+infixr 5 +++
+
 -- Írj egy függvényt, ami Tree a b-ből visszaad egy List a b-t,
 -- amiben a levelek értékei vannak balról-jobbra bejárási sorrendben!
 toList :: Tree a b -> List a b
-toList = undefined
+toList (Leaf a b) = Cons a b Nil
+toList (Node l r) = toList l +++ toList r
 {-
 Pl.
 toList (Node (Leaf True 10) (Leaf False 20)) == Cons True 10 (Cons False 20 Nil)
@@ -97,7 +112,16 @@ toList (Node (Leaf False 10) (Node (Leaf True 20) (Leaf True 30))) == Cons False
 -- ami egy Tree a b-ben az a típusú értékeket beszámozza balról-jobbra bejárási sorrendben!
 -- A számozás 0-ról induljon.
 labelAs :: Tree a b -> Tree (a, Int) b
-labelAs = undefined
+labelAs t = evalState (go t) 0 where
+    -- go :: Tree a b -> State Int (Tree (a, Int) b)
+    go (Leaf a b) = do
+        n <- get
+        put (n + 1)
+        pure (Leaf (a,n) b)
+    go (Node l r) = do
+        l' <- go l
+        r' <- go r
+        pure (Node l' r')
 {-
 Pl.
 labelAs (Node (Leaf True 10) (Leaf False 20)) == Node (Leaf (True,0) 10) (Leaf (False,1) 20)
@@ -109,14 +133,17 @@ labelAs (Node (Leaf False 10) (Node (Leaf True 20) (Leaf True 30))) == Node (Lea
 data BinaryTree a = BinaryLeaf a | BinaryNode (BinaryTree a) (BinaryTree a) deriving (Show, Eq)
 
 instance Functor BinaryTree where
-    fmap = undefined
+    fmap f (BinaryLeaf a)   = BinaryLeaf $ f a
+    fmap f (BinaryNode l r) = BinaryNode (fmap f l) (fmap f r)
 
 instance Foldable BinaryTree where
-    foldr = undefined
+    foldr f acc (BinaryLeaf a) = f a acc
+    foldr f acc (BinaryNode l r) = foldr f (foldr f acc r) l
 
 instance Traversable BinaryTree where
-    -- traverse :: Applicative f => (a -> f b) -> Binary a -> f (Binary b)
-    traverse = undefined
+    -- traverse :: Applicative f => (a -> f b) -> BinaryTree a -> f (BinaryTree b)
+    traverse f (BinaryLeaf a) = BinaryLeaf <$> (f a)
+    traverse f (BinaryNode l r) = BinaryNode <$> (traverse f l) <*> (traverse f r)
 
 data RoseTree a = Branch a [RoseTree a] deriving (Show, Eq)
 

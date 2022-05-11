@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
+module Gy13 where
+
 import Control.Applicative
 import Control.Monad
 import Data.Char

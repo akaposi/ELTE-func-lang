@@ -179,14 +179,15 @@ sepBy pa psep = sepBy1 pa psep <|> pure []
 -- zárójel a legerősebb, aztán *, aztán +
 -- +,* balra kötő műveletek
 
-data Exp = Lit Integer | Plus Exp Exp | Minus Exp Exp | Mul Exp Exp | Pow Exp Exp deriving Show
+data Exp = Lit Integer | Plus Exp Exp | Minus Exp Exp | Mul Exp Exp | Div Exp Exp | Pow Exp Exp deriving Show
 
 evalExp :: Exp -> Integer
 evalExp (Lit n)      = n
 evalExp (Plus e1 e2) = evalExp e1 + evalExp e2
 evalExp (Mul e1 e2)  = evalExp e1 * evalExp e2
 evalExp (Pow e1 e2)  = evalExp e1 ^ evalExp e2
-evalExp (Minus e1 e2) = undefined -- ezzel egészítettem ki óra végén az Exp-et, de nem beszéltük meg, hogy mit kell csinálni, hogy a Plus-szal azonos precedencián lehessen beolvasni.
+evalExp (Minus e1 e2) = evalExp e1 - evalExp e2
+evalExp (Div e1 e2) = evalExp e1 `div` evalExp e2 -- ezzel egészítettem ki óra végén az Exp-et, de nem beszéltük meg, hogy mit kell csinálni, hogy a Plus-szal azonos precedencián lehessen beolvasni.
 
 satisfy' :: (Char -> Bool) -> Parser Char
 satisfy' f = satisfy f <* ws
@@ -218,7 +219,7 @@ nonAssoc f pa psep = do
     [e]      -> pure e
     [e1,e2]  -> pure (f e1 e2)
     _        -> empty
-
+      
 assocPrefix :: (a -> a) -> Parser a -> Parser sep -> Parser a
 assocPrefix = undefined
 
@@ -230,38 +231,68 @@ try pa = Parser $ \str -> case runParser pa str of
     Just (a,_) -> Just (a,str)
     Nothing    -> Nothing
 
+idea1 :: [(a -> a -> a, Parser sep)] -> Parser a -> Parser a
+idea1 l pa = do
+    a <- pa
+    rest a
+        where
+            helper [] = empty
+            helper ((f,psep):xs) = (f <$ psep) <|> helper xs
+            rest x = (do
+                g <- helper l
+                y <- pa
+                rest $ g x y) <|> pure x
+
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chainl1 pa pf = undefined
+chainl1 pa pf = do
+    a <- pa
+    rest a
+        where
+            rest a = (do
+                f <- pf
+                b <- pa
+                rest $ f a b) <|> pure a
 
 chainl :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chainl pa pf a = undefined
+chainl pa pf a = chainl1 pa pf <|> pure a
 
 chainr1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chainr1 pa pf = undefined
+chainr1 pa pf = do
+    a <- pa
+    (do
+        f <- pf
+        b <- chainr1 pa pf
+        pure (f a b)) <|> pure a    
 
 chainr :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chainr pa pf a = undefined
+chainr pa pf a = chainr1 pa pf <|> pure a
 
 chain1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chain1 pa pf = undefined
+chain1 pa pf = pa >>= \a -> Parser $ \s -> case runParser pf s of
+    Just (f,s') -> case runParser pa s' of
+        Just (b,s'') -> case runParser pf s'' of
+            Just _  -> Nothing
+            Nothing -> Just (f a b, s'')
+        Nothing      -> Just (a, s)
+    Nothing -> Just (a, s)
 
 chain :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chain pa pf a = undefined
+chain pa pf a = chain1 pa pf <|> pure a
 ------------------------------------------------
-
 
 pBase :: Parser Exp -- számok ÉS zárójeles kifejezések
 pBase = (Lit <$> tokenize integer)
     <|> tokenize (between (char' '(') pPlus (char' ')'))
 
 pPow :: Parser Exp
-pPow = rightAssoc Pow pBase (char' '^')
+pPow = chainr1 pBase (Pow <$ char' '^')
 
 pMul :: Parser Exp
-pMul = leftAssoc Mul pPow (char' '*')
+pMul = chainl1 pPow ((Mul <$ char' '*') <|> (Div <$ char' '/'))
 
 pPlus :: Parser Exp
-pPlus = leftAssoc Plus pMul (char' '+')
+pPlus = chainl1 pMul ((Plus <$ char' '+') <|> (Minus <$ char' '-'))
 
 pExp :: Parser Exp
 pExp = topLevel pPlus
+

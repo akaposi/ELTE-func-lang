@@ -1,4 +1,4 @@
-module Lesson12 where
+module Lesson11 where
 
 import Control.Monad
 import Control.Applicative
@@ -171,6 +171,25 @@ sepBy1 pa psep = do
 sepBy :: Parser a -> Parser sep -> Parser [a]
 sepBy pa psep = sepBy1 pa psep <|> pure []
 
+-----------------------------------------------------------------------
+
+mulOrAdd :: Parser (Integer -> Integer -> Integer)
+mulOrAdd = do
+    x <- optional $ char' '+'
+    case x of
+        Just _ -> pure (+)
+        Nothing -> (*) <$ char' '*'
+
+pAdd :: Parser Integer
+pAdd = do
+    ws
+    a <- integer
+    ws
+    f <- mulOrAdd
+    b <- integer
+    ws
+    (f a b) <$ eof
+
 --------------------------------------------------------------------
 -- Számok
 -- + összeadás művelet
@@ -179,9 +198,10 @@ sepBy pa psep = sepBy1 pa psep <|> pure []
 -- zárójel a legerősebb, aztán *, aztán +
 -- +,* balra kötő műveletek
 
-data Exp = Lit Integer | Plus Exp Exp | Minus Exp Exp | Mul Exp Exp | Pow Exp Exp deriving Show
+data Exp = Nice | Lit Integer | Plus Exp Exp | Minus Exp Exp | Mul Exp Exp | Pow Exp Exp deriving Show
 
 evalExp :: Exp -> Integer
+evalExp Nice         = 69
 evalExp (Lit n)      = n
 evalExp (Plus e1 e2) = evalExp e1 + evalExp e2
 evalExp (Mul e1 e2)  = evalExp e1 * evalExp e2
@@ -219,39 +239,26 @@ nonAssoc f pa psep = do
     [e1,e2]  -> pure (f e1 e2)
     _        -> empty
 
-assocPrefix :: (a -> a) -> Parser a -> Parser sep -> Parser a
-assocPrefix = undefined
-
-nonAssocPrefix :: (a -> a) -> Parser a -> Parser sep -> Parser a
-nonAssocPrefix = undefined
+-- 4 + 4 * 45 + (6 + 7) * 9
+-- Plus (Plus (Lit 4) (Mul (Lit 4) (Lit 45))) (Mul (Plus (Lit 6) (Lit 7)) (Lit 9))
+-- Lit :: Integer -> Exp
 
 try :: Parser a -> Parser a
 try pa = Parser $ \str -> case runParser pa str of
     Just (a,_) -> Just (a,str)
     Nothing    -> Nothing
 
-chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chainl1 pa pf = undefined
-
-chainl :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chainl pa pf a = undefined
-
-chainr1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chainr1 pa pf = undefined
-
-chainr :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chainr pa pf a = undefined
-
-chain1 :: Parser a -> Parser (a -> a -> a) -> Parser a
-chain1 pa pf = undefined
-
-chain :: Parser a -> Parser (a -> a -> a) -> a -> Parser a
-chain pa pf a = undefined
-------------------------------------------------
-
+pKeyword :: String -> Parser ()
+pKeyword str = do
+  string str
+  mc <- optional (satisfy isDigit)
+  case mc of
+    Nothing -> ws
+    Just _  -> empty
 
 pBase :: Parser Exp -- számok ÉS zárójeles kifejezések
-pBase = (Lit <$> tokenize integer)
+pBase = (Nice <$ pKeyword "69")
+    <|> (Lit <$> tokenize integer)
     <|> tokenize (between (char' '(') pPlus (char' ')'))
 
 pPow :: Parser Exp
