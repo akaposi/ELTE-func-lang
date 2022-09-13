@@ -20,7 +20,7 @@
 - Páll Dominik, email: palldominiko8 @ gmail.com (szóköz nélkül)
 - Petes Márton, email: marci.petes @ gmail.com (szóköz nélkül)
 
-#### Infrastruktúra, online oktatás
+#### Infrastruktúra
 
 - Haskell installáció: az ajánlott mód a [ghcup](https://www.haskell.org/ghcup/), ha ez valamiért
   nem működik, akkor a ["via native OS manager"](https://www.haskell.org/downloads/) opciókat érdemes
