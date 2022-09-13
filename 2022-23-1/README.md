@@ -79,9 +79,9 @@ jegyzet átismétlése.
 
 #### Anyagok
 
-- Órai feladatok és megoldásaik felkerülnek a github repóba minden
-  gyakorlat/előadás után. Gyakorlati anyagok a "gyak_X" mappákba kerülnek, ahol
-  "X" a neptunban található csoport kód.
+- Órai jegyzetek felkerülnek a github repóba minden gyakorlat/előadás után. A
+  gyakorlati anyagok a "gyak_X" mappákba kerülnek, ahol "X" a neptunban
+  található csoport kód.
 - Korábbi szemeszterek jegyzetei és feladatai elérhetők a github repóban.
 - Ajánlott irodalom: http://learnyouahaskell.com/chapters, illetve
   https://en.wikibooks.org/wiki/Haskell. További irodalom órai jegyzetekben
