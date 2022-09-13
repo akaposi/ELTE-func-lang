@@ -24,15 +24,17 @@
 
 - Haskell installáció: az ajánlott mód a [ghcup](https://www.haskell.org/ghcup/), ha ez valamiért
   nem működik, akkor a ["via native OS manager"](https://www.haskell.org/downloads/) opciókat érdemes
-  megnézni.
+  megnézni. Tetszőleges szövegszerkesztő használható, én személy szerint VS Code-ot vagy Emacs-ot ajánlok.
 
 - Microsoft Teams: az előadások MS Teams-en lesznek rögzítve.
   + A Teams-hez inf-es felhasználónévvel és jelszóval lehet csatlakozni.
-  + Minden hallgató email-ben kap linket a team-hez.
+  + A hallgatók email-ben kapnak linket a team-hez, de a link megtalálható
+    a canvas-on is, az előadás oldalán.
 
-- Discord: minden hallgató kap discord meghívót email-ben. Habár a gyakorlatok
-  jelenléti oktatásban lesznek, és nem elsősorban Discord-on fognak folyni,
-  ettől még lehet haszna a discord-nak (pl. konzultáció, kommunikáció).
+- Discord: a hallgatók email-ben kapnak meghívót, és a link megtalálható a
+  canvas-on is a tematikában. Habár a gyakorlatok jelenléti oktatásban lesznek,
+  és nem elsősorban Discord-on fognak folyni, ettől még lehet haszna a
+  discord-nak (pl. konzultáció, kommunikáció).
 
 - Feladatok és vizsgák beadásának helye: https://canvas.elte.hu
 
