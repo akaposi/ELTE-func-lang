@@ -16,7 +16,7 @@
        - jelenléti oktatás: jelenlét számít jelenlétnek
 - Ha valaki el van maradva: lambda.inf.elte.hu kezdő Haskell jegyzet
                             Learn you a Haskell! könyv, stb.
-- Órai fájlok: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2021-22-2/gyak_2
+- Órai fájlok: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2022-23-1/gyak2
 - Előzetes ismeretek:
   - BSc "funkcionális programozás" ismerete (készség szinten)
     (lambda.inf.elte.hu "Kezdő Haskell" jegyzet ajánlott)
