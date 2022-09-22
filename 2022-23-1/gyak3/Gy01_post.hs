@@ -1,8 +1,6 @@
-{-
---------------------------------------------------------------------------------
 
 {-# options_ghc -Wincomplete-patterns #-}
-module Gy01_pre where
+module Gy01_post where
 
 valami :: Int -> Int
 valami 5 = 10
@@ -22,13 +20,13 @@ xor :: Bool -> Bool -> Bool
 --xor False True = True
 --xor _ _ = False
 
---xor = (/=)
+xor = (/=)
 
 --xor a b = not (a == b)
 
-xor a b = case a == b of
-  True -> False
-  False -> True
+--xor a b = case a == b of
+--  True -> False
+--  False -> True
 
 --xor a b = let
 --  isSame = a == b
