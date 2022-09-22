@@ -14,6 +14,12 @@ infixr 5 `Cons`
 -- Ha az egyik fejelem nagyobb, akkor az a lista nagyobb
 -- Ha egyenlőek a lista maradéka dönti el
 -- Ha az egy lista üres a másik nagyobb
+
+instance Eq a => Eq (List a) where -- = >
+    Nil == Nil = True
+    (Cons x xs) == (Cons y ys) = x == y && xs == ys
+    _ == _ = False
+
 instance Ord a => Ord (List a) where
     (<=) = undefined
 
@@ -28,13 +34,13 @@ data BranchOnlyTree a
 -- Csak a levelekben van érték
 data LeafOnlyTree a
 
-instance Eq a => Tree a where
+instance Eq a => Eq (Tree a) where
     (==) = undefined
 
-instance Eq a => BranchOnlyTree a where
+instance Eq a => Eq (BranchOnlyTree a) where
     (==) = undefined
 
-instance Eq a => LeafOnlyTree a where
+instance Eq a => Eq (LeafOnlyTree a) where
     (==) = undefined
 
 -- ezen a tárgyon inkább csak a LeafOnlyTree-t szeretjük használni
@@ -85,5 +91,5 @@ data NonEmpty' a = a :| [a]
 instance Foldable Maybe' where
     foldr = undefined
 
-instance Foldable NonEmpty'' where
+instance Foldable NonEmpty' where
     foldr = undefined
