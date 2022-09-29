@@ -2,7 +2,7 @@
 
 #### Oktatásforma
 
-- A gyakorlatok jelenléti látogatása **kötelező**, maximum három hiányzás engedélyezett.
+- A gyakorlatok jelenléti látogatása **kötelező**, maximum három hiányzás engedélyezett. Gyakorlatokon jelenléti ív van.
 - Az előadások látogatása **nem kötelező**. Az előadások felvételre kerülnek, a
   felvételek Teams-en lesznek elérhetők.
 
@@ -57,7 +57,6 @@ jegyzet átismétlése.
   + Minimum 13 pont szükséges a gyakorlati követelmény teljesítéséhez. Ez
     tetszőlegesen elérhető óra eleji feladatokból vagy házi feladatokból.
 - Gyakorlatok látogatása kötelező, maximum három hiányzás engedélyezett.
-  + Az óra eleji feladat tartja számon a jelenlétet. Ezért fontos, hogy akkor is küldjünk be megoldást, ha az hiányos.
 - Előadás látogatása nem kötelező.
 - A tárgyi jegy vizsgaidőszaki vizsgából áll elő. A vizsgázás előfeltétele a
   gyakorlati követelmény teljesítése.  A vizsga gépes feladmegoldásból áll és
