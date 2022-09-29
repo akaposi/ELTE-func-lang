@@ -198,7 +198,6 @@ instance (Functor f, Functor g) => Functor (Compose f g) where
 löb :: Functor f => f (f a -> a) -> f a
 löb = undefined
 
-
 -- bónusz bónusz 2:
 newtype Fix f = Fix (f (Fix f))
 
