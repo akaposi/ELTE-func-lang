@@ -2,18 +2,102 @@
 
 import Control.Monad
 
+-- köv feladat
+------------------------------------------------------------
+-- IO művelet, amiben lehet rekurzió, lehet szükség segédfüggvényre
+
+-- feladat
+------------------------------------------------------------
+
+-- olvassunk be egy sort, és utána olvassunk annyi sort
+-- ahány karakter van a beolvasott sorban
+
+help :: Int -> IO ()
+help 0 = return ()
+help n = do
+  l <- getLine
+  help (n - 1)
+
+f :: IO ()
+f = do
+  l <- getLine           -- getLine :: IO String
+  let len = length l     -- nincs mellékhatás!  (length l :: Int)
+  help len
+
+
+f' :: IO ()
+f' = do
+  l <- getLine           -- getLine :: IO String
+
+  let len = length l     -- nincs mellékhatás!  (length l :: Int)
+
+  let help 0 = return ()
+      help n = do
+        l <- getLine
+        help (n - 1)
+
+  help len
+
+-- replicate   :: Int -> a -> [a]
+-- replicateM  :: Monad m => Int -> m a -> m [a]
+-- replicateM_ :: Monad m => Int -> m a -> m ()
+
+f'' :: IO ()
+f'' = do
+  l <- getLine
+  replicateM_ (length l) getLine
+
+f''' :: IO ()
+f''' =
+  getLine >>= \l ->
+  replicateM_ (length l) getLine
+
+
+------------------------------------------------------------
+
 -- Írj egy függvényt, ami addig olvas be ismételten sorokat, amíg a sor nem
 -- tartalmaz 'x' karaktert. Ha a sorban 'x' van, akkor a program nyomtassa ki az
 -- összes eddig beolvasott sort és térjen vissza.
+
+-- tipp 1: elem :: Char -> String -> Bool
+-- tipp 2: eddig beolvasott sorokat segédfüggvény paramétereként
+--         lehet nyilván tartani [String]
+
+
 io3 :: IO ()
-io3 = undefined
+io3 = go [] where
+
+  go :: [String] -> IO ()
+  go lines = do
+    l <- getLine
+    if elem 'x' l
+      then mapM_ putStrLn $ reverse (l:lines)
+      -- print (l:lines)
+      else do
+        go (l:lines)
+
+-- io3' :: IO ()
+-- io3' = do
+--   l <- getLine
+--   if elem 'x' l then do
+--     putStrLn l
+--   else do
+--     io3'
+--     putStrLn l
 
 -- A következőt ismételd végtelenül: olvass be egy sort, majd nyomtasd ki a
--- sorban a kisbetűk számát.  A Ctrl-c -vel lehet megszakítani a futtatást
+-- sorban a kisbetűk számát. A Ctrl-c -vel lehet megszakítani a futtatást
 -- ghci-ben.
 io4 :: IO ()
-io4 = undefined
+io4 = forever $ do
+  l <- getLine
+  print $ length $ filter (\c -> 'a' <= c && c <= 'z') l
 
+io4' :: IO ()
+io4' = do
+  l <- getLine
+  print $ length $ filter (\c -> 'a' <= c && c <= 'z') l
+  io4'
 
 -- Definiáld a következő függvényeket tetszőlegesen,
 -- de típushelyesen.
@@ -71,24 +155,73 @@ execState :: State s a -> s -> s
 execState ma = snd . runState ma
 
 
+-- State monád használata
+------------------------------------------------------------
+
+-- t :: State s a      Monad (State s)
+--                     - 1 darab mutábilis referencia, "s" típusa
+--                     - "a" visszatérési érték típusa
+--                     - mellékhatás: referencia írás/olvasás
+
+-- put    : egy konkrét értéket írunk a ref-be
+-- get    : olvassa a ref jelenlegi értékét
+-- modify : egy függvényt alkalmaz a ref jelenlegi értékén
+
+--         futattni a definiált műveleteket
+--             művelet       kezdő érték   (visszatérési érték, végső ref érték)
+-- runState  :: State s a   ->  s           -> (a, s)
+-- evalState :: State s a   ->  s           -> a
+-- execState :: State s a   ->  s           -> s
+
+-- put :: s -> State s ()           -- beír egy értéket az állapotba
+-- get :: State s s                 -- értékként visszaadja az állapotot
+-- modify :: (s -> s) -> State s () -- függvényt alkalmaz az állapotra
+
+p1 :: State Int Int
+p1 = do
+  put 10
+  put 20  -- felülírom az értéket
+  modify (+100)
+  n <- get
+  return n
+
+-- runState p1 0 == (120, 120)
+
+p2 :: State Int ()
+p2 = do
+  modify (*10)
+  return ()
+
+-- runState p2  1 == ((), 10)
+-- evalState p2 1 == ()
+-- execState p2 1 == 10
 
 ------------------------------------------------------------
 
-
-
 -- Definiálj egy függvényt, ami a lista állapotot kiegészíti egy elemmel
 push :: a -> State [a] ()
-push = undefined
+push a = do
+  as <- get
+  put (a:as)
+
+push' :: a -> State [a] ()
+push' a = modify (a:)
 
 -- példák:
 -- runState (push 10) [] == ((), [10])
 -- runState (push 10 >> push 10 >> push 20) [] == ((), [20, 10, 10])
 
-
 -- Ha az állapot lista nem üres, akkor a következő függvény leveszi az első
 -- elemet és visszaadja Just értékként, egyébként Nothing-ot ad.
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do
+  as <- get
+  case as of
+    []   -> return Nothing
+    a:as -> do
+      put as
+      return $ Just a
+
 
 -- példák:
 -- runState pop []        == (Nothing, [])
@@ -96,25 +229,64 @@ pop = undefined
 
 
 -- Írj egy függvényt, ami egy Int listában minden elemet kicserél az elemtől
--- balra levő elemek maximumára. Legyen az állapot Nothing, ha még egy értéket
--- sem jártunk be, egyébként pedig Just-ban tárolva az eddigi értékek maximuma.
+-- balra levő elemek maximumára (beleértve az elemet). Legyen az állapot
+-- Nothing, ha még egy értéket sem jártunk be, egyébként pedig Just-ban tárolva
+-- az eddigi értékek maximuma.
 
 maxs :: [Int] -> State (Maybe Int) [Int]
-maxs = undefined
+maxs []     = return []
+maxs (n:ns) = do
+  mn <- get
+  let (mn', m) = case mn of
+        Nothing -> (Just n, n)
+        Just m  -> (Just (max m n), m)
+  put mn'
+  ns <- maxs ns
+  return (m:ns)
+
+  -- case mn of
+  --   Nothing -> do
+  --     put $ Just n
+  --     ns <- maxs ns
+  --     return (n:ns)
+  --   Just m -> do
+  --     put $ Just (max n m)
+  --     ns <- maxs ns
+  --     return (m:ns)
+
+  -- mn <- get
+  -- case mn of
+  --   Nothing -> do
+  --     put $ Just n
+  --     ns <- maxs ns
+  --     return (n:ns)
+  --   Just m -> do
+  --     put $ Just (max n m)
+  --     ns <- maxs ns
+  --     return (m:ns)
+
+
 
 -- példák:
 -- evalState (maxs [1, 2, 5, 2]) Nothing == [1, 2, 5, 5]
 -- evalState (maxs [10, 5, 12, 3] Nothing) == [10, 10, 12, 12]
 
+-- pop  :: State [a] (Maybe a)
+-- push :: a -> State [a] ()
 
 -- Írj egy függvényt, ami kizárólag push, pop és rekurzió felhasználásával
 -- map-eli az állapot listát.
 mapPushPop :: (a -> a) -> State [a] ()
-mapPushPop = undefined
+mapPushPop f = do
+  ma <- pop
+  case ma of
+    Nothing -> return ()
+    Just a  -> do
+      mapPushPop f
+      push (f a)
 
 -- példák:
--- evalState (mapPushPop (+10)) [0, 1, 2] == [10, 11, 12]
-
+-- execState (mapPushPop (+10)) [0, 1, 2] == [10, 11, 12]
 
 
 -- Definiálj egy függvényt, ami kicseréli egy fa leveleiben tárolt értékeket
@@ -131,7 +303,24 @@ data Tree a = Leaf a | Node (Tree a) (Tree a)
 --        (Node (Leaf 5) (Node (Leaf 0) (Leaf 0)))
 
 replaceLeaves :: [a] -> Tree a -> Tree a
-replaceLeaves = undefined
+replaceLeaves as t = evalState (go t) as where
+
+  -- go :: Tree a -> [a] -> (Tree a, [a])  -- State nélkül ez lenne a típus
+  go :: Tree a -> State [a] (Tree a)
+  go (Leaf a) = do
+    ma <- pop
+    case ma of
+      Nothing -> return (Leaf a)
+      Just a' -> return (Leaf a')
+
+    -- ma <- pop
+    -- return $ Leaf $ maybe a id ma
+  go (Node l r) = do
+    l' <- go l
+    r' <- go r
+    return $ Node l' r'
+
+
 
 
 
