@@ -1,111 +1,40 @@
+
 {-# language InstanceSigs, DeriveFunctor #-}
 
 import Control.Monad
 
--- köv feladat
-------------------------------------------------------------
--- IO művelet, amiben lehet rekurzió, lehet szükség segédfüggvényre
-
--- feladat
 ------------------------------------------------------------
 
--- olvassunk be egy sort, és utána olvassunk annyi sort
--- ahány karakter van a beolvasott sorban
-
-help :: Int -> IO ()
-help 0 = return ()
-help n = do
+go :: String -> IO ()
+go prevLine = do
   l <- getLine
-  help (n - 1)
+  case l of
+    "" -> putStrLn prevLine
+    _  -> go l
 
-f :: IO ()
-f = do
-  l <- getLine           -- getLine :: IO String
-  let len = length l     -- nincs mellékhatás!  (length l :: Int)
-  help len
-
-
-f' :: IO ()
-f' = do
-  l <- getLine           -- getLine :: IO String
-
-  let len = length l     -- nincs mellékhatás!  (length l :: Int)
-
-  let help 0 = return ()
-      help n = do
-        l <- getLine
-        help (n - 1)
-
-  help len
-
--- replicate   :: Int -> a -> [a]
--- replicateM  :: Monad m => Int -> m a -> m [a]
--- replicateM_ :: Monad m => Int -> m a -> m ()
-
-f'' :: IO ()
-f'' = do
+readUntilEmpty :: IO ()
+readUntilEmpty = do
   l <- getLine
-  replicateM_ (length l) getLine
-
-f''' :: IO ()
-f''' =
-  getLine >>= \l ->
-  replicateM_ (length l) getLine
+  case l of
+    "" -> return ()
+    _  -> go l
 
 
 ------------------------------------------------------------
 
--- Írj egy függvényt, ami addig olvas be ismételten sorokat, amíg a sor nem
--- tartalmaz 'x' karaktert. Ha a sorban 'x' van, akkor a program nyomtassa ki az
--- összes eddig beolvasott sort és térjen vissza.
-
--- tipp 1: elem :: Char -> String -> Bool
--- tipp 2: eddig beolvasott sorokat segédfüggvény paramétereként
---         lehet nyilván tartani [String]
-
-
-io3 :: IO ()
-io3 = go [] where
-
-  go :: [String] -> IO ()
-  go lines = do
-    l <- getLine
-    if elem 'x' l
-      then mapM_ putStrLn $ reverse (l:lines)
-      -- print (l:lines)
-      else do
-        go (l:lines)
-
--- io3' :: IO ()
--- io3' = do
---   l <- getLine
---   if elem 'x' l then do
---     putStrLn l
---   else do
---     io3'
---     putStrLn l
-
--- A következőt ismételd végtelenül: olvass be egy sort, majd nyomtasd ki a
--- sorban a kisbetűk számát. A Ctrl-c -vel lehet megszakítani a futtatást
--- ghci-ben.
-io4 :: IO ()
-io4 = forever $ do
-  l <- getLine
-  print $ length $ filter (\c -> 'a' <= c && c <= 'z') l
-
-io4' :: IO ()
-io4' = do
-  l <- getLine
-  print $ length $ filter (\c -> 'a' <= c && c <= 'z') l
-  io4'
 
 -- Definiáld a következő függvényeket tetszőlegesen,
 -- de típushelyesen.
 f1 :: Monad m => (a -> b) -> m a -> m b -- fmap nélkül definiáld!
-f1 = undefined
+f1 f ma = do
+  a <- ma
+  return (f a)
 
 f2 :: Monad m => m a -> m b -> m (a, b)
-f2 = undefined
+f2 ma mb = do
+  a <- ma
+  b <- mb
+  return (a, b)
 
 f3 :: Monad m => m (m a) -> m a
 f3 = undefined
@@ -132,11 +61,11 @@ f8 = undefined
 newtype State s a = State {runState :: s -> (a, s)} deriving Functor
 
 instance Applicative (State s) where
-  pure  = return
+  pure  a = State (\s -> (a, s))
   (<*>) = ap
 
 instance Monad (State s) where
-  return a = State (\s -> (a, s))
+  return = pure
   State f >>= g = State (\s -> case f s of (a, s') -> runState (g a) s')
 
 get :: State s s
@@ -198,21 +127,9 @@ p2 = do
 
 ------------------------------------------------------------
 
--- Definiálj egy függvényt, ami a lista állapotot kiegészíti egy elemmel
 push :: a -> State [a] ()
-push a = do
-  as <- get
-  put (a:as)
+push a = modify (a:)
 
-push' :: a -> State [a] ()
-push' a = modify (a:)
-
--- példák:
--- runState (push 10) [] == ((), [10])
--- runState (push 10 >> push 10 >> push 20) [] == ((), [20, 10, 10])
-
--- Ha az állapot lista nem üres, akkor a következő függvény leveszi az első
--- elemet és visszaadja Just értékként, egyébként Nothing-ot ad.
 pop :: State [a] (Maybe a)
 pop = do
   as <- get
@@ -221,72 +138,6 @@ pop = do
     a:as -> do
       put as
       return $ Just a
-
-
--- példák:
--- runState pop []        == (Nothing, [])
--- runState pop [0, 1, 2] == (Just 0, [1, 2])
-
-
--- Írj egy függvényt, ami egy Int listában minden elemet kicserél az elemtől
--- balra levő elemek maximumára (beleértve az elemet). Legyen az állapot
--- Nothing, ha még egy értéket sem jártunk be, egyébként pedig Just-ban tárolva
--- az eddigi értékek maximuma.
-
-maxs :: [Int] -> State (Maybe Int) [Int]
-maxs []     = return []
-maxs (n:ns) = do
-  mn <- get
-  let (mn', m) = case mn of
-        Nothing -> (Just n, n)
-        Just m  -> (Just (max m n), m)
-  put mn'
-  ns <- maxs ns
-  return (m:ns)
-
-  -- case mn of
-  --   Nothing -> do
-  --     put $ Just n
-  --     ns <- maxs ns
-  --     return (n:ns)
-  --   Just m -> do
-  --     put $ Just (max n m)
-  --     ns <- maxs ns
-  --     return (m:ns)
-
-  -- mn <- get
-  -- case mn of
-  --   Nothing -> do
-  --     put $ Just n
-  --     ns <- maxs ns
-  --     return (n:ns)
-  --   Just m -> do
-  --     put $ Just (max n m)
-  --     ns <- maxs ns
-  --     return (m:ns)
-
-
-
--- példák:
--- evalState (maxs [1, 2, 5, 2]) Nothing == [1, 2, 5, 5]
--- evalState (maxs [10, 5, 12, 3] Nothing) == [10, 10, 12, 12]
-
--- pop  :: State [a] (Maybe a)
--- push :: a -> State [a] ()
-
--- Írj egy függvényt, ami kizárólag push, pop és rekurzió felhasználásával
--- map-eli az állapot listát.
-mapPushPop :: (a -> a) -> State [a] ()
-mapPushPop f = do
-  ma <- pop
-  case ma of
-    Nothing -> return ()
-    Just a  -> do
-      mapPushPop f
-      push (f a)
-
--- példák:
--- execState (mapPushPop (+10)) [0, 1, 2] == [10, 11, 12]
 
 
 -- Definiálj egy függvényt, ami kicseréli egy fa leveleiben tárolt értékeket
@@ -373,3 +224,45 @@ runOps = undefined
 --  a megoldáshoz, ami a mapM általánosítása különböző struktrákra).
 reverseElems' :: Traversable t => t a -> t a
 reverseElems' = undefined
+
+
+-- Foldable, Traversable
+--------------------------------------------------------------------------------
+
+-- Definiáld a következő instance-okat:
+
+instance Foldable Tree where
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr = undefined
+
+instance Traversable Tree where
+  traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+  traverse = undefined
+
+
+-- Definiáld a következő függvényeket úgy, hogy csak foldr-t használj!
+
+isEmpty :: Foldable t => t a -> Bool
+isEmpty = undefined
+
+length' :: Foldable t => t a -> Int
+length' = undefined
+
+sum' :: (Foldable t, Num a) => t a -> a
+sum' = undefined
+
+toList' :: Foldable t => t a -> a
+toList' = undefined
+
+-- első elemet add vissza, ha van
+safeHead :: Foldable t => t a -> Maybe a
+safeHead = undefined
+
+-- utolsó elemet add vissza, ha van
+safeLast :: Foldable t => t a -> Maybe a
+safeLast = undefined
+
+-- bónusz feladat: definiáld a foldl-t foldr *egyszeri* felhasználásával,
+-- rekurzió nélkül.
+foldl' :: Foldable t => (b -> a -> b) -> b -> t a -> b
+foldl' = undefined
