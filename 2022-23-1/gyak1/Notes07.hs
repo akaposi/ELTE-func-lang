@@ -3,6 +3,13 @@
 
 import Control.Monad
 
+-- kisfeladat:
+------------------------------------------------------------
+
+-- Egyszerű State definíció valamilyen függvényre
+--   get,put,modify,bind
+--   nincs: adatszerkezet reukrzív bejárás
+
 ------------------------------------------------------------
 
 go :: String -> IO ()
@@ -26,39 +33,96 @@ readUntilEmpty = do
 -- Definiáld a következő függvényeket tetszőlegesen,
 -- de típushelyesen.
 f1 :: Monad m => (a -> b) -> m a -> m b -- fmap nélkül definiáld!
-f1 f ma = do
-  a <- ma
-  return (f a)
+f1 f ma = fmap f ma
+  -- do
+  --   a <- ma
+  --   return (f a)
 
+-- Applicative: tetszőleges aritású fmap-elés
+--  f <$> arg1 <*> arg2 <*> arg3
+
+-- fmap2 :: Applicative m => (a -> b -> c) -> m a -> m b -> m c
+-- fmap2 f ma mb = f <$> ma <*> mb
+
+-- fmap3 ::
+--   Applicative m => (a -> b -> c -> d)
+--                 -> m a -> m b -> m c -> m d
+-- fmap3 f ma mb mc = f <$> ma <*> mb <*> mc
+
+-- f <$> ma               fmap f ma       (1-es fmap aritás)
+-- f <$> ma <*> mb                        (2-es aritás)
+-- f <$> ma <*> mb <*> mc                 (3-as aritás)
+-- .....
+
+-- (,) :: (a -> b -> (a, b))
+-- fmap2 (,) :: m a -> m b -> m (a, b)
 f2 :: Monad m => m a -> m b -> m (a, b)
-f2 ma mb = do
-  a <- ma
-  b <- mb
-  return (a, b)
+f2 ma mb = (,) <$> ma <*> mb
+  -- do
+  --  a <- ma
+  --  b <- mb
+  --  return (a, b)
 
+-- standard: Control.Monad.join
 f3 :: Monad m => m (m a) -> m a
-f3 = undefined
+f3 mma = do
+  ma <- mma
+  ma        -- ma :: m a
 
+-- do
+--   ma <- mma
+--   a <- ma           (monád törvény!)
+--   return a
+
+-- standard: (<*>)  ("ap")
+--   (<*>) :: Applicative f => f (a -> b) -> f a -> f b
 f4 :: Monad m => m (a -> b) -> m a -> m b
-f4 = undefined
+f4 = (<*>)
 
+  -- do
+  --   f <- mf
+  --   a <- ma
+  --   return (f a)
+
+-- (>>=) :: m a -> (a -> m b) -> m b
+-- Control.Monad.(=<<)
 f5 :: Monad m => (a -> m b) -> m a -> m b
-f5 = undefined
+f5 = (=<<)
 
 f6 :: Monad m => (a -> b -> c) -> m a -> m b -> m c
-f6 = undefined
+f6 f ma mb = f <$> ma <*> mb
 
 f7 :: Monad m => (a -> b -> c -> d) -> m a -> m b -> m c -> m d
-f7 = undefined
+f7 f ma mb mc = f <$> ma <*> mb <*> mc
+
+--        (.) :: (b ->   c) -> (a ->   b) -> a ->   c
+
+-- Control.Monad.(>=>)     ("kompozíció")
 
 f8 :: Monad m => (a -> m b) -> (b -> m c) -> a -> m c
-f8 = undefined
+f8 = (>=>)
+  -- do
+  --   b <- f a
+  --   g b
+
+  -- monád törvények:
+  --    return >=> f = f
+  --    f >=> return = f
+  --    ((f >=> g) >=> h) = (f >=> (g >=> h))
 
 
 -- State monád
---------------------------------------------------------------------------------
+------------------------------------------------------------
 
-newtype State s a = State {runState :: s -> (a, s)} deriving Functor
+newtype State s a =
+  State {runState :: s -> (a, s)} deriving Functor
+
+  -- State művelet:
+
+  --  bemenő állapot        (érték, új állapot)
+  --    s              ->   (a,     s         )
+
+  -- runState :: State s a -> (s -> (a, s))
 
 instance Applicative (State s) where
   pure  a = State (\s -> (a, s))
@@ -175,9 +239,14 @@ replaceLeaves as t = evalState (go t) as where
 -- Definiáld a függvényt, ami megfordítja a fa leveleiben tárolt értékek
 -- sorrendjét!  tipp: használhatod a replaceLeaves függvényt.
 reverseElems :: Tree a -> Tree a
-reverseElems = undefined
+reverseElems t = replaceLeaves (revToList t []) t where
+  revToList :: Tree a -> [a] -> [a]
+  revToList (Leaf a)   acc = a : acc
+  revToList (Node l r) acc =
+    revToList r (revToList l acc)
 
-
+-- revToList vesd össze:
+--   reverse as = foldl (\acc x -> x : acc) [] as
 
 -- Írd át a következő függvényeket úgy, hogy *csak* a (State :: (s -> (a, s)) ->
 -- State s a) konstruktort használd, monád/funktor instance-t és
@@ -189,7 +258,10 @@ modify' f = do
   s <- get
   put (f s)
 
-  -- Művelet végrehajtása lokálisan: az állapot visszaáll a művelet után.
+modify'' :: (s -> s) -> State s ()
+modify'' f = State $ \s -> ((), f s)
+
+-- Művelet végrehajtása lokálisan: az állapot visszaáll a művelet   után.
 locally :: State s a -> State s a
 locally ma = do
   s <- get        -- "elmentjük" az állapotot
@@ -197,25 +269,76 @@ locally ma = do
   put s           -- visszaállítjuk
   pure a
 
+  -- (pure ugyanaz mint a return)
+  --  pure Applicative metódus
+  --  használjuk return helyett a pure-t
+
+locally' :: State s a -> State s a
+locally' (State f) = State $ \s -> case f s of
+  (a, s') -> (a, s)
+
 -- Állapot módosítás n-szer
 modifyNTimes :: Int -> (s -> s) -> State s ()
 modifyNTimes 0 f = pure ()
 modifyNTimes n f = modify f >> modifyNTimes (n - 1) f
 
+-- modifyNTimes n f = replicateM_ n (modify f)
+
+modifyNTimes' :: Int -> (s -> s) -> State s ()
+modifyNTimes' n f = State (go n f) where
+
+  go :: Int -> (s -> s) -> s -> ((), s)
+  go 0 f s = ((), s)
+  go n f s = go (n - 1) f (f s)
+
+-- egyszerű példa a State definíciók kifejtésére:
+
+p3 :: State Int Int
+p3 = do
+  n <- get
+  put (n + 10)
+  pure n
+
+-- State $ \n -> (n, n + 10)
+
+-- get >>= \n -> put (n + 10) >> pure n
+
+-- State (\s -> (s, s)) >>= (\n -> put (n + 10) >> pure n)
+
+-- State $ \s -> case (\s -> (s, s)) s of
+--   (x, s) -> runState (\n -> put (n + 10) >> pure n) x s
+
+-- State $ \s -> case (s, s) of
+--   (x, s) -> runState (\n -> put (n + 10) >> pure n) x s
+
+-- State $ \s -> runState ((\n -> put (n + 10) >> pure n) s) s
+
+-- State $ \s -> runState (put (s + 10) >> pure s) s
+
+-- ...
+
+-- State $ \n -> (n, n + 10)
 
 --------------------------------------------------------------------------------
 
 -- Értelmezd a következő utasítások listáját. Minden utasítás
 -- egy Int-et módosító művelet. Az "Add n" adjon n-et a jelenlegi
--- állapothoz, a "Subtract n" vonjon ki n-t, és a "Mul" értelemszerűen.
+-- állapothoz, a "Subtract n" vonjon ki n-t, és a "Mul" értelemszerűen szorozza n-el az állapotot.
 data Op = Add Int | Subtract Int | Mul Int
 
+-- [Add 10, Add 20, Subtract 10, Mul 300]
+
 evalOps :: [Op] -> State Int ()
-evalOps = undefined
+evalOps ops = mapM_ go ops where
+  go :: Op -> State Int ()
+  go (Add n)      = modify (+n)
+  go (Subtract n) = modify (\x -> x - n)
+  go (Mul n)      = modify (*n)
+
 
 -- Add meg ennek segítségével az állapotot módosító (Int -> Int) függvényt.
 runOps :: [Op] -> Int -> Int
-runOps = undefined
+runOps ops = execState (evalOps ops)
 
 
 -- bónusz feladat: fordítsd meg a tárolt értékek sorrendjét egy tetszőleges
