@@ -6,6 +6,25 @@ import Control.Monad
 import Control.Applicative
 import Data.Char  -- isDigit, isAlpha, digitToInt
 
+-- canvas megoldás
+------------------------------------------------------------
+
+swap :: State (a, a) ()
+swap = do
+  (x, y) <- get
+  put (y, x)
+
+-- swap :: State (a, a) ()
+-- swap = modify (\(x, y) -> (y, x))
+
+-- swap' :: State (a, b) ()  -- nem működik, mert állapot típusa
+--                           -- nem változhat
+
+-- ("indexed State monad" : típus-változtató State)
+-- (swap' :: IxState (a, b) (b, a) ())     -- (input-output típus különböző)
+
+------------------------------------------------------------
+
 
 -- State monád
 ------------------------------------------------------------
@@ -42,9 +61,32 @@ execState ma = snd . runState ma
 -- Traversable struktúrában!
 -- (Traversable: lásd előadás. Röviden: a "traverse" függvényt használhatod
 --  a megoldáshoz, ami a mapM általánosítása különböző struktrákra).
-reverseElems' :: Traversable t => t a -> t a
-reverseElems' = undefined
+reverseElems :: Traversable t => t a -> t a
+reverseElems ta = replaceElems (traversableToList ta) ta
 
+  -- emlékezzünk:
+  --  mapM     :: Monad       m => (a -> m b) -> [a] -> m [b]
+  --  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+
+  --  (rendelkezésre áll: mellékhatásos "map" függvény)
+  --   kigyűjtjük az értékeket, fordítva visszatesszük
+
+  -- használjuk a State mellékhatást arra, hogy kigyűjtsük/módosítsuk
+  --   a tárolt értékeket
+
+traversableToList :: Traversable t => t a -> [a]
+traversableToList ta = execState (traverse (\a -> modify (a:)) ta) []
+  -- traverse _ ta :: State [a] (t ())
+
+replaceElems :: Traversable t => [a] -> t a -> t a
+replaceElems as ta = evalState (traverse go ta) as where
+
+  go :: a -> State [a] a
+  go a = do
+    as <- get
+    case as of
+      []    -> pure a
+      a':as -> put as >> pure a'
 
 -- Foldable, Traversable
 --------------------------------------------------------------------------------
@@ -53,21 +95,53 @@ reverseElems' = undefined
 
 data Tree a = Leaf a | Node (Tree a) (Tree a) deriving (Show, Functor)
 
-data Tree2 a = Leaf1 a | Leaf2 a a | Node2 (Tree2 a) (Tree2 a)
-             | Node3 (Tree2 a) (Tree2 a) (Tree2 a) deriving (Show, Functor)
+instance Traversable Tree where
+
+  traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+  traverse f (Leaf a)   = Leaf <$> f a
+  traverse f (Node l r) = Node <$> traverse f l <*> traverse f r
+
+    -- N-áris fmap: (Applicative-ból jön)
+    --  f <$> arg1 <*> arg2 <*> ... <*> argN
+
+  -- definíció általánosan:
+  --  map definíció + Applicative mellékhatás
+  --   1. vesszük az fmap-et
+  --   2. átírjuk Applicative-ra a konstruktor és f-alkalmazásokat
+
+instance Foldable Tree where
+
+  -- kombináljuk az összes tárolt "a" típusú értéket egy függvénnyel
+  -- (jobbra asszociált a függvényalkalmazás)
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr f b (Leaf a)   = f a b         -- (1-elemű lista)
+  foldr f b (Node l r) =
+    let rightResult = foldr f b r
+    in  foldr f rightResult l
+
+  -- listává alakítás Foldable-re:
+  --   foldr (:) [] (Node (Leaf 0) (Leaf 1))
+  --     ==   0 : 1 : []
+  --     ==   [0, 1]
 
 data Foo3 a = Foo3 a a a a a deriving (Show, Functor)
 
-data Pair a b = Pair a b deriving (Show, Functor)
-
-
-instance Foldable Tree where
-  foldr :: (a -> b -> b) -> b -> Tree a -> b
+instance Foldable Foo3 where
   foldr = undefined
 
-instance Traversable Tree where
-  traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+instance Traversable Foo3 where
   traverse = undefined
+
+data Pair a b = Pair a b deriving (Show, Functor)
+
+instance Foldable (Pair c) where
+  foldr = undefined
+
+instance Traversable (Pair c) where
+  traverse = undefined
+
+data Tree2 a = Leaf1 a | Leaf2 a a | Node2 (Tree2 a) (Tree2 a)
+             | Node3 (Tree2 a) (Tree2 a) (Tree2 a) deriving (Show, Functor)
 
 instance Foldable Tree2 where
   foldr :: (a -> b -> b) -> b -> Tree2 a -> b
@@ -77,11 +151,7 @@ instance Traversable Tree2 where
   traverse :: Applicative f => (a -> f b) -> Tree2 a -> f (Tree2 b)
   traverse = undefined
 
-instance Foldable (Pair c) where
-  foldr = undefined
 
-instance Traversable (Pair c) where
-  traverse = undefined
 
 
 -- Definiáld a következő függvényeket úgy, hogy csak foldr-t használj!
