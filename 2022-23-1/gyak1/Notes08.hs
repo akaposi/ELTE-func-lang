@@ -6,6 +6,12 @@ import Control.Monad
 import Control.Applicative
 import Data.Char  -- isDigit, isAlpha, digitToInt
 
+-- köv feladat:
+------------------------------------------------------------
+
+-- Foldable definiálása valamilyen típusra
+
+
 -- canvas megoldás
 ------------------------------------------------------------
 
@@ -127,32 +133,62 @@ instance Foldable Tree where
 data Foo3 a = Foo3 a a a a a deriving (Show, Functor)
 
 instance Foldable Foo3 where
-  foldr = undefined
+  foldr f b (Foo3 a1 a2 a3 a4 a5) =
+    f a1 (f a2 (f a3 (f a4 (f a5 b))))
+
+  -- tesztelés: foldr (:) [] meg kell hogy adja az értékek listáját
+  -- {-# language DeriveFunctor, DeriveFoldable, DeriveTraversable #-} !!
+  --   ebből kapjuk:
+  --     data Foo a = ...
+  --       derive (Functor, Foldable, Traversable)
 
 instance Traversable Foo3 where
-  traverse = undefined
+  -- fmap f (Foo3 a1 a2 a3 a4 a5) = Foo3 (f a1) (f a2) (f a3) (f a4) (f a5)
 
+  traverse f (Foo3 a1 a2 a3 a4 a5) = Foo3 <$> f a1 <*> f a2 <*> f a3
+                                          <*> f a4 <*> f a5
+
+-- utolsó paraméter fölött (fmap, foldr, traverse)
 data Pair a b = Pair a b deriving (Show, Functor)
 
 instance Foldable (Pair c) where
-  foldr = undefined
+  foldr f b (Pair _ a) = f a b  -- 1 elemű lista
 
 instance Traversable (Pair c) where
-  traverse = undefined
+  -- fmap f (Pair c a) = Pair c (f a)
+  traverse f (Pair c a) = Pair <$> pure c <*> f a  -- "mechanikus" fordítás
+
+  -- traverse f (Pair c a) = Pair c <$> f a
+      -- Pair c :: b -> Pair c b
+      -- fmap (Pair c) :: f b -> f (Pair c b)
+      -- (Pair c <$>)  :: f b -> f (Pair c b)
 
 data Tree2 a = Leaf1 a | Leaf2 a a | Node2 (Tree2 a) (Tree2 a)
              | Node3 (Tree2 a) (Tree2 a) (Tree2 a) deriving (Show, Functor)
 
 instance Foldable Tree2 where
+
+  -- két metódus közül elég az egyiket megadni
+  --   - foldr   ::  ...
+  --   - foldMap ::  (Foldable t, Monoid m) => (a -> m) -> t a -> m
+
   foldr :: (a -> b -> b) -> b -> Tree2 a -> b
-  foldr = undefined
+  foldr f b (Leaf1 a) = f a b
+  foldr f b (Leaf2 a1 a2) = f a1 (f a2 b)
+  foldr f b (Node2 l r) = foldr f (foldr f b r) l
+  foldr f b (Node3 t1 t2 t3) = foldr f (foldr f (foldr f b t3) t2) t1
+
+  foldMap :: Monoid m => (a -> m) -> Tree2 a -> m
+  foldMap f (Leaf1 a) = f a
+  foldMap f (Leaf2 a1 a2) = f a1 <> f a2
+  foldMap f (Node2 l r) = foldMap f l <> foldMap f r
+  foldMap f (Node3 t1 t2 t3) = foldMap f t1 <> foldMap f t2 <> foldMap f t3
+
+  -- foldr-ből foldMap definiálható és fordítva
 
 instance Traversable Tree2 where
   traverse :: Applicative f => (a -> f b) -> Tree2 a -> f (Tree2 b)
   traverse = undefined
-
-
-
 
 -- Definiáld a következő függvényeket úgy, hogy csak foldr-t használj!
 
