@@ -1,5 +1,5 @@
 
-{-# language InstanceSigs #-}
+{-# language InstanceSigs, DeriveFunctor #-}
 {-# options_ghc -Wincomplete-patterns #-}
 
 import Control.Applicative
