@@ -1,6 +1,10 @@
 
-{-# language DeriveFunctor, DeriveFoldable, DeriveTraversable, InstanceSigs #-}
+{-# language DeriveFunctor, DeriveFoldable, DeriveTraversable, InstanceSigs
+    #-}
 {-# options_ghc -Wincomplete-patterns #-}
+
+--------------------------------------------------------------------------------
+
 
 --------------------------------------------------------------------------------
 
@@ -25,6 +29,34 @@ import Control.Applicative
 import Control.Monad
 import Debug.Trace
 import Data.Char    -- isSpace, isDigit
+
+--------------------------------------------------------------------------------
+
+pLeft :: Parser (Either Int Int)
+pLeft = do
+  string "Left" <* ws
+  n <- pPos <* ws
+  pure (Left n)
+
+pRight :: Parser (Either Int Int)
+pRight = do
+  string "Right" <* ws
+  n <- pPos <* ws
+  pure (Right n)
+
+pEitherIntInt :: Parser (Either Int Int)
+pEitherIntInt = pLeft <|> pRight
+
+kisf :: Parser (Either Int Int, Int)
+kisf = do
+  ws
+  char '(' <* ws
+  eii <- pEitherIntInt
+  char ',' <* ws
+  n <- pPos <* ws
+  char ')' <* ws
+  eof
+  pure (eii, n)
 
 
 -- State
@@ -113,7 +145,7 @@ zipWith' = undefined
 
 -- Alkalmazzunk egy (a -> Maybe b) függvényt a listaelemekre.  Nothing-ot
 -- kapunk, legyen a végeredmény Nothing, egyébként Just-ban a map-elt lista.
-mapMaybeLeft :: forall a b c. (a -> Maybe b) -> [Either' a c] -> Maybe [Either' b c]
+mapMaybeLeft :: (a -> Maybe b) -> [Either' a c] -> Maybe [Either' b c]
 mapMaybeLeft = undefined
 
 
