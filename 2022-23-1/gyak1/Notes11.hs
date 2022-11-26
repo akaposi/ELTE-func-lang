@@ -3,7 +3,8 @@
     #-}
 {-# options_ghc -Wincomplete-patterns #-}
 
---------------------------------------------------------------------------------
+-- Köv feladat: bármi (nem parser/interpreter), ami eddig
+--              szerepelt óra eleji feladatban
 
 
 --------------------------------------------------------------------------------
