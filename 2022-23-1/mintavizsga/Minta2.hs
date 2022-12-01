@@ -4,17 +4,20 @@
 
 --------------------------------------------------------------------------------
 
--- Minta vizsga:
---   1. Kis feladatok (10-12 pont)
---   2. Parser/interpreter kiegészítés (8-10 pont)
+-- Minta vizsga.
+--  A vizsga két részből áll:
+--    1. Kis feladatok (10-12 pont)
+--    2. Parser/interpreter kiegészítés (8-10 pont)
 
 -- Résztpontok vannak (lehet kapni nem funkcionális megoldásra is részpontot)
 
--- Ponthatár
+-- Ponthatárok:
 --   2: 10-11
 --   3: 12-14
 --   4: 15-16
 --   5: 17-20
+
+-- Ebben a fájlban 2 darab "kis feladatok" sor van.
 
 --------------------------------------------------------------------------------
 
@@ -31,7 +34,7 @@ newtype State s a = State {runState :: s -> (a, s)}
   deriving Functor
 
 instance Applicative (State s) where
-  pure a = State (\s -> (a, s))
+  pure a  = State (\s -> (a, s))
   (<*>) = ap
 
 instance Monad (State s) where
@@ -54,139 +57,63 @@ evalState sta s = fst (runState sta s)
 execState :: State s a -> s -> s
 execState sta s = snd (runState sta s)
 
-
--- FELADATOK (1. sor)
+-- FELADATOK
 --------------------------------------------------------------------------------
 
-data Either' a b = Left' a | Right' b | Both a b
-  deriving (Eq, Show)
-
-instance Functor (Either' c) where
-  fmap :: (a -> b) -> Either' c a -> Either' c b
-  fmap f (Left' c)  = Left' c
-  fmap f (Right' a) = Right' (f a)
-  fmap f (Both c a) = Both c (f a)
-
-instance Foldable (Either' c) where
-  foldr :: (a -> b -> b) -> b -> Either' c a -> b
-  foldr f b (Left' c)  = b
-  foldr f b (Right' a) = f a b
-  foldr f b (Both c a) = f a b
-
-  foldMap :: Monoid m => (a -> m) -> Either' c a -> m
-  foldMap f (Left' c)  = mempty
-  foldMap f (Right' a) = f a
-  foldMap f (Both c a) = f a
-
-instance Traversable (Either' c) where
-  traverse :: Applicative f => (a -> f b) -> Either' c a -> f (Either' c b)
-  traverse f (Left' c)  = pure (Left' c)
-  traverse f (Right' a) = Right' <$> f a
-  traverse f (Both c a) = Both c <$> f a
-
-partition :: [Either' a b] -> ([a], [b], [(a, b)])
-partition []         = ([], [], [])
-partition (eab:eabs) = case partition eabs of
-  (as, bs, abs) -> case eab of
-    Left' a  -> (a:as, bs  , abs)
-    Right' b -> (as,   b:bs, abs)
-    Both a b -> (as,   bs  , (a, b):abs)
-
-zipWith' :: (Either' a b -> c) -> [a] -> [b] -> [c]
-zipWith' f []     []     = []
-zipWith' f (a:as) (b:bs) = f (Both a b) : zipWith' f as bs
-zipWith' f []     (b:bs) = f (Right' b) : zipWith' f [] bs
-zipWith' f (a:as) []     = f (Left' a)  : zipWith' f as []
-
-mapMaybeLeft :: (a -> Maybe b) -> [Either' a c] -> Maybe [Either' b c]
-mapMaybeLeft f xs = traverse go xs where
-  go (Left' a)  = Left' <$> f a
-  go (Right' b) = pure (Right' b)
-  go (Both a b) = Both <$> f a <*> pure b
-
-data Tree a = Leaf a | Node (Tree a) (Tree a)
-  deriving (Show, Functor, Foldable, Traversable)
-
-treeSums :: Tree Int -> Tree Int
-treeSums t = evalState (traverse go t) 0 where
-  go :: Int -> State Int Int
-  go n = do
-    sum <- get
-    put $ n + sum
-    pure sum
-
-
--- FELADATOK (2. sor)
---------------------------------------------------------------------------------
-
-data RoseTree a = Branch a [RoseTree a]
+data Tree a = Leaf a | Node1 a (Tree a) | Node2 (Tree a) (Tree a)
   deriving (Eq, Ord, Show)
 
-ex1 :: RoseTree Int
-ex1 = Branch 2
-      [ Branch 3
-          [ Branch 11 []
-          ]
-      , Branch 5 []
-      , Branch 7
-          [ Branch 13 []
-          ]
-      ]
+t1 :: Tree Int
+t1 =
+  Node1 0
+    (Node1 2
+       (Node2
+          (Node1 10 (Leaf 20))
+          (Leaf 30)))
 
--- Definiáld az instance-okat.
+-- Definiáld a következő instance-okat!
+instance Functor Tree where
+  fmap :: (a -> b) -> Tree a -> Tree b
+  fmap = undefined
 
-instance Functor RoseTree where
-  fmap :: (a -> b) -> RoseTree a -> RoseTree b
-  fmap f (Branch a ts) = Branch (f a) (map (fmap f) ts)
+instance Foldable Tree where
+  -- elég az egyik
 
-instance Foldable RoseTree where
-  -- elég az egyiket
-  foldr :: (a -> b -> b) -> b -> RoseTree a -> b
-  foldr f b (Branch a ts) = f a (foldr (\t b -> foldr f b t) b ts)
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr = undefined
 
-  foldMap :: Monoid m => (a -> m) -> RoseTree a -> m
-  foldMap f (Branch a ts) = f a <> foldMap (foldMap f) ts
+  foldMap :: Monoid m => (a -> m) -> Tree a -> m
+  foldMap = undefined
 
-instance Traversable RoseTree where
-  traverse :: Applicative f => (a -> f b) -> RoseTree a -> f (RoseTree b)
-  traverse f (Branch a ts) = Branch <$> f a <*> traverse (traverse f) ts
+instance Traversable Tree where
+  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  traverse = undefined
 
--- Add vissza a tárolt "a" típusú értékek számát!
-countElems :: RoseTree a -> Int
-countElems = length   -- foldr (\_ n -> n + 1) 0
 
--- Add vissza az elemek maximumát.
-maxElem :: Ord a => RoseTree a -> a
-maxElem = maximum     -- foldr max undefined
+-- Definiáljuk azt a függvényt, ami visszaadja a legutolsó (leginkább
+-- jobboldali) `a` értéket egy fából. Példa: rightmost ex1 == 30.
+rightmost :: Tree a -> a
+rightmost = undefined
 
--- Számozd be a fában tártolt értékeket balról-jobbra bejárási sorrendben.
-label :: RoseTree a -> RoseTree (a, Int)
-label t = evalState (traverse go t) 0 where
-  go :: a -> State Int (a, Int)
-  go a = do
-    n <- get
-    put (n + 1)
-    pure (a, n)
+-- Definiáljunk egy függvényt, ami visszadja balról az első "a" típusú értéket
+-- egy fából, amire igaz egy feltétel. Ha nincs ilyen érték, akkor "Nothing" az
+-- eredmény. Példa: findElem (>10) ex1 == Just 20.
+findElem :: (a -> Bool) -> Tree a -> Maybe a
+findElem = undefined
 
--- A fában tárolt minden N szám helyére tedd be a kapott [a] lista N-edik
--- értékét. Ha az N index bárhol kimutat a listából, akkor legyen a végeredmény
--- Nothing. Példák a működésre:
---  transformWithList [2, 3, 4] (Branch 0 [Branch 2 [Branch 1 []]])
---                          ==  Just (Branch 2 [Branch 4 [Branch 3 []]])
---  transformWithList [2, 3, 4] (Branch 3 []) == Nothing
+-- Definiáljuk a függvényt, amely megszámozza egy Tree elemeit! A bejárás
+-- sorrendje legyen balról-jobbra preorder, azaz először a Node1-ben található
+-- `a` értéket járjuk be, utána pedig a részfát. Tipp: használjuk a State
+-- monádot.
+numberElems :: Tree a -> Tree (a, Int)
+numberElems = undefined
 
-transformWithList :: forall a. [a] -> RoseTree Int -> Maybe (RoseTree a)
-transformWithList as t = traverse go t where
-  len = length as
 
-  go :: Int -> Maybe a
-  go n | n < len   = Just (as !! n)
-       | otherwise = Nothing
-
--- Mi mást tudunk forall-al kezdeni?
-foo :: (forall a. a -> a) -> (Int, Bool)
-foo f = (f 10, f True)
--- foo id == (10, True
+-- Definiáld a függvényt, ami visszaadja a fában legtöbbször előforduló értéket!
+-- Lehet, hogy több ilyen érték is van, ekkor mindegy, hogy melyiket adjuk
+-- vissza.
+mostCommon :: Eq a => Tree a -> a
+mostCommon = undefined
 
 
 -- Parser lib
@@ -296,19 +223,19 @@ topLevel p = ws *> p <* eof
 --------------------------------------------------------------------------------
 
 {-
-1. Feladat:
-  - Egészítsd ki a nyelvet pár típusú értékekkel!
-  - Szintaxis:     (e1, e2)
-                   fst e
-                   snd e
-  - fst és snd precendenciája legyen ugyanaz, mint "not"-é (tipp: not parser-t egészítsük ki!)
-  - Egészítsd ki a parser-t és az interpretert.
-     - Egészítsd ki az Exp típust a megfelelő konstruktorokkal, amelyek
-         az fst, snd és párképzés műveleteket reprezentálják.
-  - interpreter:
-     - Egészíts ki a Val típust értékek párjaival.
-     - Az fst és snd típushibát dob, ha nem pár értéket kap.
-     - Az fst vegye egy pár első elemét, az snd a másodikat.
+Feladat: nyelv kiegészítése string értékekkel és műveletekkel
+
+- Add hozzá az "StrLit :: String -> Exp" és "Append :: Exp -> Exp -> Exp"
+  konstruktorokat a kifejezésekhez.
+- A string literálok szintaxisa a következő: a literált idézőjel kezdi
+  és zárja, az idézőjelek között pedig lehet 0 vagy több tetszőleges karakter,
+  ami nem idézőjel.
+- A string összefűzés legyen "++" mint operátor, ami jobbra asszociál, és
+  erősebben köt, mint a "<", viszont gyengébben, mint a "+".
+- Egészítsd ki a "Val" típus olyan konstruktorral, ami "String"-et tárol.
+- A kifejezések kiértékelése értelemszerű: egy string literálból adjunk
+  vissza string értéket, az "Append" kiértékelésénél pedig két
+  string értéket fűzzünk össze.
 -}
 
 data Exp =
@@ -322,10 +249,6 @@ data Exp =
   | Not Exp             -- not e
   | Eq Exp Exp          -- e == e
   | Var String          -- (változónév)
-
-  | Pair Exp Exp        -- (e, e)
-  | Fst Exp             -- fst e
-  | Snd Exp             -- snd e
   deriving (Eq, Show)
 
 {-
@@ -349,8 +272,7 @@ posInt' = do
   pure (read digits)
 
 keywords :: [String]
-keywords =
-  ["not", "true", "false", "while", "if", "do", "end", "then", "else", "fst", "snd"]
+keywords = ["not", "true", "false", "while", "if", "do", "end", "then", "else"]
 
 ident' :: Parser String
 ident' = do
@@ -364,39 +286,20 @@ keyword' s = do
   string s
   (satisfy isLetter >> empty) <|> ws
 
-pParensOrPair :: Parser Exp
-pParensOrPair = do
-  char' '('
-  e <- pExp
-
-  let pairCase = do
-        char' ','
-        e' <- pExp
-        char' ')'
-        pure (Pair e e')
-
-      parensCase = do
-        char' ')'
-        pure e
-
-  pairCase <|> parensCase
-
 atom :: Parser Exp
 atom =
         (Var <$> ident')
     <|> (IntLit <$> posInt')
     <|> (BoolLit True <$ keyword' "true")
     <|> (BoolLit False <$ keyword' "false")
-    <|> pParensOrPair
+    <|> (char' '(' *> pExp <* char' ')')
 
-notFstSndExp :: Parser Exp
-notFstSndExp = (keyword' "not" *> (Not <$> atom))
-     <|> (keyword' "fst" *> (Fst <$> atom))
-     <|> (keyword' "snd" *> (Snd <$> atom))
-     <|> atom
+notExp :: Parser Exp
+notExp =  (keyword' "not" *> (Not <$> atom))
+    <|> atom
 
 mulExp :: Parser Exp
-mulExp = rightAssoc Mul notFstSndExp (char' '*')
+mulExp = rightAssoc Mul notExp (char' '*')
 
 addExp :: Parser Exp
 addExp = rightAssoc Add mulExp (char' '+')
@@ -416,7 +319,7 @@ eqExp = nonAssoc Eq orExp (string' "==")
 pExp :: Parser Exp
 pExp = eqExp
 
-data Val = VInt Int | VBool Bool | VPair Val Val
+data Val = VInt Int | VBool Bool
   deriving (Eq, Show)
 
 type Env = [(String, Val)]
@@ -451,15 +354,6 @@ evalExp env e = case e of
     Just v  -> v
     Nothing -> error $ "name not in scope: " ++ x
 
-  Fst e -> case evalExp env e of
-    VPair v _ -> v
-    _         -> error "type error"
-
-  Snd e -> case evalExp env e of
-    VPair _ v -> v
-    _         -> error "type error"
-
-  Pair e1 e2 -> VPair (evalExp env e1) (evalExp env e2)
 
 --------------------------------------------------------------------------------
 
@@ -471,8 +365,6 @@ data Statement
   | If Exp Program Program  -- if e then prog1 else prog2 end
   deriving (Eq, Show)
 
--- Statement szintaxisban nem kell precendenciával foglalkozni, mert valójában
--- csak "atomi" konstrukció van
 statement :: Parser Statement
 statement =
         (Assign <$> ident'
@@ -501,7 +393,7 @@ updateEnv x v ((y, v'):env)
   | x == y    = (x, v):env
   | otherwise = (y, v'):updateEnv x v env
 
--- evalStatement :: Statement -> Env -> Env
+
 evalStatement :: Statement -> State Env ()
 evalStatement st = case st of
 
@@ -516,14 +408,12 @@ evalStatement st = case st of
       VBool True  -> inNewScope (evalProgram p) >> evalStatement (While e p)
       VBool False -> pure ()
       VInt _      -> error "type error"
-      VPair _ _   -> error "type error"
   If e p1 p2 -> do
     env <- get
     case evalExp env e of
       VBool True  -> inNewScope (evalProgram p1)
       VBool False -> inNewScope (evalProgram p2)
       VInt _      -> error "type error"
-      VPair _ _   -> error "type error"
 
 evalProgram :: Program -> State Env ()
 evalProgram = mapM_ evalStatement
@@ -535,9 +425,3 @@ run str = case runParser (topLevel program) str of
 
 p1 :: String
 p1 = "i := 10; acc := 0; while not (i == 0) do acc := acc + i; i := i - 1 end"
-
-p2 :: String
-p2 = "x := (10, 20); y := fst x; z := snd x"
-
-p3 :: String
-p3 = "x := ((10, true), 20); y := fst (fst x)"
