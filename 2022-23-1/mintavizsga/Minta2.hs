@@ -91,13 +91,13 @@ instance Traversable Tree where
 
 
 -- Definiáljuk azt a függvényt, ami visszaadja a legutolsó (leginkább
--- jobboldali) `a` értéket egy fából. Példa: rightmost ex1 == 30.
+-- jobboldali) `a` értéket egy fából. Példa: rightmost t1 == 30.
 rightmost :: Tree a -> a
 rightmost = undefined
 
 -- Definiáljunk egy függvényt, ami visszadja balról az első "a" típusú értéket
 -- egy fából, amire igaz egy feltétel. Ha nincs ilyen érték, akkor "Nothing" az
--- eredmény. Példa: findElem (>10) ex1 == Just 20.
+-- eredmény. Példa: findElem (>10) t1 == Just 20.
 findElem :: (a -> Bool) -> Tree a -> Maybe a
 findElem = undefined
 
