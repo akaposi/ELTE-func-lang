@@ -86,7 +86,7 @@ instance Foldable Tree where
   foldMap = undefined
 
 instance Traversable Tree where
-  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+  traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
   traverse = undefined
 
 

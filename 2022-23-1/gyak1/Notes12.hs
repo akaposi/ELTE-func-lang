@@ -3,7 +3,8 @@
     #-}
 {-# options_ghc -Wincomplete-patterns #-}
 
---------------------------------------------------------------------------------
+
+------------------------------------------------------------
 
 -- Minta vizsga. Ugyanaz, mint a "mintavizsga/Minta1.hs".
 --  A vizsga két részből áll:
@@ -27,7 +28,25 @@ import Control.Monad
 import Debug.Trace
 import Data.Char    -- isSpace, isDigit
 
---------------------------------------------------------------------------------
+-- Feladat megoldás
+------------------------------------------------------------
+
+printLines :: [String] -> IO ()
+printLines [] = pure ()
+printLines (l:lines) = do
+  printLines lines
+  putStrLn l
+
+loop :: [String] -> IO ()
+loop lines = do
+  l <- getLine
+  printLines (l:lines)
+  loop (l:lines)
+
+f :: IO ()
+f = loop []
+
+------------------------------------------------------------
 
 pLeft :: Parser (Either Int Int)
 pLeft = do
@@ -220,6 +239,10 @@ data Exp =
   | Not Exp             -- not e
   | Eq Exp Exp          -- e == e
   | Var String          -- (változónév)
+
+  | Pair Exp Exp        -- (e, e)
+  | Fst Exp             -- fst e
+  | Snd Exp             -- snd e
   deriving (Eq, Show)
 
 {-
@@ -243,7 +266,8 @@ posInt' = do
   pure (read digits)
 
 keywords :: [String]
-keywords = ["not", "true", "false", "while", "if", "do", "end", "then", "else"]
+keywords = ["not", "true", "false", "while",
+            "if", "do", "end", "then", "else", "fst", "snd"]
 
 ident' :: Parser String
 ident' = do
@@ -257,16 +281,41 @@ keyword' s = do
   string s
   (satisfy isLetter >> empty) <|> ws
 
+pairExp :: Parser Exp
+pairExp = do
+  char' '('
+  e1 <- pExp
+  char' ','
+  e2 <- pExp
+  char' ')'
+  pure (Pair e1 e2)
+
+-- hatékonyabb verzió (atom-ba betesszük mint
+--  1db eset)
+pairOrParens :: Parser Exp
+pairOrParens = do
+  char' '('
+  exps <- sepBy1 pExp (char' ',')
+  char' ')'
+  case exps of
+    [e]     -> pure e
+    [e1,e2] -> pure (Pair e1 e2)
+    _       -> empty
+
 atom :: Parser Exp
 atom =
         (Var <$> ident')
     <|> (IntLit <$> posInt')
     <|> (BoolLit True <$ keyword' "true")
     <|> (BoolLit False <$ keyword' "false")
+    <|> pairExp
     <|> (char' '(' *> pExp <* char' ')')
 
 notExp :: Parser Exp
-notExp =  (keyword' "not" *> (Not <$> atom))
+notExp =
+        (keyword' "not" *> (Not <$> atom))
+    <|> (keyword' "fst" *> (Fst <$> atom))
+    <|> (keyword' "snd" *> (Snd <$> atom))
     <|> atom
 
 mulExp :: Parser Exp
@@ -290,7 +339,7 @@ eqExp = nonAssoc Eq orExp (string' "==")
 pExp :: Parser Exp
 pExp = eqExp
 
-data Val = VInt Int | VBool Bool
+data Val = VInt Int | VBool Bool | VPair Val Val
   deriving (Eq, Show)
 
 type Env = [(String, Val)]
@@ -324,6 +373,15 @@ evalExp env e = case e of
   Var x -> case lookup x env of
     Just v  -> v
     Nothing -> error $ "name not in scope: " ++ x
+
+  Pair e1 e2 -> VPair (evalExp env e1) (evalExp env e2)
+
+  Fst e -> case evalExp env e of
+    VPair v1 v2 -> v1
+    _           -> error "type error"
+  Snd e -> case evalExp env e of
+    VPair v1 v2 -> v2
+    _           -> error "type error"
 
 
 --------------------------------------------------------------------------------
@@ -379,12 +437,14 @@ evalStatement st = case st of
       VBool True  -> inNewScope (evalProgram p) >> evalStatement (While e p)
       VBool False -> pure ()
       VInt _      -> error "type error"
+      VPair _ _   -> error "type error"
   If e p1 p2 -> do
     env <- get
     case evalExp env e of
       VBool True  -> inNewScope (evalProgram p1)
       VBool False -> inNewScope (evalProgram p2)
       VInt _      -> error "type error"
+      VPair _ _   -> error "type error"
 
 evalProgram :: Program -> State Env ()
 evalProgram = mapM_ evalStatement
