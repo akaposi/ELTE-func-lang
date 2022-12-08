@@ -9,15 +9,39 @@ import Data.Char
 import Data.Foldable
 import Debug.Trace
 
+-- Feladat megoldás
 --------------------------------------------------------------------------------
 
+data Tree' a = Leaf' a | Node' a (Tree' a) (Tree' a) deriving (Eq, Show)
+
+-- Cseréld ki egy fában a tárolt értékeket Int-ekre, amelyek 0-tól kezdve
+-- jobbról-balra bejárási sorrendben növekednek. Használj State-et.
+
+f :: Tree' a -> Tree' Int
+f t = evalState (go t) 0 where
+
+  goElem :: State Int Int
+  goElem = do
+    n <- get
+    put $ n + 1
+    pure n
+
+  go :: Tree' a -> State Int (Tree' Int)
+  go (Leaf' _) =
+    Leaf' <$> goElem
+  go (Node' _ l r) = do
+    r' <- go r
+    l' <- go l
+    n  <- goElem
+    pure $ Node' n l' r'
 
 
-
-
-
-
-
+tests :: [Bool]
+tests = [
+    f (Leaf' ()) == Leaf' 0
+  , f (Node' () (Leaf' ()) (Leaf' ())) == Node' 2 (Leaf' 1) (Leaf' 0)
+  , f (Node' () (Node' () (Leaf' ()) (Leaf' ())) (Leaf' ())) == Node' 4 (Node' 3 (Leaf' 2) (Leaf' 1)) (Leaf' 0)
+  ]
 
 
 --------------------------------------------------------------------------------
