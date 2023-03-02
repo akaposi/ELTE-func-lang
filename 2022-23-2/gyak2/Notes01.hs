@@ -2,7 +2,55 @@
 {-# language InstanceSigs #-}
 {-# options_ghc -Wincomplete-patterns #-}
 
+------------------------------------------------------------
+-- Kisfeladat: nagyon egyszerű (ingyen pont)
+
+------------------------------------------------------------
+
+-- tárgyi info
+
+--  canvas-on kiírva
+--  Gyakorlat:
+--   - gyak elején 10 perces feladat: 0-2 pont
+--   - 3 darab nagyobb opcionális házi feladat (darabja 4 pont) (határidő: vizsgaidőszak eleje)
+--  min 13 pontot szerezni (beugró a vizsgára)
+--
+--  Jegy: vizsgajegy
+--    - 2 óra, gépes feladatmegoldás
+
+-- gyakorlat / előadás tartalom
+--   előadás: kitenkités, konzultáció, extra témák
+--     - minden héten felvétel + jegyzet felkerül a gyak témával kapcsolatban
+--   gyakorlat: önálló feladatmegoldás / én magyarázok (mix)
+
+-- Tárgy anyag intro
 --------------------------------------------------------------------------------
+
+-- tartalom: középhaladó Haskell
+--   - előzmény: BSc funkc. prog
+--   - érdemes BSc funkc prog frissítés
+--     aki 0%-on van: gyakorlatokon lehet pótolni BSc-s anyagot
+
+-- funkcionális programozás:
+--   - bevezetés szoftvertechnológiai további témákba:
+--       - logika, típuselmélet, kategóriaelmélet, algebra
+
+
+-- infrastruktúra, ghci, stb
+-- alapvetően: Teams
+--   gyakorlatokat rögzítem, Teams-en Files-ba felteszem
+
+-- ghci + szövegszerkesztő
+
+-- ghci parancsok
+--    :l <file.hs>       betöltés
+--    :r                 újratöltés
+--    :bro               kilistázza a fájlból a definíciókat
+--    :t <kifejezés>     kiírja egy kifejezés típusát
+--    :i <azonosító>     info-t lekérdezni egy névről
+--                       típus, operátor precedencia, definíció helye
+--                       osztályok metódusai, stb.
+
 
 
 -- Gyakorló feladatok (ismétlés, függvények, mintaillesztés, ADT-k, osztályok)
@@ -20,20 +68,49 @@ xor = undefined
 -- Definiáld a következő függvényeket tetszőlegesen, de típushelyesen és totális
 -- függvényként (azaz nem lehet végtelen rekurzió vagy kivétel dobás!).
 
-f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 :: (a, (b, (c, d))) -> (b, c)   -- típus
+f1 (a, (b, (c, d))) = (b, c)       -- érték
+  -- konvenció: generikus típusú értékváltozókat érdemes ugyanúgy nevezni,
+  --            mint ami a típusuk
+  -- (rögtön látjuk, hogy mi egy érték változó típusa)
 
-f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 :: (a -> b) -> (a -> b)
+f2 = id
 
+f2' :: (a -> b) -> (a -> b)
+f2' = ($)                        -- f (g (h x))
+                                 -- f $ g $ h x
+
+-- függvénykompozíció
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 = (.)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 = flip
 
-f5 :: ((a, b) -> c) -> (a -> (b -> c))
-f5 = undefined
+-- curry-zés
+-- f :: a -> (b -> (c -> d))
+-- f x :: b -> (c -> d)
+-- f x y :: c -> d
+
+f5 :: ((a, b) -> c) -> a -> b -> c
+f5 f a b = f (a, b)
+
+   -- underscore definícióban:
+   --    betöltéskor ghci kiírja, hogy milyen típusú kifejezést *kéne*
+   --    a _ helyére írni
+
+   -- definíció menete:
+   --    _         _ :: c
+   --    f _       _ :: (a, b)
+   --    f (_, _)  _ :: a    _ :: b
+   --    f (a, b)
+
+   -- mechanikusan használni a _-t
+   --  pl: ha (a -> b) kéne:  \a -> _
+   --      ha (a, b)   kéne:  (_, _)
+   --      ha Bool     kéne:  sok lehetséges választás
+
 
 f6 :: (a -> b -> c) -> (a, b) -> c
 f6 = undefined
