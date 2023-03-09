@@ -2,6 +2,13 @@
 {-# language InstanceSigs, StandaloneDeriving, UndecidableInstances #-}
 {-# options_ghc -Wincomplete-patterns #-}
 
+--
+--------------------------------------------------------------------------------
+
+-- Következő kisfeladat:
+--   egyszerű függvény valami "data"-val definiált típuson
+--   (típus nem rekurzív, és a függvény sem)
+
 -- Gyakorló feladatok (ismétlés, függvények, mintaillesztés, ADT-k, osztályok)
 --------------------------------------------------------------------------------
 
@@ -33,28 +40,79 @@ f4 :: (a -> b -> c) -> b -> a -> c
 f4 = flip
 
 f5 :: ((a, b) -> c) -> a -> b -> c
-f5 f a b = f (a, b)
+f5 = curry
 
 f6 :: (a -> b -> c) -> (a, b) -> c
-f6 = undefined
+f6 = uncurry
 
-f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 :: (a -> (b, c)) -> ((a -> b), (a -> c)) -- függvények párja
+f7 f = (\a -> fst (f a), \a -> snd (f a))
+  -- = (fst . f , snd . f)
 
-f8 :: (a -> b, a -> c) -> (a -> (b, c))
-f8 = undefined
+f8 :: (a -> b, a -> c) -> a -> (b, c)
+f8 (f, g) a = (f a, g a)
+
+-- data Either a b = Left a | Right b
+
+--   Left  :: a -> Either a b        (konstruktor 1 db "a" típusú mezővel)
+--   Right :: b -> Either a b        (konstruktor 1 db "b" típusú mezővel)
+
+-- f (Left x) = ...     -- mintaillesztés konstruktorra és annak az adatmezőjére
+-- f (Right x) = ...
 
 f9 :: (Either a b -> c) -> (a -> c, b -> c)
-f9 = undefined
+f9 f = (\a -> f (Left a), \b -> f (Right b))
+   -- (f . Left, f . Right)
 
-f10 :: (a -> c, b -> c) -> (Either a b -> c)
-f10 = undefined
+-- Int, Integer
+-- data Integer = Small Int | Large ByteArray
+
+
+f10 :: (a -> c, b -> c) -> Either a b -> c
+f10 (f, g) (Left a)  = f a
+f10 (f, g) (Right b) = g b
+   -- "case" kifejezéssel:
+-- f10 (f, g) eab = case eab of
+--    Left a  -> f a
+--    Right b -> g b
+
+-- egy sorban:
+-- f10 (f, g) eab = case eab of Left a -> f a; Right b -> g b
 
 f11 :: Either (a, b) (a, c) -> (a, Either b c)
-f11 = undefined
+f11 (Left (a, b))  = (a, Left b)
+f11 (Right (a, c)) = (a, Right c)
+
+{-
+x1 :: Either Int Bool
+x1 = Left 100
+
+x2 :: Either Int Bool
+x2 = Right False
+
+x3 :: Either (Int -> Int) Int
+x3 = Left (\x -> x + 10)
+
+x4 :: Either (Int -> Int) Int
+x4 = Right 100
+-}
+
+-- Nem kizáró választás "a" és "b" között:
+data Either' a b = Left' a | Right' b | Both a b
+
+-- zip :: [a] -> [b] -> [(a, b)]
+-- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+
+zipWith' :: (Either' a b -> c) -> [a] -> [b] -> [c]
+zipWith' f (a:as) (b:bs) = f (Both a b) : zipWith' f as bs
+zipWith' f (a:as) []     = f (Left' a)  : zipWith' f as []
+zipWith' f []     (b:bs) = f (Right' b) : zipWith' f [] bs
+zipWith' f []     []    = []
+
 
 f12 :: (a, Either b c) -> Either (a, b) (a, c)
 f12 = undefined
+
 
 -- (bónusz, nehezebb)
 f13 :: (a -> a -> b) -> ((a -> b) -> a) -> b
@@ -70,24 +128,49 @@ f13 = undefined
 -- Pl. "applyMany [(+10), (*10)] 10 == [20, 100]".
 
 applyMany :: [a -> b] -> a -> [b]
-applyMany = undefined
+applyMany []     a = []
+applyMany (f:fs) a = f a : applyMany fs a
+
+-- applyMany fs a = map (\f -> f a) fs
+-- applyMany fs a = map ($ a) fs          -- map (+10)
 
 
--- Definiálj egy "NonEmptyList a" típust "data"-ként.
+-- Definiálj egy "NonEmptyList a" típust "data"-ként.n
 -- aminek az értékei nemüres listák.
 
+data NonEmptyList a = Single a | More a (NonEmptyList a)
+  deriving (Eq, Show)
+
 --   - Írj egy "toList :: NonEmptyList a -> [a]" függvényt!
+toList :: NonEmptyList a -> [a]
+toList (Single a)  = [a]
+toList (More a as) = a : toList as
 
 --   - Írj egy "fromList :: [a] -> Maybe (NonEmptyList a)" függvényt, ami
 --     nemüres listát ad vissza egy standard listából, ha az input nem
 --     üres.
+fromList :: [a] -> Maybe (NonEmptyList a)
+fromList []     = Nothing
+fromList (a:as) = case fromList as of
+  Nothing -> Just (Single a)
+  Just as -> Just (More a as)    -- "as" árnyékolja az input "as"-t
+
+-- fromList []     = Nothing
+-- fromList (a:as) = f $ case fromList as of
+--   Nothing -> Single a
+--   Just as -> More a as
 
 
 -- Definiáld a "composeAll :: [a -> a] -> a -> a" függvényt. Az eredmény legyen
 -- az összes bemenő függvény kompozíciója,
 -- pl. "composeAll [f, g, h] x == f (g (h x))"
 composeAll :: [a -> a] -> a -> a
-composeAll = undefined
+composeAll []     a = a
+composeAll (f:fs) a = f (composeAll fs a)
+
+-- composeAll = foldr (.) id
+-- foldr f   x  [a1, a2, a3] == f a1 (f a2 (f a3 x))
+-- foldr (.) id [a1, a2, a3] == a1 . (a2 . (a3 . id)) == a1 . a2 . a3 . id
 
 -- (bónusz) Definiáld a "sublists :: [a] -> [[a]]" függvényt, ami a bemenő lista
 -- minden lehetséges részlistáját visszaadja. Pl:
@@ -96,10 +179,11 @@ composeAll = undefined
 -- A részlisták sorrendje az eredményben tetszőleges, a
 -- fontos, hogy az összes részlista szerepeljen.
 sublists :: [a] -> [[a]]
-sublists = undefined
+sublists []     = [[]]
+sublists (x:xs) = case sublists xs of
+  xss -> xss ++ map (x:) xss
 
-
--- osztályok
+-- Osztályok, algebrai típusok
 --------------------------------------------------------------------------------
 
 data Color = Red | Green | Blue
