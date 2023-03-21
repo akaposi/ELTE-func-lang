@@ -1,9 +1,8 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
-{-# LANGUAGE InstanceSigs, TypeSynonymInstances, StandaloneDeriving, QuantifiedConstraints #-}
+{-# LANGUAGE InstanceSigs, StandaloneDeriving, QuantifiedConstraints #-}
 module Gy03 where
 
 import Prelude hiding (Either(..), Maybe(..))
-import Language.Haskell.TH (thisModule)
 
 -- Vegyük az alábbi adattípusokat
 data Single a = Single a deriving (Eq, Show)
