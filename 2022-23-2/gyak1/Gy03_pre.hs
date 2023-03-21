@@ -169,6 +169,8 @@ data TriCompose f g h a = TriCompose (f (g (h a))) deriving (Eq, Show)
 data Free f a = Pure a | Free (f (Free f a))
 type Fix :: (* -> *) -> * -> *
 data Fix f a = Fix (f (Fix f a))
+data Join a b = Join (a -> a -> b)
+data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
 
 --- Írjunk rájuk Functor instance-ot!
 
@@ -214,6 +216,14 @@ instance Functor f => Functor (Free f) where
 
 instance Functor f => Functor (Fix f) where
   fmap :: Functor f => (a -> b) -> Fix f a -> Fix f b
+  fmap = undefined
+  
+instance Functor (Join q) where
+  fmap :: (a -> b) -> Join q a -> Join q b
+  fmap = undefined
+  
+instance Functor (CrazyType2 fixed) where
+  fmap :: (a -> b) -> CrazyType2 fixed a -> CrazyType2 fixed b
   fmap = undefined
 
 -- Dont mind this
