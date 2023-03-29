@@ -1,5 +1,5 @@
-
-{-# language StandaloneDeriving, UndecidableInstances #-}
+{-# language InstanceSigs #-}
+{-# options_ghc -Wincomplete-patterns #-}
 
 data Tree a = Leaf a | Node (Tree a) (Tree a) (Tree a) deriving (Eq, Show)
 
@@ -22,6 +22,7 @@ zipWithMaybe :: (a -> b -> Maybe c) -> [a] -> [b] -> Maybe [c]
 zipWithMaybe = undefined
 
 
+-- Maybe monad
 --------------------------------------------------------------------------------
 
 
