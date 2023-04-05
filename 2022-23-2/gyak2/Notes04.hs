@@ -164,12 +164,6 @@ bar mx my mz = do
   z <- mz
   return (x + y + z)
 
--- bar(mx, my, mz) { return (mx + my + mz); }
-
---
-
-
-
 {-
 -- imperatív pszeudokód:
 filterMaybe(f, as) = case as of
