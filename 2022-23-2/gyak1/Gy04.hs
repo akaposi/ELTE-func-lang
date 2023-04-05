@@ -96,11 +96,9 @@ instance Applicative Tree where
   pure = Leaf
   liftA2 :: (a -> b -> c) -> Tree a -> Tree b -> Tree c
   liftA2 f (Leaf a) (Leaf b) = Leaf (f a b)
-  liftA2 f (Node l r) (Leaf b) = Node (fmap (\a -> f a b) l) (fmap (\a -> f a b) r)
+  liftA2 f (Node l r) (Leaf b) = Node (fmap (flip f b) l) (fmap (flip f b) r)
   liftA2 f (Leaf a) (Node l r) = Node (fmap (f a) l) (fmap (f a) r)
   liftA2 f (Node l r) (Node l' r') = Node (Node (liftA2 f l l') (liftA2 f r r')) (Node (liftA2 f l r') (liftA2 f r l'))
-  (<*>) :: Tree (a -> b) -> Tree a -> Tree b
-  (<*>) = undefined
 
 instance Applicative Maybe where
   pure :: a -> Maybe a
@@ -147,24 +145,23 @@ instance Applicative (Fun q) where
   pure a = Fun (const a)
   liftA2 :: (a -> b -> c) -> Fun q a -> Fun q b -> Fun q c
   liftA2 f (Fun qa) (Fun qb) = Fun $ \q -> f (qa q) (qb q)
-  (<*>) :: Fun q (a -> b) -> Fun q a -> Fun q b
-  (<*>) = undefined
+
 
 instance (Applicative f, Applicative g) => Applicative (Compose f g) where
   pure :: (Applicative f, Applicative g) => a -> Compose f g a
   pure = Compose . pure . pure
   liftA2 :: (Applicative f, Applicative g) => (a -> b -> c) -> Compose f g a -> Compose f g b -> Compose f g c
   liftA2 f (Compose fga) (Compose fgb) = Compose (liftA2 (liftA2 f) fga fgb)
-  (<*>) :: (Applicative f, Applicative g) => Compose f g (a -> b) -> Compose f g a -> Compose f g b
-  (<*>) = undefined
 
 instance Applicative NonEmpty where
   pure :: a -> NonEmpty a
-  pure = undefined
+  pure = Last
   liftA2 :: (a -> b -> c) -> NonEmpty a -> NonEmpty b -> NonEmpty c
-  liftA2 = undefined
-  (<*>) :: NonEmpty (a -> b) -> NonEmpty a -> NonEmpty b
-  (<*>) = undefined
+  liftA2 f (Last a) xs = fmap (f a) xs
+  liftA2 f (NECons a as) xs = fmap (f a) xs +++ liftA2 f as xs
+    where
+      Last a +++ xs = NECons a xs
+      NECons a as +++ xs = NECons a (as +++ xs)
 
 
 -- Egy típusnak több szabályos applikatív instance-a is lehet
@@ -175,8 +172,6 @@ instance Applicative ZipList where
   pure = ZipList . repeat
   liftA2 :: (a -> b -> c) -> ZipList a -> ZipList b -> ZipList c
   liftA2 f (ZipList a) (ZipList b) = ZipList (zipWith f a b)
-  (<*>) :: ZipList (a -> b) -> ZipList a -> ZipList b
-  (<*>) = undefined
 
 -- Az Applikatívot "statikus mellékhatás"-nak is szokás hívni, mivel az eredmény struktúrája eldönthető a paraméterek megvizsgálásával
 -- Ez annyi megkötést ad nekünk, hogy a konténer struktúrája nem függ valami függvény eredményétől!
@@ -185,6 +180,18 @@ instance Applicative ZipList where
 -- Gyakorlás: Írj az alábbi típusokra Applicative instance-ot!
 
 data Product f g a = Product (f a) (g a) deriving (Eq, Show, Functor)
-data Sum f g a = SumL (f a) | SumR (g a) deriving (Eq, Show, Functor)
+-- data Sum f g a = SumL (f a) | SumR (g a) deriving (Eq, Show, Functor) ambiguous
 data Kleisli f a b = Kleisli (a -> f b) deriving Functor
-data BiRecurse a = LeftRec a (BiRecurse a) | RightRec a (BiRecurse a) | BNill deriving (Eq, Show, Functor)
+-- data BiRecurse a = LeftRec a (BiRecurse a) | RightRec a (BiRecurse a) | BNill deriving (Eq, Show, Functor) ambiguous
+
+instance (Applicative f, Applicative g) => Applicative (Product f g) where
+  pure :: (Applicative f, Applicative g) => a -> Product f g a
+  pure x = Product (pure x) (pure x)
+  liftA2 :: (Applicative f, Applicative g) => (a -> b -> c) -> Product f g a -> Product f g b -> Product f g c
+  liftA2 f (Product ax ay) (Product bx by) = Product (liftA2 f ax bx) (liftA2 f ay by)
+
+instance Applicative f => Applicative (Kleisli f q) where
+  pure :: Applicative f => a -> Kleisli f q a
+  pure a = Kleisli $ const (pure a)
+  (<*>) :: Applicative f => Kleisli f q (a -> b) -> Kleisli f q a -> Kleisli f q b
+  (Kleisli f) <*> (Kleisli a) = Kleisli $ \q -> f q <*> a q
