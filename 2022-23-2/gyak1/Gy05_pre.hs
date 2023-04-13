@@ -136,6 +136,13 @@ zipWithMaybe' f _      _      = pure []
 -- emlékeztető:
 --   zipWith f (a:as) (b:bs) = f a b : zipWith f as
 
+data NonEmpty' a = Last' a | Cons' a (NonEmpty' a) deriving (Eq, Show, Functor)
+
+mapNE :: (a -> Maybe b) -> NonEmpty' a -> Maybe (NonEmpty' b)
+mapNE f (Last' a) = Last' <$> f a
+mapNE f (Cons' a xs) = Cons' <$> f a <*> mapNE f xs
+
+
 --------------------------------------------------------------------------------
 
 -- Előző óra: Applikatív
@@ -170,11 +177,13 @@ class Applicative m => Monad m where
 
 instance Monad List where
   (>>=) :: List a -> (a -> List b) -> List b -- hint: concatMap
-  (>>=) = undefined
+  Nil >>= f = Nil
+  (Cons x xs) >>= f = f x +++ (xs >>= f)
 
 instance Monad Tree where
   (>>=) :: Tree a -> (a -> Tree b) -> Tree b
-  (>>=) = undefined
+  (Leaf a) >>= f = f a
+  (Node l r) >>= f = Node (l >>= f) (r >>= f)
 
 -- Monádnak is vannak törvényei
 {-
@@ -187,30 +196,36 @@ instance Monad Tree where
 
 instance Monad Maybe where
   (>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b
-  (>>=) = undefined
+  Just a >>= f = f a
+  Nothing >>= _ = Nothing
 
 instance Monad Id where
   (>>=) :: Id a -> (a -> Id b) -> Id b
-  (>>=) = undefined
+  (Id a) >>= f = f a
 
 instance Monad (Either e) where
   (>>=) :: Either e a -> (a -> Either e b) -> Either e b
-  (>>=) = undefined
+  (Right a) >>= f = f a
+  (Left e) >>= _ = Left e
 
 instance Monad m => Monad (Wrap m) where
   (>>=) :: Monad m => Wrap m a -> (a -> Wrap m b) -> Wrap m b
-  (>>=) = undefined
+  (Wrap fa) >>= f = Wrap $ fa >>= \x -> case f x of
+                                          Wrap v -> v
 
 instance Monad (Fun q) where
   -- (>>=) :: (q -> a) -> (a -> (q -> b)) -> (q -> b)
   -- hint: mi volt a <*> típusa fv-ek esetén?
   (>>=) :: Fun q a -> (a -> Fun q b) -> Fun q b
-  (>>=) = undefined
+  (Fun k) >>= f = Fun $ \x -> let (Fun g) = f (k x) in g x
 
 instance Monad NonEmpty where
   (>>=) :: NonEmpty a -> (a -> NonEmpty b) -> NonEmpty b
-  (>>=) = undefined
-
+  (Last a) >>= f = f a
+  (NECons a as) >>= f = (++++) (f a) (as >>= f)
+    where
+      (++++) (Last a) xs = NECons a xs
+      (++++) (NECons x xs) ys = NECons x (xs ++++ ys)
 -- instance (Monad m, Monad w) => Monad (Product m w) where
 --   (>>=) :: (Monad m, Monad w) => Product m w a -> (a -> Product m w b) -> Product m w b
 --   (>>=) = undefined
@@ -250,3 +265,67 @@ liftA3' = undefined
 data Free f a = Pure a | Free (f (Free f a)) deriving Functor
 data Tuple a b = Tuple a b deriving Functor
 data Join a b = Join (a -> a -> b) deriving Functor
+
+
+-- Do-notáció
+-- Lényegében >>= láncol rövidítésére van
+
+-- a >>= \g -> b g
+
+{-
+do
+  g <- a
+  b g
+-}
+
+readAndPrint :: IO ()
+readAndPrint = getLine >>= \str -> putStrLn str
+
+readAndPrint' :: IO ()
+readAndPrint' = do
+  str <- getLine
+  putStrLn str
+
+readTwo :: IO ()
+readTwo = getLine >>= \str -> (getLine >>= \str2 -> putStrLn (str ++ str2))
+
+readTwo' :: IO ()
+readTwo' = do
+  str <- getLine
+  str2 <- getLine
+  putStrLn (str ++ str2)
+
+  -- Olvassunk be két stringet és írjuk ki a hosszabikat
+  -- if then else!!
+
+io1 :: IO ()
+io1 = do
+  str1 <- getLine
+  str2 <- getLine
+  putStrLn $ if length str1 >= length str2 then str1 else str2
+
+io1' :: IO ()
+io1' = getLine >>= \str1 -> getLine >>= \str2 ->
+  if length str1 >= length str2
+  then putStrLn str1
+  else putStrLn str2
+
+
+-- Olvassunk be egy stringet, majd írjuk ki, majd megint olvassunk
+-- be egy stringet és írjuk ki
+
+io2 = do
+  str1 <- getLine
+  putStrLn str1
+  str2 <- getLine
+  putStrLn str2
+
+io'2 = getLine >>= \str -> putStr str >> getLine >>= \str -> putStrLn str
+
+printNTimes :: Int -> String -> IO () -- írjuk ki annyiszor a stringet
+printNTimes n st
+  | n <= 0 = return ()
+  | otherwise = do
+      putStrLn st
+      printNTimes (n - 1) st
+-- amennyi az első paraméter (hint: rekurzió)
