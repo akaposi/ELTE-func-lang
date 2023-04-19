@@ -4,7 +4,7 @@ module Gy06_pre where
 
 import Control.Monad
 import Control.Applicative
-import Data.Array (Ix(range))
+
 
 -- Mai óra anyaga: Monad műveletek és do-notáció használata.
 -- Ismert műveletek:
