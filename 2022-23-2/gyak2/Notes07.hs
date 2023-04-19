@@ -83,7 +83,30 @@ p2 = do
 -- evalState p2 1 == ()
 -- execState p2 1 == 10
 
+-- Standard függvények State-el implementálva:
 ------------------------------------------------------------
+
+-- sum :: [Int] -> Int
+sumState :: [Int] -> Int
+sumState ns = execState (go ns) 0 where
+  go []     = return ()
+  go (n:ns) = modify (+n) >> go ns
+
+sumState' :: [Int] -> Int
+sumState' ns = execState (mapM_ (\n -> modify (+n)) ns) 0
+
+-- reverse :: [a] -> [a]
+reverseState :: [a] -> [a]
+reverseState as = execState (go as) [] where
+  go [] = return ()
+  go (a:as) = modify (a:) >> go as
+
+reverseState' :: [a] -> [a]
+reverseState' as = execState (mapM_ (\a -> modify (a:)) as) []
+
+
+------------------------------------------------------------
+
 
 -- Definiálj egy függvényt, ami a lista állapotot kiegészíti egy elemmel
 push :: a -> State [a] ()
