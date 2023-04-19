@@ -83,7 +83,7 @@ p2 = do
 -- evalState p2 1 == ()
 -- execState p2 1 == 10
 
--- Standard függvények State-el implementálva:
+-- Példák: standard függvények State-el implementálva.
 ------------------------------------------------------------
 
 -- sum :: [Int] -> Int
@@ -104,9 +104,7 @@ reverseState as = execState (go as) [] where
 reverseState' :: [a] -> [a]
 reverseState' as = execState (mapM_ (\a -> modify (a:)) as) []
 
-
 ------------------------------------------------------------
-
 
 -- Definiálj egy függvényt, ami a lista állapotot kiegészíti egy elemmel
 push :: a -> State [a] ()
@@ -125,6 +123,11 @@ pop = undefined
 -- példák:
 -- runState pop []        == (Nothing, [])
 -- runState pop [0, 1, 2] == (Just 0, [1, 2])
+
+
+-- Definiáld a standard foldl függvényt State használatával
+foldlState :: (b -> a -> b) -> b -> [a] -> b
+foldlState = undefined
 
 
 -- Írj egy függvényt, ami egy Int listában minden elemet kicserél az elemtől
