@@ -1,7 +1,24 @@
 {-# language DeriveFunctor, InstanceSigs #-}
 
-
 import Control.Monad
+
+-- kisfeladat
+--------------------------------------------------------------------------------
+
+-- Control.Monad import nélkül, replicateM_ helyett:
+doNTimes :: Monad m => Int -> m a -> m ()
+doNTimes n ma
+  | n <= 0    = return ()
+  | otherwise = ma >> doNTimes (n - 1) ma
+
+feladat :: IO ()
+feladat = do
+  let go :: Int -> IO ()
+      go n = do
+        l <- getLine
+        replicateM_ n (putStrLn l)
+  go 0
+
 
 -- State monád
 --------------------------------------------------------------------------------
@@ -54,22 +71,32 @@ execState ma = snd . runState ma
 -- get    : olvassa a ref jelenlegi értékét
 -- modify : egy függvényt alkalmaz a ref jelenlegi értékén
 
+
+-- HASZNÁLAT ÖSSZEFOGLALÓ:
+--  A következő függvényeket kell használni:
+
+--  + A típus:
+--       State s a      Művelet, ami "s" típusú referenciát ("változó") tud módosítani
+--                       (mellékhatásként).
+--                      És visszatér "a" típusú értékkel.
+
 --         futattni a definiált műveleteket
 --             művelet       kezdő érték   (visszatérési érték, végső ref érték)
 -- runState  :: State s a   ->  s           -> (a, s)
 -- evalState :: State s a   ->  s           -> a
 -- execState :: State s a   ->  s           -> s
 
--- put :: s -> State s ()           -- beír egy értéket az állapotba
--- get :: State s s                 -- értékként visszaadja az állapotot
+-- put    :: s -> State s ()        -- beír egy értéket az állapotba
+-- get    :: State s s              -- értékként visszaadja a jelenlegi állapotot (olvasás)
 -- modify :: (s -> s) -> State s () -- függvényt alkalmaz az állapotra
 
 p1 :: State Int Int
 p1 = do
   put 10
   put 20         -- felülírom az értéket
-  modify (+100)  -- függvényt alkalmazok
-  n <- get
+  modify (+100)  -- függvényt alkalmazok az állapotra
+  n <- get       -- vesd össze: getLine :: IO String    (l <- getLine)
+  modify (+100)
   return n
 
 -- runState p1 0 == (120, 120)
@@ -89,17 +116,49 @@ p2 = do
 -- sum :: [Int] -> Int
 sumState :: [Int] -> Int
 sumState ns = execState (go ns) 0 where
+  go :: [Int] -> State Int ()
   go []     = return ()
   go (n:ns) = modify (+n) >> go ns
+            -- do {modify (+n); go ns}
+            -- do modify (+n)
+            --    go ns
+
+   -- go ns :: State Int ()
+   -- execState (go ns) :: Int -> Int
+   -- execState (go ns) 0 :: Int
+
+-- imperatív:
+--  sum(ns) =
+--     var sum = 0;
+--     for n in ns:
+--        sum += n
+--     return sum
+
+-- mapM_ :: Monad m => (a -> m b) -> [a] -> m ()
 
 sumState' :: [Int] -> Int
-sumState' ns = execState (mapM_ (\n -> modify (+n)) ns) 0
+sumState' ns = execState action 0 where
+  action = mapM_ (\n -> modify (+n)) ns
+
+  -- modify :: (s -> s) -> State s ()
+  -- (\n -> modify (+n)) :: Int -> State Int ()
+  -- mapM_ (\n -> modify (+n)) ns :: State Int ()
+  -- execState (mapM_ (\n -> modify (+n)) ns) 0 :: Int
+
 
 -- reverse :: [a] -> [a]
 reverseState :: [a] -> [a]
 reverseState as = execState (go as) [] where
-  go [] = return ()
+  go :: [a] -> State [a] ()
+  go []     = return ()
   go (a:as) = modify (a:) >> go as
+
+-- imperatív:
+-- reverse(as) =
+--   var res = []
+--   for a in as
+--     res := (a : res)
+--   return res;
 
 reverseState' :: [a] -> [a]
 reverseState' as = execState (mapM_ (\a -> modify (a:)) as) []
