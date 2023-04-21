@@ -2,7 +2,14 @@
 
 import Control.Monad
 
--- kisfeladat
+-- Következő feladat
+--------------------------------------------------------------------------------
+
+-- Egyszerű State feladat
+--   6 függvény: get, put, modify, runState, evalState, execState
+--   nem rekurzív egyszerűbb művelet definíció + futtatás
+
+-- Mai kisfeladat
 --------------------------------------------------------------------------------
 
 -- Control.Monad import nélkül, replicateM_ helyett:
@@ -165,10 +172,10 @@ reverseState' as = execState (mapM_ (\a -> modify (a:)) as) []
 
 ------------------------------------------------------------
 
--- Definiálj egy függvényt, ami a lista állapotot kiegészíti egy elemmel
+-- Definiálj egy műveletet, ami a lista állapotot kiegészíti egy elemmel
 push :: a -> State [a] ()
-push = undefined
-
+push a = modify (a:)
+    -- modify (\as -> a : as)
 
 -- példák:
 -- runState (push 10) [] == ((), [10])
@@ -176,8 +183,16 @@ push = undefined
 
 -- Ha az állapot lista nem üres, akkor a következő függvény leveszi az első
 -- elemet és visszaadja Just értékként, egyébként Nothing-ot ad.
+
+-- dropS :: Int -> State [a] ()
+-- dropS n = modify (drop n)
+
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do
+  as <- get
+  case as of
+    []   -> return Nothing
+    a:as -> put as >> return (Just a)  -- "leveszünk": visszaírjuk a rövidebb listát
 
 -- példák:
 -- runState pop []        == (Nothing, [])
@@ -199,7 +214,7 @@ maxs = undefined
 
 -- példák:
 -- evalState (maxs [1, 2, 5, 2]) Nothing == [1, 2, 5, 5]
--- evalState (maxs [10, 5, 12, 3] Nothing) == [10, 10, 12, 12]
+-- evalState (maxs [10, 5, 12, 3]) Nothing == [10, 10, 12, 12]
 
 -- pop  :: State [a] (Maybe a)
 -- push :: a -> State [a] ()
