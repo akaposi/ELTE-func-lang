@@ -1,6 +1,7 @@
 {-# LANGUAGE InstanceSigs, DeriveFunctor, DeriveFoldable #-}
 module Gy07 where
 
+
 import Control.Monad
 import Data.Traversable
 import Prelude hiding (NonEmpty(..), Maybe(..), Either(..))
@@ -18,6 +19,14 @@ instance Monad (State s) where
   (>>=) :: State s a -> (a -> State s b) -> State s b
   (State sa) >>= f = State $ \s -> let (a, s') = sa s in runState (f a) s'
 
+get :: State s s
+get = State $ \s -> (s,s)
+
+put :: s -> State s ()
+put s = State $ const ((), s)
+
+modify :: (s -> s) -> State s ()
+modify f = get >>= put . f
 
 
 -- Definiáljunk egy olyan áll. vált.-t amely megcímzkézi egy lista összes elemét
