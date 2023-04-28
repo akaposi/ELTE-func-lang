@@ -1,9 +1,32 @@
 
-{-# language DeriveFunctor, InstanceSigs #-}
+{-# language DeriveFunctor, InstanceSigs, DeriveFoldable #-}
 
 import Control.Monad
 import Control.Applicative
 import Data.Char
+
+-- Köv órai feladat:
+-- (feladatba bemásolva Parser library)
+--  satisfy, char, string, <|>, do (vagy Monad műveletek)
+--  felhasználásával, valamilyen parser definíció
+-- (egyszerű definíció)
+
+-- Feladat
+--------------------------------------------------------------------------------
+
+
+-- cseréljük meg a mezőket, adjuk vissza az új első mező értékét
+-- (régi második).
+
+f :: State (a, a) a
+f = do
+  (a1, a2) <- get
+  put (a2, a1)
+  return a2
+
+  -- modify (\(a1, a2) -> (a2, a1))
+  -- fst <$> get                       -- fmap fst get
+
 
 -- State monád
 --------------------------------------------------------------------------------
@@ -90,7 +113,7 @@ mapPushPop = undefined
 -- balról jobbra haladva egy megadott lista elemeire. Használj State monádot!
 
 data Tree a = Leaf a | Node (Tree a) (Tree a)
-  deriving (Functor, Show)
+  deriving (Functor, Show, Foldable)
 
 -- pl: replaceLeaves [10, 20, 30] (   Node (Leaf 2) (Leaf 3))
 --                                 == Node (Leaf 10) (Leaf 20)
@@ -100,19 +123,89 @@ data Tree a = Leaf a | Node (Tree a) (Tree a)
 --        (Node (Leaf 5) (Node (Leaf 0) (Leaf 0)))
 
 replaceLeaves :: [a] -> Tree a -> Tree a
-replaceLeaves = undefined
+replaceLeaves as t = evalState (go t) as where   -- "inicializáljuk"
+
+  -- go definíciójában, tudunk egy "[a]" típusú értéket írni/olvasni
+  go :: Tree a -> State [a] (Tree a)
+  go (Leaf a) = do
+    ma <- pop  -- mellékhatása: nemüres listából levesz egy értéket
+    case ma of
+      -- üres volt a lista
+      Nothing -> return (Leaf a)
+      -- nemüres volt a lista
+      Just a' -> return (Leaf a')
+  go (Node l r) = do
+    l' <- go l
+    r' <- go r
+    return (Node l' r')
+
+-- imperatív
+{-
+def f(as, t) :=
+   mutvar list := copy(as);
+   def go(t) := case t of
+     Leaf a := case pop(list) of
+       Nothing  -> return (Leaf a)
+       Just(a') -> return (Leaf a')
+     Node(l, r) -> return Node(go l, go r)
+   return go(t);
+-}
+
+-- class Foldable t where
+--   foldr :: (a -> b -> b) -> b -> t a -> b
+
+-- deriving (Foldable)        -- megkapom a foldr-t
+
+-- foldr :: (a -> b -> b) -> b -> [a]    -> b
+-- foldr :: (a -> b -> b) -> b -> Tree a -> b
+treeToList :: Tree a -> [a]
+treeToList t = foldr (:) [] t
+   -- (:)-al kombinálok minden értéket, kiindulva []-el
 
 -- Definiáld a függvényt, ami megfordítja a fa leveleiben tárolt értékek
 -- sorrendjét!  tipp: használhatod a replaceLeaves függvényt.
+
 reverseElems :: Tree a -> Tree a
-reverseElems = undefined
+reverseElems t =
+
+   -- let elems = treeToList t
+   -- in replaceLeaves (reverse elems) t
+
+   replaceLeaves (reverse elems) t where
+     elems = treeToList t
+
 
 -- + Házi feladat: Notes07.hs fennmaradó State feladatai!
-
+--                 és az itteni State feladatok.
 
 --------------------------------------------------------------------------------
 -- Parser, regex-ek
 --------------------------------------------------------------------------------
+
+
+{-
+Parser monád használata:
+
+típus:
+  f :: Parser a     "f" egy olyan függvény, ami String-ből "a" típusú
+                    értéket próbál kiolvasni (String elejéről).
+futtatás:
+                         input String    (hibázhat) (érték, fennmaradó String)
+  runParser :: Parser a ->  String     ->  Maybe    (a, String)
+
+példa:
+  parseInt :: Parser Int   -- String elejéről Int literált próbál olvasni
+
+  runParser parseInt :: String -> Maybe (Int, String)
+
+  runParser parseInt "12333xxx" == Just (12333, "xxx")
+
+használjuk:
+  - instance-okat: Functor, Monad, Applicative
+  - primitív függvények + "kombinátorok"
+  - kis parser függvényekből összerakunk bonyolultabbakat
+
+-}
 
 newtype Parser a = Parser {runParser :: String -> Maybe (a, String)}
   deriving Functor
@@ -128,30 +221,83 @@ instance Monad Parser where
     Nothing     -> Nothing
     Just (a, s) -> runParser (g a) s
 
+-- eof ("end of file")
+--   illeszkedik az üres String-re
+-- példa:  runParser eof ""    == Just ((), "")
+--         runParser eof "foo" == Nothing
+
 eof :: Parser ()
 eof = Parser $ \s -> case s of
   "" -> Just ((), "")
   _  -> Nothing
 
--- egy karaktert olvassunk az input elejéről, amire
--- igaz egy feltétel
+-- Egy karaktert olvassunk az input elejéről, amire
+-- igaz egy feltétel.
+-- Példa:
+--    satisfy (\c -> 'a' <= c && c <= 'z') :: Parser Char
+
+lowercaseChar :: Parser Char
+lowercaseChar = satisfy (\c -> 'a' <= c && c <= 'z')
+
+-- runParser lowercaseChar "abc" == Just ('a', "bc")
+
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy f = Parser $ \s -> case s of
   c:s | f c -> Just (c, s)
   _         -> Nothing
 
--- olvassunk egy konkrét karaktert
+-- Olvassunk egy konkrét karaktert
+
+-- char 'x' :: Parser ()    -- csak az 'x' karaktert olvassa sikeresen
+-- runParser (char 'x') "xy" == Just ((), "y")
+
 char :: Char -> Parser ()
 char c = () <$ satisfy (==c)
-  -- satisfy (==c)   hiba: Parser Char helyett Parser () kéne
+
 
 instance Alternative Parser where
+  empty :: Parser a
   empty = Parser $ \_ -> Nothing
+
+  (<|>) :: Parser a -> Parser a -> Parser a
   (<|>) (Parser f) (Parser g) = Parser $ \s -> case f s of
     Nothing -> g s
     x       -> x
 
--- konkrét String olvasása:
+-- (<|>) ("choice", "vagy" operátor)
+-- p1 :: Parser a
+-- p2 :: Parser a
+-- p1 <|> p2 :: Parser a    -- ha p1 hibázik, akkor p2-t futtatjuk
+
+myParser :: Parser Char
+myParser = lowercaseChar <|> satisfy (\c -> '0' <= c && c <= '9')
+
+  -- runParser myParser "axxx" = Just ('a', "xxx")
+  -- runParser myParser "8a"   = Just ('8', "a")
+  -- runParser myParser "A"    = Nothing
+
+-- konkrét String olvasása input elejéről:
+--   runParser (string "foo") "foobar" == Just ((), "bar")
+
+-- Functor, Monad instance:
+
+-- Egymás utáni végrehajtás Monad műveletekkel:
+--   hiba propagálódik + a String változása
+myParser2 :: Parser Char
+myParser2 = do
+  _ <- myParser  -- myParser olvas egy lowercase betűt vagy egy szám karaktert
+  c <- myParser
+  return c
+
+-- runParser myParser2 "a2xx" == Just ('2',"xxx")
+
+-- -- alkalmazzunk egy függvényt a visszatérési értékre:
+-- fmap :: (a -> b) -> Parser a -> Parser b
+
+-- (ord :: Char -> Int) megadja a karaketr kódját (ASCII/Unicode)
+-- fmap ord lowercaseChar :: Parser Int
+-- runParser (fmap ord lowercaseChar) "axx" == Just (97, "xx")
+
 string :: String -> Parser ()
 string = mapM_ char -- minden karakterre alkalmazzuk a char-t
 
@@ -161,11 +307,51 @@ string = mapM_ char -- minden karakterre alkalmazzuk a char-t
 -- some :: Parser a -> Parser [a]
 --    (1-szor vagy többször futtatunk egy parser-t)
 
+-- ismételt futtatás (iteráció)
+--   many  :: Parser a -> Parser [a]   -- 0-szor vagy többször futtat
+--                                     -- egy parser-t
+--   many_ :: Parser a -> Parser ()    -- mint many, de ()-ot ad
+--   some  :: Parser a -> Parser [a]   -- 1-szer vagy többször futtat
+--   some_ :: Parser a -> Parser ()    -- mint some, de ()-ot ad
+
+-- Példák:
+--   many lowercaseChar :: Parser [Char]
+--   runParser (many lowercaseChar) "slfkjsdlfdsj" == Just ("slfkjsdlfdsj", "")
+--   runParser (many lowercaseChar) "aaa999" == Just ("aaa", "999")
+--   runParser (many lowercaseChar) "999"    == Just ([], "999")
+--   runParser (some lowercaseChar) "999"    == Nothing
+
 many_ :: Parser a -> Parser ()
 many_ pa = () <$ many pa
 
 some_ :: Parser a -> Parser ()
 some_ pa = () <$ some pa
+
+
+------------------------------------------------------------
+-- regex-ek: típus Parser ()  (arra vagyunk kíváncsiak, hogy illeszkedik-e
+--                             egy regex az inputra)
+--
+--  Parser ()            regex
+--------------------------------
+--   char c               c
+--  p1 >> p2             p1p2
+--  p1 <|> p2            p1|p2
+--   many_ p              p*
+--   some_ p              p+
+--    eof                 $
+
+----------------------------------------
+
+-- Definiáljuk a regex-ekből ismerős ? operátort
+optional :: Parser a -> Parser (Maybe a)
+optional p =
+  --  egyszer sikerül p-t futtatni      egyébként: visszaadjuk a Nothing-ot
+  do {a <- p; return (Just a)}      <|>   return Nothing
+
+  -- fmap Just p <|> return Nothing
+  -- (Just <$> p) <|> return Nothing
+
 
 -- olvassunk 0 vagy több pa-t, psep-el elválasztva
 sepBy :: Parser a -> Parser sep -> Parser [a]
