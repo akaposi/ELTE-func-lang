@@ -203,7 +203,11 @@ boolParser = True <$ string' "True" <|> False <$ string' "False"
 -- Írj egy parsert, ami [Maybe Int] értékeket olvas be Haskell szintaxis szerint!
 -- Engedj meg bárhol whitespace-t.
 listMaybeInt :: Parser [Maybe Int]
-listMaybeInt = undefined
+listMaybeInt = pList maybeIntParser
+
+-- Just :: Int -> Maybe Int
+maybeIntParser :: Parser (Maybe Int)
+maybeIntParser = Nothing <$ string' "Nothing" <|> Just <$> (string' "Just" >> posInt')
 
 -- Extra: Írj egy parsert, ami [(Bool, Maybe Int)] értékeket olvas Haskell
 -- szintaxis szerint! Engedj meg bárhol whitespace-t.
@@ -239,7 +243,23 @@ people =
   ]
 
 person :: Parser Person
-person = undefined
+person = do
+  firstLetter <- satisfy isUpper <* ws
+  rest <- some (inList ['a'..'z']) <* ws
+  let name = firstLetter : rest
+  string' "is a"
+  optional (char' 'n')
+  ws
+  age <- posInt'
+  string' "year"
+  optional (char' 's') >> ws
+  string' "old"
+  gender <- Boy <$ string' "boy" <|> Girl <$ string' "girl"
+  char' '.'
+  return (MkPerson name age gender)
+
+
+
 
 -- Írj egy parser-t, ami zárójeleket, +-t és pozitív Int literálokat tartalmazó
 -- kifejezéseket olvas! (Lásd előadás) Whitespace-t mindenhol engedj meg.
