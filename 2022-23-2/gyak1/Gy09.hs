@@ -99,7 +99,7 @@ between left a right = do -- left *> a <* right
 -- runParser (sepBy1 anyChar (char ',')) "" == Nothing
 
 sepBy1 :: Parser a -> Parser delim -> Parser {- nem üres -} [a]
-sepBy1 a delim = do
+sepBy1 a delim = do -- (:) <$> a <*> many (delim *> a)
   a' <- a
   as <- many (delim *> a)
   pure (a' : as)
@@ -239,3 +239,23 @@ evalExp'' (Mul'' e1 e2) lt = liftA2 (*) (evalExp'' e1 lt) (evalExp'' e2 lt)
 evalExp'' (Var' str) lt = case lookup str lt of
     Just exp -> evalExp'' exp lt
     _        -> Nothing
+
+
+---
+
+chainr1 :: Parser a->  Parser (a -> a -> a) ->  Parser a
+chainr1 v op = do
+    val <- v
+    (do
+        opr <- op
+        res <- chainr1 v op
+        pure (opr val res)
+        ) <|> pure val
+
+chainl1 :: Parser a ->  Parser (a -> a -> a) -> Parser a
+chainl1 v op = v >>= parseLeft
+    where
+        parseLeft val = (do
+            opr <- op
+            val2 <- v
+            parseLeft (opr val val2)) <|> pure val
