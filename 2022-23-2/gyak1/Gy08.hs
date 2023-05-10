@@ -54,21 +54,21 @@ eof = Parser $ \s -> case s of
 -- Írjunk egy parsert ami beparseol egy 'a' betűt vagy egy 'b' betűt
 -- Segítség: void :: Functor f => f a -> f ()
 aOrB :: Parser ()
-aOrB = undefined
+aOrB = () <$ satisfy (\c -> c == 'a' || c == 'b')
 
 -- Írjunk egy parser ami beparseol egy kisbetűt!
 lowercaseChar :: Parser ()
-lowercaseChar = undefined
+lowercaseChar = () <$ satisfy isLower
 
 
 -- Egyéb 'elemi' parserek
 -- Parseoljunk be akármilyen karaktert
 anyChar :: Parser Char
-anyChar = undefined
+anyChar = satisfy (const True)
 
 -- Parseoljunk be egy specifikus karaktert
 char :: Char -> Parser ()
-char c = undefined
+char c = () <$ satisfy (== c)
 
 
 -- Új típusosztály: Alternative ("Hibakezelés" típuosztály)
@@ -84,24 +84,33 @@ instance Alternative Parser where
 
 -- Olvassunk be vagy egy 'a' betűt vagy egy 'b' betűt. Használjunk <|>-t!
 aOrB' :: Parser ()
-aOrB' = undefined
+aOrB' = void $ satisfy (\c -> c == 'a') <|> satisfy (\c -> c == 'b')
 
 
 -- A Parser is egy monád
 
 -- Olvassunk be egy 'a'-t majd egy 'b'-t
 aThenB :: Parser ()
-aThenB = undefined
+aThenB = do
+  satisfy (== 'a')
+  satisfy (== 'b')
+  pure ()
 
 -- Olvassunk be két adott karaktert egymás után
 twoChars :: Char -> Char -> Parser ()
-twoChars c1 c2 = undefined
+twoChars c1 c2 = do
+  char c1--satisfy (== c1)
+  char c2--satisfy (== c2)
+  pure ()
 
 -- Komolyabb parserek
 
 -- Olvassunk be egy adott stringet!
 string :: String -> Parser ()
-string = undefined
+string [] = pure ()
+string (x:xs) = do
+  char x
+  string xs
 
 
 -- Parser segédfüggvények
@@ -143,6 +152,7 @@ asum' = foldr (<|>) empty
 -- Regex féle parserek
 {-
     Regex gyorstalpaló:                               Haskell megfelelő:
+    ℓ₁ℓ₂     - Parser szekvencia                      ℓ₁ >> ℓ₂ vagy do { ℓ₁; ℓ₂; }
     c        - Parseol egy c karaktert                char 'c'
     ℓ+       - Parseol 1 vagy több ℓ kifejezést       some ℓ
     ℓ*       - Parseol 0 vagy több ℓ kifejezést       many ℓ
@@ -150,6 +160,7 @@ asum' = foldr (<|>) empty
     ℓ?       - Parseol 0 vagy 1 ℓ kifejezést          optional ℓ
     .        - Akármilyen karakter                    anyChar
     ℓ{n}     - Parseol n darab ℓ kifejezést           replicateM n ℓ
+    ℓ{n,}    - Parseol n vagy több darab ℓ-t          replicateM n ℓ >> many ℓ
     $        - Nincs mit parseolni                    eof
     \d       - Parseol egy számjegyet                 digitToInt <$> satisfy isDigit
     [c₁-c₂]  - c₁ és c₂ között parseol egy karaktert  satisfy (\x -> x >= min c₁ c₂ && x <= max c₁ c₂)
@@ -162,51 +173,75 @@ asum' = foldr (<|>) empty
 
 -- alm(a|ák)
 p1 :: Parser ()
-p1 = undefined
+p1 = do
+  string "alm"
+  void $ string "a" <|> string "ák"-- alt
 
 -- c(i+)ca
 p2 :: Parser ()
-p2 = undefined
+p2 = do
+  char 'c'
+  some $ char 'i'
+  string "ca"
 
 -- (c*)i?(c+)a{3}
 p3 :: Parser ()
-p3 = undefined
+p3 = many (char 'c') *> optional (char 'i') *> some (char 'c') *> replicateM_ 3 (char 'a')
 
 -- (alma|banana)?
 p4 :: Parser ()
-p4 = undefined
+p4 = void $ optional (string "alma" <|> string "banana")
 
 -- [A-Z]{10}
 p5 :: Parser ()
-p5 = undefined
+p5 = do
+  replicateM_ 10 $ satisfy isUpper
 
 -- \d{2}
 p6 :: Parser ()
-p6 = undefined
+p6 = replicateM_ 2 digit where
+  digit = satisfy isDigit
 
 -- \d+.*$
 p7 :: Parser ()
-p7 = undefined
+p7 = do
+  some $ satisfy isDigit
+  many anyChar
+  eof
 
 -- \d?alma.?banana
 p8 :: Parser ()
-p8 = undefined
+p8 = do
+  optional $ satisfy isDigit
+  string "alma"
+  optional anyChar
+  string "banana"
+
 
 -- (ab)?ba+.*
 p9 :: Parser ()
-p9 = undefined
+p9 = void $ (void $ optional $ string "ab") *> char 'b' *> some (char 'a') *> many anyChar
 
 -- \d{2,}-?$
 p10 :: Parser ()
-p10 = undefined
+p10 = do
+  replicateM_ 2 $ digitToInt <$> satisfy (== 'd')
+  optional (string "-")
+  eof
 
 -- [A-Z]*[1,2,3,9]?(A|Z)$
 p11 :: Parser ()
-p11 = undefined
+p11 = many (satisfy (\c -> c <= 'Z' && c >= 'A')) *> optional (char '1' <|> char '2' <|> char '3' <|> char '9') *> (char 'A' <|> char 'Z') *> eof
 
 -- a+b*c?d{4}e{5,}
 p12 :: Parser ()
-p12 = undefined
+p12 = do
+  some $ char 'a'
+  many $ char 'b'
+  optional $ char 'c'
+  replicateM 4 $ char 'd'
+  replicateM 5 $ char 'e'
+  void $ many $ char 'e'
 
 -- alm(a|ák)|banán(ok)?
 p13 :: Parser ()

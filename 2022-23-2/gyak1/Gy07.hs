@@ -261,6 +261,13 @@ instance Traversable (SplitList q) where
   traverse f (LeftCons as q) = LeftCons <$> traverse f as <*> pure q
   traverse f (RightCons a as) = RightCons <$> f a <*> traverse f as
 
+data JaggedList a = JaggedCons [[a]] (JaggedList a) | JNill deriving (Functor, Foldable)
+
+instance Traversable JaggedList where
+  traverse :: Applicative f => (a -> f b) -> JaggedList a -> f (JaggedList b)
+  traverse f JNill = pure JNill
+  traverse f (JaggedCons as ja) = JaggedCons <$> traverse (traverse f) as <*> traverse f ja
+
 instance Traversable f => Traversable (Wrap f) where
 
 instance Traversable f => Traversable (WrapList f) where
@@ -268,3 +275,14 @@ instance Traversable f => Traversable (WrapList f) where
 instance (Traversable f, Traversable g) => Traversable (Compose f g) where
 
 instance Traversable Tree2 where
+
+
+-- Írjunk az alábbi datára Traversable instance-ot!
+-- Deriving semmilyen formában nem használható!
+
+data InfoTree e a = Leaf' e | Node' (InfoTree e a) e a (InfoTree e a) deriving (Foldable, Functor)
+
+instance Traversable (InfoTree e) where
+  traverse :: Applicative f => (a -> f b) -> InfoTree e a -> f (InfoTree e b)
+  traverse f (Leaf' e) = pure (Leaf' e) -- Leaf' <$> pure e
+  traverse f (Node' l e a r) = Node' <$> traverse f l <*> pure e <*> f a <*> traverse f r
