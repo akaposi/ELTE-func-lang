@@ -165,7 +165,7 @@ nonAssoc = undefined
 -- 1 * 2 + (3 * 4) + 5 + (6 + 7 * 8)
 
 -- Az alábbi lesz a kifejezésnyelvünk
-data Exp = Add Exp Exp | Mul Exp Exp | IntLit Int deriving (Eq, Show)
+data Exp = Add Exp Exp | Mul Exp Exp | IntLit Int | Pow Exp Exp | Minus Exp Exp deriving (Eq, Show)
 
 -- Kiértékelő függvény:
 evalExp :: Exp -> Int
@@ -180,6 +180,7 @@ evalExp (IntLit i) = i
 {-
 A műveleteink:
 
+    Pow | (^) | Infixr 9
     Mul | (*) | Infixl 7 <- fontos az irány (balra)
     Add | (+) | Infixl 6
 
@@ -190,19 +191,25 @@ Ez alapján a szintek:
         add : összeadás (és meghívja a mult)
 -}
 
--- ^
+-- ^ (Infixr 9)
 -- - (Infixl 4)
 -- % (Infixl 7)
 -- / (Infixl 8)
 
 pAtom :: Parser Exp
-pAtom = (IntLit <$> integer') <|> (between (char' '(') pAdd (char' ')'))
+pAtom = (IntLit <$> integer') <|> (between (char' '(') pMinus (char' ')'))
 
 pMul :: Parser Exp
-pMul = leftAssoc Mul pAtom (char' '*')
+pMul = chainl1 pExp (Mul <$ char' '*')--leftAssoc Mul pExp (char' '*')
 
 pAdd :: Parser Exp
-pAdd = leftAssoc Add pMul (char' '+')
+pAdd = chainl1 pMul (Add <$ char' '+')--leftAssoc Add pMul (char' '+')
+
+pMinus :: Parser Exp
+pMinus = chainl1 pAdd (Minus <$ char' '-')--leftAssoc Minus pAdd (char' '-')
+
+pExp :: Parser Exp
+pExp = chainr1 pAtom (Pow <$ char' '^')--rightAssoc Pow pAtom (char' '^')
 
 -- Írjunk parsert az alábbi nyelvekre!
 
@@ -243,7 +250,9 @@ evalExp'' (Var' str) lt = case lookup str lt of
 
 ---
 
-chainr1 :: Parser a->  Parser (a -> a -> a) ->  Parser a
+-- chainr1 pMul (Add <$ char' '+' <|> Sub <$ char' '-')
+
+chainr1 :: Parser a ->  Parser (a -> a -> a) ->  Parser a
 chainr1 v op = do
     val <- v
     (do
