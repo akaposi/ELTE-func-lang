@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
+module Gy09 where
+
 import Data.Functor
 import Data.Foldable
 import Data.List
@@ -165,7 +167,7 @@ nonAssoc = undefined
 -- 1 * 2 + (3 * 4) + 5 + (6 + 7 * 8)
 
 -- Az alábbi lesz a kifejezésnyelvünk
-data Exp = Add Exp Exp | Mul Exp Exp | IntLit Int | Pow Exp Exp | Minus Exp Exp deriving (Eq, Show)
+data Exp = Add Exp Exp | Mul Exp Exp | IntLit Int | Pow Exp Exp | Minus Exp Exp | Div Exp Exp | Rem Exp Exp deriving (Eq, Show)
 
 -- Kiértékelő függvény:
 evalExp :: Exp -> Int
@@ -200,8 +202,7 @@ pAtom :: Parser Exp
 pAtom = (IntLit <$> integer') <|> (between (char' '(') pMinus (char' ')'))
 
 pMul :: Parser Exp
-pMul = chainl1 pExp (Mul <$ char' '*')--leftAssoc Mul pExp (char' '*')
-
+pMul = chainl1 pExp (Mul <$ char' '*')
 pAdd :: Parser Exp
 pAdd = chainl1 pMul (Add <$ char' '+')--leftAssoc Add pMul (char' '+')
 
