@@ -1,11 +1,44 @@
 {-# language DeriveFunctor, InstanceSigs, DeriveFoldable #-}
 
--- Library
---------------------------------------------------------------------------------
-
 import Control.Monad
 import Control.Applicative
 import Data.Char
+
+
+------------------------------------------------------------
+-- Köv Kisfeladat:
+--   Haskell szintaxisú adat olvasás
+--    (pár, Maybe, lista, stb.)
+
+------------------------------------------------------------
+
+
+-- Megoldás
+
+-- Írj parser-t, ami megfelel a következő regex-nek:
+--   <[a-z]+>(,<[a-z]+>)*
+-- Nem muszáj az input végére illeszkeni.
+
+lowercase =
+  satisfy (\c -> 'a' <= c && c <= 'z')
+
+kisf :: Parser ()
+kisf = char '<' *> some_ lowercase *> char '>' *>
+       many_ (string ",<" *> some_ lowercase *> char '>')
+
+-- sepBy1-el
+kisf' :: Parser ()
+kisf' = () <$ sepBy1 (char '<' *> some_ lowercase *> char '>')
+                     (char ',')
+
+-- kód duplikáció Monad/Applicative:
+--    (>>)    (*>)
+--    return  pure
+
+-- idiomatikus: Applicative-ot preferáljuk
+
+-- Library
+--------------------------------------------------------------------------------
 
 newtype Parser a = Parser {runParser :: String -> Maybe (a, String)}
   deriving Functor
@@ -82,7 +115,11 @@ pPos = do
 
 -- Operátorok
 
--- Jobb asszociatív infix
+-- Jobb asszociatív infix:
+-- Bemenetek: (a -> a -> a)  -- függvény, amivel az eredényt kombináljuk
+--         -> Parser a       -- milyen kifejezés van az operátorok között
+--         -> Parser sep     -- operátor olvasása
+--         -> Parser a
 rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
 rightAssoc f pa psep = foldr1 f <$> sepBy1 pa psep
 
@@ -99,7 +136,7 @@ nonAssoc f pa psep = do
     [e1,e2]  -> pure (f e1 e2)
     _        -> empty
 
--- Nem láncolható prefix
+-- Nem láncolható prefix operátor
 prefix :: (a -> a) -> Parser a -> Parser op -> Parser a
 prefix f pa pop = (pop *> (f <$> pa)) <|> pa
 
@@ -130,14 +167,45 @@ string' s = string s >> ws
 satisfy' :: (Char -> Bool) -> Parser Char
 satisfy' f = satisfy f <* ws
 
+pPos' :: Parser Int
+pPos' = pPos <* ws
+
+
 -- Haskell szintaxis szerint olvass be Maybe (Int, Int) típusú értékeket!
 -- Whitespace mindenhol megengedett.
+
 pMaybePair :: Parser (Maybe (Int, Int))
-pMaybePair = undefined
+pMaybePair =
+  (do string' "Nothing"
+      return Nothing)
+  <|>
+  (do string' "Just"
+      char' '('
+      n1 <- pPos'
+      char' ','
+      n2 <- pPos'
+      char' ')'
+      return (Just (n1, n2)))
+
+-- Applicative
+pMaybePair' :: Parser (Maybe (Int, Int))
+pMaybePair' =
+      (Nothing <$ string' "Nothing")
+  <|> (Just <$> ((,) <$> (string' "Just" *> char' '(' *> pPos' <* char' ',')
+                     <*> (pPos' <* char' ')')))
 
 -- Hasonló módon, Haskell szintaxis szerint olvass [Int] értékeket
+-- Tipp: sepBy függvényt használj
 pIntList :: Parser [Int]
-pIntList = undefined
+pIntList = do
+  char' '['
+  ns <- sepBy pPos' (char' ',')
+  char' ']'
+  return ns
+
+pIntList' :: Parser [Int]
+pIntList' = char' '[' *> sepBy pPos' (char' ',') <* char' ']'
+
 
 -- Olvass [[(String, Int)]] típusú adatot a következő szintaxis szerint:
 --  - a bemenet 0 vagy több sorból áll
@@ -184,32 +252,115 @@ pKeyVals = undefined
 
 data Exp = Lit Int | Plus Exp Exp | Mul Exp Exp deriving Show
 
+-- Lit 10                                10
+-- Plus (Lit 0) (Lit 2)                  0 + 2
+-- Plus (Lit 0) (Mul (Lit 3) (Lit 5))    0 + 3 * 5
+-- Mul (Plus (Lit 0) (Lit 1)) (Lit 3)    (0 + 1) * 3
+
+-- három erősség:
+--   1. atom: literál, zárójelezett kifejezés
+--   2. (*)   jobbra asszociál
+--   3. (+)   jobbra asszociál
+
+pAtom :: Parser Exp
+pAtom = (Lit <$> pPos') <|> (char' '(' *> pPlus <* char' ')')
+    -- leggyengébb parser bármit tud olvasni
+    -- zárójel belsejében azt hívjuk meg
+
+-- szorzás kifejezés: 1 vagy több atom, *-al elválasztva
+-- végeredmény: jobbra asszociált Mul alkalmazás
+pMul :: Parser Exp
+pMul = foldr1 Mul <$> sepBy1 pAtom (char' '*')
+
+-- összeadás kifejezés: 1 vagy több szorzás kifejezés, +-al elválasztva
+pPlus :: Parser Exp
+pPlus = foldr1 Plus <$> sepBy1 pMul (char' '+')
+
+-- topLevel parser: leggyengébb függvény
+pExp :: Parser Exp
+pExp = topLevel pPlus
+
+
+-- (library függvényekkel:)
+------------------------------------------------------------
+
+-- rightAssoc használat:
+-- Bemenetek: (a -> a -> a)  -- függvény, amivel az eredényt kombináljuk
+--         -> Parser a       -- milyen kifejezés van az operátorok között
+--         -> Parser sep     -- operátor olvasása
+--         -> Parser a
+
+-- library függvényekkel ugyanez:
+pMul' :: Parser Exp
+pMul' = rightAssoc Mul pAtom (char' '*')
+
+pPlus' :: Parser Exp
+pPlus' = rightAssoc Plus pMul' (char' '+')
+
+-- Általánosan
+--------------------------------------------------------------------------------
+
+-- Van: atom, N darab operátor, erősségi sorrendben
+--      mindegyik operátor lehet: jobb asszoc, bal asszoc, nem asszoc, prefix
+
+-- rightAssoc
+-- leftAssoc
+-- nonAssoc
+-- prefix
+
+data Exp2
+  = Lit2 Bool         -- true|false
+  | Not2 Exp2         -- not e             (prefix, nem láncolható)
+  | And2 Exp2 Exp2    -- e && e            (jobb asszoc)
+  | Or2 Exp2 Exp2     -- e || e            (jobb asszoc)
+  deriving Show
+-- Zárójel és whitespace megengedett
+
+pAtom2 :: Parser Exp2
+pAtom2 =
+     (Lit2 True  <$ string' "true")
+ <|> (Lit2 False <$ string' "false")
+ <|> (char' '(' *> pOr2 <* char' ')')
+
+pNot2 :: Parser Exp2
+pNot2 = prefix Not2 pAtom2 (string' "not")
+
+pAnd2 :: Parser Exp2
+pAnd2 = rightAssoc And2 pNot2 (string' "&&")
+
+pOr2 :: Parser Exp2
+pOr2 = rightAssoc Or2 pAnd2 (string' "||")
+
+pExp2 :: Parser Exp2
+pExp2 = topLevel pOr2
+
 
 -- Kulcsszavak és azonosítók
 --------------------------------------------------------------------------------
 
 -- Írj egy parser-t, ami a következő kifejezéseket olvassa:
 
-data Exp
-  = IntLit Int        -- pozitív Int
-  | Plus Exp Exp      -- e + e
-  | Mul Exp Exp       -- e * e
-  | Var String        -- nemüres betűsorozat
-  | BoolLit Bool      -- true | false
-  | Not Exp           -- not e
-  | Eq Exp Exp        -- e == e
+
+data Exp3
+  = IntLit3 Int        -- pozitív Int
+  | Plus3 Exp3 Exp3    -- e + e
+  | Mul3 Exp3 Exp3     -- e * e
+  | Var3 String        -- nemüres betűsorozat
+  | BoolLit3 Bool      -- true | false
+  | Not3 Exp3          -- not e
+  | Eq3 Exp3 Exp3      -- e == e
    deriving Show
 
 -- Kötési erősségek:
 --   - atomok: literálok, változók, zárójelezett kifejezések
---   - not alkalmazás
+--   - not   : prefix
 --   - *     : jobbra asszociál
 --   - +     : jobbra asszociál
 --   - ==    : nem asszociatív
 
-
+-- kulcsszó: token, ami ütközhet változónevekkel
 keywords :: [String]
-keywords = undefined
+keywords = ["true", "false", "not"]
 
 -- olvassunk egy konkrét kulcsszót
 keyword :: String -> Parser ()
@@ -220,6 +371,7 @@ keyword s = do
     Just _ -> empty
     _      -> ws
 
+-- olvassunk egy azonosítót (változónevet)
 ident :: Parser String
 ident = do
   s <- some (satisfy isLetter) <* ws
