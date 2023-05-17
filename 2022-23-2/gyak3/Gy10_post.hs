@@ -6,6 +6,7 @@ import Control.Monad
 import Control.Applicative
 import Data.Char
 import Debug.Trace
+import Control.Arrow (ArrowChoice(right))
 
 -- PARSER LIBRARY
 --------------------------------------------------------------------------------
@@ -214,6 +215,7 @@ data Exp
   = IntLit Int        -- pozitív Int  1.
   | Plus Exp Exp      -- e + e        1.
   | Mul Exp Exp       -- e * e
+  | Div Exp Exp       -- e / e
   | Var String        -- nemüres betűsorozat
   | BoolLit Bool      -- true | false
   | Not Exp           -- not e
@@ -224,41 +226,81 @@ data Exp
 --   - atomok: literálok, változók, zárójelezett kifejezések
 --   - not alkalmazás
 --   - *     : jobbra asszociál
+--   - /     : jobbra asszociál
 --   - +     : jobbra asszociál
 --   - ==    : nem asszociatív
 
 -- Atomok
 ---------------------------
 
+pVar :: Parser Exp
+pVar = Var <$> some (satisfy isAlpha) <* ws
+
+pBoolLit :: Parser Exp
+pBoolLit = BoolLit <$> (True <$ string "True" <|> False <$ string "False") <* ws
+
 pIntLit :: Parser Exp
 pIntLit = IntLit <$> decimalNumber <* ws
 
 pParen :: Parser Exp
-pParen = char' '(' *> pPlus <* char' ')'
+pParen = char' '(' *> pEq <* char' ')'
 --              a leggyengébb parser
 
 pAtom :: Parser Exp
-pAtom = pIntLit <|> pParen
+pAtom = pIntLit <|> pParen <|> pBoolLit <|> pVar
 
 -- Just (  Plus (Plus (IntLit 3) (IntLit 5)) (IntLit 4)  ,"")
 -- Operátorok
 ---------------------------
 
-pPlus :: Parser Exp
-pPlus = rightAssoc Plus pAtom (char' '+')
+-- 2. Parser megírása
 
+pNot :: Parser Exp
+pNot = prefix Not pAtom (string' "not")
+
+pMul :: Parser Exp
+pMul = rightAssoc Mul pNot (char' '*')
+
+pDiv :: Parser Exp
+pDiv = rightAssoc Div pMul (char' '/')
+
+pPlus :: Parser Exp
+pPlus = rightAssoc Plus pDiv (char' '+') -- 1
+
+pEq :: Parser Exp
+pEq = nonAssoc Eq pPlus (string' "==")
 
 pExp :: Parser Exp
-pExp = topLevel pPlus
+pExp = topLevel pEq
 -- leggyengébb operátorral kezdjük
 
-evalExp :: Exp -> Int
-evalExp (IntLit i) = i
-evalExp (Plus e1 e2) = evalExp e1 + evalExp e2 
+data Val = VInt Int | VString String | VBool Bool
+  deriving (Show, Eq)
 
-evalString :: String -> Int
+evalExp :: Exp -> Val
+evalExp (BoolLit b) = VBool b
+evalExp (Var s) = VString s
+evalExp (IntLit i) = VInt i
+-- evalExp (Plus e1 e2) = evalExp e1 + evalExp e2
+evalExp (Plus e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VInt $ i + i2
+  _ -> error "type error"
+evalExp (Mul e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VInt $ i * i2
+  _ -> error "type error"
+evalExp (Div e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VInt $ div i i2
+  _ -> error "type error"
+evalExp (Not e) = case evalExp e of
+  VBool b -> VBool (not b)
+  _ -> error "type error"
+evalExp (Eq e1 e2) = case (evalExp e1, evalExp e2) of
+  (val1, val2) -> VBool $ val1 == val2
+-- 3.
+
+evalString :: String -> Val
 evalString str = case runParser pExp str of
-  Nothing -> 0
+  Nothing -> error "type error"
   Just (e,str) -> evalExp e
 
 
