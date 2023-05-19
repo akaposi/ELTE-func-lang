@@ -123,17 +123,25 @@ chainl1 v op = v >>= parseLeft
             parseLeft (opr val val2)) <|> pure val
 
 
-data Exp = Add Exp Exp | Mul Exp Exp | IntLit Int | Var String deriving (Eq, Show)
+data Exp = Or Exp Exp | And Exp Exp | Add Exp Exp | Mul Exp Exp | IntLit Int | Var String | BoolLit Bool deriving (Eq, Show)
 
+pBool :: Parser Exp
+pBool = BoolLit <$> (True <$ string' "true" <|> False <$ string' "false")
 
 pAtom :: Parser Exp
-pAtom = (IntLit <$> natural') <|> between (char' '(') pAdd (char' ')')
+pAtom = (IntLit <$> natural') <|> pBool <|> (Var <$> some (satisfy isLetter) <* ws) <|> between (char' '(') pAt (char' ')')
 
 pMul :: Parser Exp
-pMul = chainl1 pAtom (Mul <$ char' '*')
+pMul = chainl1 pHash (Mul <$ char' '*')
 
 pAdd :: Parser Exp
 pAdd = chainl1 pMul (Add <$ char' '+')
+
+pAt :: Parser Exp
+pAt = chainl1 pAdd (And <$ char' '|')
+
+pHash :: Parser Exp
+pHash = chainr1 pAtom (Or <$ char' '&')
 
 -- Egészítsük ki a nyelvet
 -- negálás (prefix) művelettel
@@ -146,8 +154,8 @@ pAdd = chainl1 pMul (Add <$ char' '+')
 
 data Statement
  = Assign String Exp -- e := kif
- | If Exp [Statement]  -- if kif do p₁ end
- | For Exp [Statement] -- for kif do p₁ end
+ | If Exp [Statement]  -- if kif then p₁ end
+ | While Exp [Statement] -- while kif do p₁ end
 
 keywords :: [String]
 keywords = [ "for", "if", "do", "end", "true", "false" ]
@@ -169,10 +177,12 @@ pKeyword' s = do
 -- Program parser
 -- Legyenek ;-el elválasztva
 program :: Parser [Statement]
-program = undefined
+program = sepBy1  statement (char' ';')
 
 statement :: Parser Statement
-statement = undefined
+statement = (Assign <$> pIdent' <*> (string' ":=" *> (pAdd <* ws)))
+  <|> If <$> (pKeyword' "if" *> (pAdd <* ws)) <*> (pKeyword' "then" *> program) <* pKeyword' "end"
+  <|> While <$> (pKeyword' "while" *> (pAdd <* ws)) <*> (pKeyword' "do" *> program) <* pKeyword' "end"
 
 -- Eredményes típusa:
 data Val = VInt Int | VBool Bool
@@ -191,8 +201,24 @@ updateEnv x v ((y, v') : env)
 
 -- Kifejezés kiértékelése
 evalExp :: Env -> Exp -> Val
-evalExp = undefined
-
+evalExp env exp = case exp of
+  Mul exp1 exp2 -> case (evalExp env exp1, evalExp env exp2) of
+    (VInt a, VInt b) -> VInt (a * b)
+    _                -> error "Type mismatch"
+  Add exp1 exp2 -> case (evalExp env exp1, evalExp env exp2) of
+    (VInt a, VInt b) -> VInt (a + b)
+    _                -> error "Type mismatch"
+  Or exp1 exp2 -> case (evalExp env exp1, evalExp env exp2) of
+    (VBool a, VBool b) -> VBool (a || b)
+    _                -> error "Type mismatch"
+  And exp1 exp2 -> case (evalExp env exp1, evalExp env exp2) of
+    (VBool a, VBool b) -> VBool (a && b)
+    _                -> error "Type mismatch"
+  IntLit i -> VInt i
+  BoolLit b -> VBool b
+  Var string -> case lookup string env of
+    Just v -> v
+    Nothing -> error "Variable not in scope"
 
 -- State
 
@@ -218,7 +244,28 @@ modify f = get >>= put . f
 -- Értékeljünk ki egy állítást!
 -- Tároljuk state-ben az Env-et
 evalStatement :: Statement -> State Env ()
-evalStatement = undefined
+evalStatement st = case st of
+  If exp prog -> do
+    env <- get
+    case evalExp env exp of
+      (VBool True) -> inNewScope $ mapM_ evalStatement prog
+      _            -> pure ()
+  While exp prog -> while exp prog
+  Assign nam exp -> do
+    env <- get
+    put (updateEnv nam (evalExp env exp) env)
+
+while :: Exp -> [Statement] -> State Env ()
+while cond sts = do
+  env <- get
+  case evalExp env cond of
+    (VBool True) -> inNewScope $ mapM_ evalStatement sts *> while cond sts
+    _            -> pure ()
+
+
+evalProgramm :: [Statement] -> Env
+evalProgramm st = case runState (mapM_ evalStatement st) [] of
+  (_, env) -> env
 
 -- Ha valami newScope-ban fut, akkor a futás után az újonnan felvett változókat
 -- eldobjuk az Env-ből.
