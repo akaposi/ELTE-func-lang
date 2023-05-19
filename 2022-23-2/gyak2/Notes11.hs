@@ -8,6 +8,45 @@ import Control.Monad
 import Debug.Trace
 import Data.Char
 
+-- Következő kisfeladat
+--------------------------------------------------------------------------------
+
+-- bármilyen korábbi kisfeladat (hoz hasonló)
+
+
+-- Kisfeladat megoldás
+--------------------------------------------------------------------------------
+
+pEitherIntInt :: Parser (Either Int Int)
+pEitherIntInt =
+      (do string' "Left"
+          n <- posInt'
+          pure (Left n))
+  <|> (do string' "Right"
+          n <- posInt'
+          pure (Right n))
+
+-- Monádikus:
+p :: Parser (Either Int Int, Int)
+p = topLevel $ do
+  char' '('
+  eab <- pEitherIntInt
+  char' ','
+  n <- posInt'
+  char' ')'
+  pure (eab, n)
+
+
+pEitherIntInt' :: Parser (Either Int Int)
+pEitherIntInt' =
+      (Left  <$> (string' "Left"  *> posInt'))
+  <|> (Right <$> (string' "Right" *> posInt'))
+
+-- Applicative
+p' :: Parser (Either Int Int, Int)
+p' = topLevel
+     ((,) <$> (char' '(' *> pEitherIntInt' <* char' ',')
+          <*> (posInt' <* char' ')'))
 
 -- State
 --------------------------------------------------------------------------------
@@ -156,6 +195,7 @@ topLevel p = ws *> p <* eof
   - Egészítsd ki a parser-t és az interpretert.
      - Egészítsd ki az Exp típust a megfelelő konstruktorokkal, amelyek
          az fst, snd és párképzés műveleteket reprezentálják.
+
   - interpreter:
      - Egészíts ki a Val típust értékek párjaival.
      - Az fst és snd típushibát dob, ha nem pár értéket kap.
@@ -173,6 +213,11 @@ data Exp =
   | Not Exp             -- not e
   | Eq Exp Exp          -- e == e
   | Var String          -- (változónév)
+
+  | Pair Exp Exp        -- (e, e)
+  | Fst Exp             -- fst e
+  | Snd Exp             -- snd e
+
   deriving (Eq, Show)
 
 {-
@@ -196,7 +241,9 @@ posInt' = do
   pure (read digits)
 
 keywords :: [String]
-keywords = ["not", "true", "false", "while", "if", "do", "end", "then", "else"]
+keywords = [
+    "not", "true", "false", "while", "if"
+  , "do", "end", "then", "else", "fst", "snd"]
 
 ident' :: Parser String
 ident' = do
@@ -214,17 +261,44 @@ keyword' s = do
     Just _ -> empty
     _      -> ws
 
+pPair :: Exp -> Parser Exp
+pPair e = do
+  char' ','
+  e' <- pExp
+  char' ')'
+  pure (Pair e e')
+
+pParen :: Exp -> Parser Exp
+pParen e = do
+  char' ')'
+  pure e
+
+pPairOrParen :: Parser Exp
+pPairOrParen = do
+  char' '('
+  e <- pExp
+  pPair e <|> pParen e
+
 atom :: Parser Exp
 atom =
         (Var <$> ident')
     <|> (IntLit <$> posInt')
     <|> (BoolLit True <$ keyword' "true")
     <|> (BoolLit False <$ keyword' "false")
-    <|> (char' '(' *> pExp <* char' ')')
+    <|> pPairOrParen
 
-notExp :: Parser Exp
-notExp =  (keyword' "not" *> (Not <$> atom))
-    <|> atom
+    -- lassú verzió:
+    -- <|> (char' '(' *> pExp <* char' ')')
+    -- <|> (Pair <$> (char' '(' *> pExp)
+    --           <*> (char' ',' *> pExp <* char' ')'))
+
+    -- (lassú verzióból gyors verzió: "left factoring")
+    --   (p1 *> p2) <|> (p1 *> p3)    -->    p1 *> (p2 <|> p3)
+
+-- mindegy, hogy prefix operátorokat milyen sorrendben hívok
+sndExp = prefix Snd atom   (keyword' "snd")
+fstExp = prefix Fst sndExp (keyword' "fst")
+notExp = prefix Not fstExp (keyword' "not")
 
 mulExp :: Parser Exp
 mulExp = rightAssoc Mul notExp (char' '*')
@@ -247,18 +321,23 @@ eqExp = nonAssoc Eq orExp (string' "==")
 pExp :: Parser Exp
 pExp = eqExp
 
-data Val = VInt Int | VBool Bool
+-- extra: értékek párja
+data Val = VInt Int | VBool Bool | VPair Val Val
   deriving (Eq, Show)
 
-type Env = [(String, Val)]
+type Env = [(String, Val)]  -- értékek környezete: minden névhez egy érték
+
+-- x + y + 1000;
 
 evalExp :: Env -> Exp -> Val
 evalExp env e = case e of
   IntLit n  -> VInt n
   BoolLit b -> VBool b
+
   Add e1 e2 -> case (evalExp env e1, evalExp env e2) of
     (VInt n1, VInt n2) -> VInt (n1 + n2)
     _                  -> error "type error"
+
   Sub e1 e2 -> case (evalExp env e1, evalExp env e2) of
     (VInt n1, VInt n2) -> VInt (n1 - n2)
     _                  -> error "type error"
@@ -271,17 +350,29 @@ evalExp env e = case e of
   And e1 e2 -> case (evalExp env e1, evalExp env e2) of
     (VBool b1, VBool b2) -> VBool (b1 && b2)
     _                    -> error "type error"
+
   Eq e1 e2 -> case (evalExp env e1, evalExp env e2) of
     (VBool b1, VBool b2) -> VBool (b1 == b2)
     (VInt n1,  VInt n2 ) -> VBool (n1 == n2)
     _                    -> error "type error"
+
   Not e -> case evalExp env e of
     VBool b -> VBool (not b)
     _       -> error "type error"
+
   Var x -> case lookup x env of
     Just v  -> v
     Nothing -> error $ "name not in scope: " ++ x
 
+  Pair e1 e2 -> VPair (evalExp env e1) (evalExp env e2)
+
+  Fst e -> case evalExp env e of
+    VPair v _ -> v
+    _         -> error "type error"
+
+  Snd e -> case evalExp env e of
+    VPair _ v -> v
+    _         -> error "type error"
 
 --------------------------------------------------------------------------------
 
@@ -306,15 +397,23 @@ statement =
 program :: Parser Program
 program = sepBy statement (char' ';')
 
+
 -- Ha valami newScope-ban fut, akkor a futás után az újonnan felvett változókat
 -- eldobjuk az Env-ből.
 inNewScope :: State Env a -> State Env a
 inNewScope ma = do
-  l <- length <$> get
-  a <- ma
-  modify (take l)
+  l <- length <$> get  -- környezet (lista) hossza
+  a <- ma              -- fut a művelet
+  modify (take l)      -- vesszük az első "l" elemet
   pure a
 
+-- inNewScope $ do
+--    ...
+--    ...
+
+-- updateEnv x v env
+-- Ha (x, _) pár a környezetben van, akkor (x, v)-re cseréli.
+-- Ha nincs a környezetben, akkor a végére teszi (x, v)-t.
 updateEnv :: String -> Val -> Env -> Env
 updateEnv x v [] = [(x, v)]
 updateEnv x v ((y, v'):env)
@@ -324,7 +423,7 @@ updateEnv x v ((y, v'):env)
 evalStatement :: Statement -> State Env ()
 evalStatement st = case st of
 
-  Assign x e -> do
+  Assign x e -> do                -- x := e
     env <- get
     let val = evalExp env e
     put $ updateEnv x val env
@@ -334,13 +433,17 @@ evalStatement st = case st of
     case evalExp env e of
       VBool True  -> inNewScope (evalProgram p) >> evalStatement (While e p)
       VBool False -> pure ()
+      -- _           -> error "type error"
       VInt _      -> error "type error"
+      VPair _ _   -> error "type error"
+
   If e p1 p2 -> do
     env <- get
     case evalExp env e of
       VBool True  -> inNewScope (evalProgram p1)
       VBool False -> inNewScope (evalProgram p2)
       VInt _      -> error "type error"
+      VPair _ _   -> error "type error"
 
 evalProgram :: Program -> State Env ()
 evalProgram = mapM_ evalStatement

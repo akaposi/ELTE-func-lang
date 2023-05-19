@@ -35,6 +35,9 @@ execState sta s = snd (runState sta s)
 
 
 -- FELADATOK (1. sor)
+-- Összesen: 20 pont
+-- ~8-10 kis feladat: összesen 10-12 pont
+
 --------------------------------------------------------------------------------
 
 data Either' a b = Left' a | Right' b | Both a b
@@ -106,6 +109,7 @@ treeSums = undefined
 -- Feladatok (2.sor)
 --------------------------------------------------------------------------------
 
+-- (nehezebb, mint ami átlagosan vizsgán várható)
 data RoseTree a = Branch a [RoseTree a]
   deriving (Eq, Ord, Show)
 
