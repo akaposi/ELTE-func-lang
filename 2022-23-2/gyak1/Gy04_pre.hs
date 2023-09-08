@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 {-# LANGUAGE InstanceSigs, DeriveFunctor #-}
 
-module Gy04 where
+module Gy04_pre where
 
 import Control.Applicative hiding (ZipList(..))
 import Prelude hiding (Maybe(..), Either(..))
