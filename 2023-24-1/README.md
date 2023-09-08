@@ -1,4 +1,4 @@
-# Funckionális nyelvek (IPM-18sztKVFPNYEG, IP-18KVFPNYEG, IPM-18EsztKVFPNYEG), 2024 ösz, EA + GY
+# Funckionális nyelvek (IPM-18sztKVFPNYEG, IP-18KVFPNYEG, IPM-18EsztKVFPNYEG), 2024 ősz, EA + GY
 
 #### Oktatásforma
 
