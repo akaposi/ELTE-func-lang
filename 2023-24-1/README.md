@@ -1,4 +1,10 @@
-# Funckionális nyelvek (IPM-18sztKVFPNYEG, IP-18KVFPNYEG, IPM-18EsztKVFPNYEG), 2024 ősz, EA + GY
+# Funckionális nyelvek, 2024 ősz, EA + GY
+
+Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
+
+ * BSc: IP-18KVFPNYEG
+ * MSc: IPM-18sztKVFPNYEG
+ * MSc esti: IPM-18EsztKVFPNYEG
 
 #### Oktatásforma
 
