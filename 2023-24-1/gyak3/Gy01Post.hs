@@ -220,7 +220,7 @@ instance Eq' a => Eq' (Maybe a) where
 
 instance Ord' a => Ord' (Maybe a) where
 	lte Nothing _ = True
-	lte (Just a) Nothing = False
+	lte (Just _) Nothing = False
 	lte (Just a) (Just b) = lte a b
 
 instance Show' a => Show' (Maybe a) where
@@ -234,11 +234,9 @@ instance Eq' a => Eq' [a] where
 
 instance Ord' a => Ord' [a] where
 	lte [] _ = True
-	lte (x:xs) (y:ys) = case (lte x y,lte y x) of
-		(True,True) -> lte xs ys
-		(False,True) -> False
-		(True,False) -> True
-		(_,_) -> False
+	lte (x:xs) (y:ys) = case eq x y of
+		True -> lte xs ys
+		False -> lte x y
 	lte (x:xs) [] = False
 
 instance Show' a => Show' [a] where
@@ -249,10 +247,18 @@ instance Show' a => Show' [a] where
 		(s:ss) -> "[" ++ show' x ++ "," ++ ss
 
 instance Eq' a => Eq' (Tree a) where
-	eq = undefined
+	eq (Leaf a) (Leaf b) = eq a b
+	eq (Node a b) (Node c d) = eq a c && eq b d
+	eq _ _ = False
 
 instance Ord' a => Ord' (Tree a) where
-	lte = undefined
+	lte (Leaf a) (Leaf b) = lte a b
+	lte (Leaf _) (Node _ _) = True
+	lte (Node _ _) (Leaf _) = False
+	lte (Node a b) (Node c d) = case eq a c of
+		False -> lte a c
+		True -> lte b d
 
 instance Show' a => Show' (Tree a) where
-	show' = undefined
+	show' (Leaf a) = show' a
+	show' (Node a b) = "(" ++ (show' a) ++ "," ++ (show' b) ++ ")"
