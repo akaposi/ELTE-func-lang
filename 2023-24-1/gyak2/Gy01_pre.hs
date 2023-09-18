@@ -1,14 +1,10 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
-{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE InstanceSigs, LambdaCase #-}
 
 module Gy01 where
 
 {-
 
-Funkcionális Nyelvek (IP-18KVFPNYEG) 1. Gyakorlat
-
-Terem: Lágymányosi Déli Tömb 2-709
-Időpont: Szerda 17:45 - 19:15
 
 Tematika:
 - Canvas EA oldalán olvasható a hosszab verzió
@@ -25,7 +21,7 @@ Tematika:
 - A tárgyon tetszőleges IDE és szoftver használható (VSCode, Emacs, Neovim stb) beleértve a Haskell Language Servert
 - KisZH folyamán tetszőleges segédezköz használható emberi segítségen kívül (Vizsga TBA)
 
-- Órai file-ok: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2022-23-2/gyak1
+- Órai file-ok: https://github.com/AndrasKovacs/ELTE-func-lang/tree/master/2023-24-1/gyak1
 - GyXX_pre.hs = Óra előtti fájl
 - GyXX.hs     = Óra utáni fájl
 
@@ -50,17 +46,29 @@ Pragmák:
 
 -}
 
+alma :: Int
+alma = 1
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 -- Definiáld az "xor" függvényt a Bool típuson.
 xor :: Bool -> Bool -> Bool
-xor = undefined
+xor x y = not (x == y)
 
 xor' :: Bool -> Bool -> Bool
-xor' = undefined
+xor' True False = True
+xor' False True = True
+xor' True True = False
+xor' False False = False
 
 xor'' :: Bool -> Bool -> Bool
-xor'' = undefined
+xor'' True True = False
+xor'' False False = False
+xor'' _ _ = True
+
+xor''' :: Bool -> Bool -> Bool
+xor''' x y = case x of
+  True -> not y
+  False -> y
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -81,11 +89,11 @@ twelve' = let x = 6 in x + x
 
 -- Polimorfizmus: A függvény tetszőleges típusokra működik
 id' :: a -> a
-id' = undefined
+id' x = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (a , (b , (c , d))) = (b,c)
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -93,32 +101,33 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 f a = f a
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 f g a = f (g a)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 f x y = f y x
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
 -- snd :: (a,b) -> b
 
+--    |          |    O      O    X
 f5 :: ((a,b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
-f5 = undefined
+f5 f a b = f (a,b)
 
 f6 :: (a -> b -> c) -> (a,b) -> c
-f6 = undefined
+f6 x (y,z) = x y z
 
 -- Ha az eredménybe függvényt kell megadni használj lambdákat!
 -- pl.: \x -> x
 
 f7 :: (a -> (b,c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\a -> fst (f a) , snd . f)
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
-f8 = undefined
+f8 (x,y) = \a -> (x a, y a)
 
 -- ADT-k emlékeztető:
 -- Either adattípus. Két konstruktora van, Left és Right, ami vagy a-t vagy b-t tárol:
@@ -127,11 +136,18 @@ f8 = undefined
 data Either a b = Left a | Right b
 -}
 
+data Fruit = Apple | Banana | Tomato
+
+feither :: Either a b -> Either b a
+feither (Left a) = Right a
+feither (Right b) = Left b
+
 f9 :: (Either a b -> c) -> (a -> c, b -> c)
-f9 = undefined
+f9 f = (\a -> f (Left a), \a -> f (Right a))
 
 f10 :: (a -> c, b -> c) -> (Either a b -> c)
-f10 = undefined
+f10 (f, g) (Left a) = f a
+f10 (f, g) (Right b) = g b
 
 -- Bónusz
 
@@ -147,6 +163,15 @@ f13 = undefined
 -- Listák emlékeztető
 -- Listának két konstruktora van: [] és :
 
+map' :: (a -> b) -> [a] -> [b]
+map' f [] = []
+map' f (a:as) = f a : map' f as
+
+map'' :: (a -> b) -> [a] -> [b]
+map'' f = foldr (\a b -> f a : b) []
+
+map''' :: (a -> b) -> [a] -> [b]
+map''' f xs = [ f x | x <- xs ]
 -- Definiálj egy függvényt, amely egy listányi függvényt kap paraméterül, és azokat
 -- alkalmazza a második kapott paraméterre!
 -- pl: applyMany [(+10), (*10)] 10 == [20, 100]
