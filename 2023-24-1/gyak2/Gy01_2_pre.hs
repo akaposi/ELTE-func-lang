@@ -15,7 +15,6 @@ Tematika:
   - A 13 ponton túl a KisZH és a Házik nem kötelezőek
   - Vizsgaidőszakban vizsga az egész féléves tananyagból
   - Elővizsga nincs
-  - Előadás: Csütörtök 19:30-21:00, Lágymányosi Déli Tömb 2-502 (Nem kötelező)
   - Gyakorlatról max 3-szor lehet hiányozni
 
 - A tárgyon tetszőleges IDE és szoftver használható (VSCode, Emacs, Neovim stb) beleértve a Haskell Language Servert
