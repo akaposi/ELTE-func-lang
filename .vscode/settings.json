@@ -1,7 +1,0 @@
-{
-	"[haskell]": {
-		"editor.detectIndentation": false,
-		"editor.tabSize": 2,
-		"editor.indentSize": "tabSize",
-	}
-}
