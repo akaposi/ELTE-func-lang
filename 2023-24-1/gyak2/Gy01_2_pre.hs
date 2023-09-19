@@ -159,6 +159,13 @@ f12 = undefined
 f13 :: (a -> a -> b) -> ((a -> b) -> a) -> b
 f13 = undefined
 
+
+-- Definiálj egy függvény aminek az alábbi a típusa! Más függvényt ne használj a definícióban (csak a típusok konstruktorait és projekcióit (,) Left Right fst snd)
+f :: a -> Either (a -> c) (a -> b) -> Either b c
+f a (Left ac) = Right (ac a)
+f a (Right ab) = Left (ab a)
+-- (2 pont)
+
 -- Listák emlékeztető
 -- Listának két konstruktora van: [] és :
 
@@ -202,21 +209,23 @@ class Show a where
 
 -- Egyszerű data, nincs típusparamétere
 -- Legyen két konstruktora, RGB aminek három szám paramétere van és HSL aminek szintén három szám paramétere van
-data Colour
+data Colour = RGB Int Int Int | HSL Int Int Int
 
 -- Mik a lista konstruktorai és azok paraméterei?
 -- GHCi meg tudja mondani
-data List a -- = ???
+data List a = Nil | Cons a (List a)
 
 -- Bináris fa
 -- Ilyen nincs beépítve nekünk kell kitalálni
 -- Minden belső csúcsnak pontosan 2 részfája legyen
-data Tree a
+data Tree a = Leaf | Node a (Tree a) (Tree a)
 
 -- Írjunk ezekre a datákra instance-okat!
 instance Eq Colour where
   (==) :: Colour -> Colour -> Bool -- régebbi GHC-ben nem lehetett ezt kiírni InstanceSigs nélkül
-  (==) = undefined
+  (==) (RGB r1 g1 b1) (RGB r2 g2 b2) = r1 == r2 && g1 == g2 && b1 == b2
+  (==) (HSL h1 s1 l1) (HSL h2 s2 l2) = h1 == h2 && s1 == s2 && l1 == l2
+  (==) _ _ = False
 
 instance Show Colour where
   show :: Colour -> String
@@ -232,11 +241,14 @@ instance Show a => Show (List a) where -- Extra Show a kikötés különben nem 
 
 instance Eq a => Eq (List a) where
   (==) :: List a -> List a -> Bool
-  (==) = undefined
-
+  (==) Nil Nil = True
+  (==) (Cons x xs) (Cons y ys) = x == y && xs == ys
+  (==) _ _ = False
 -- Bónusz
 instance Eq a => Eq (Tree a) where
   (==) :: Tree a -> Tree a -> Bool
-  (==) = undefined
+  (==) Leaf Leaf = True
+  (==) (Node a t1 t2) (Node a2 t3 t4) = t1 == t3 && t2 == t4 && a == a2
+  (==) _ _ = False
 
 -- Jövő heti KisZh, egy hasonló fv mint az f1-f10 és egy instance írás valami egyszerűbb datára
