@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
-{-# LANGUAGE InstanceSigs, StandaloneDeriving, QuantifiedConstraints #-}
+{-# LANGUAGE InstanceSigs, StandaloneDeriving, QuantifiedConstraints, StandaloneKindSignatures #-}
 module Gy03 where
 
 import Prelude hiding (Either(..), Maybe(..))
@@ -21,16 +21,17 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 -- Mivel a fenti típusok mind valamilyen szintent tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a1 a2) = Tuple (f a1) (f a2)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a1 a2 a3 a4 a5) = Quintuple (f a1) (f a2) (f a3) (f a4) (f a5)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f Nothing = Nothing
+mapMaybe f (Just a) = Just (f a)
 
 mapList :: (a -> b) -> List a -> List b
 mapList = undefined
