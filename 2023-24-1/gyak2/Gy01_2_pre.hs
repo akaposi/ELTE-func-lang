@@ -252,3 +252,19 @@ instance Eq a => Eq (Tree a) where
   (==) _ _ = False
 
 -- Jövő heti KisZh, egy hasonló fv mint az f1-f10 és egy instance írás valami egyszerűbb datára
+
+data Tree' a = Leaf' a | Node' (Tree' a) (Tree' a) deriving Show
+data Cookie = ChocolateChip | Mint Int | Rasin Bool deriving Show
+
+instance Eq Cookie where
+  (==) :: Cookie -> Cookie -> Bool
+  (==) ChocolateChip ChocolateChip = True
+  (==) (Mint i) (Mint j) = i == j
+  (==) (Rasin b) (Rasin c) = b == c
+  (==) _ _ = False
+
+instance Eq a => Eq (Tree' a) where
+  (==) :: Tree' a -> Tree' a -> Bool
+  (==) (Leaf' a) (Leaf' b) = a == b
+  (==) (Node' a b) (Node' c d) = a == c && b == d
+  (==) _ _ = False

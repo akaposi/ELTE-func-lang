@@ -112,6 +112,9 @@ instance Functor (BiList fixed) where
 type Lift :: (* -> *) -> * -> *
 data Lift f a = Lift (f a) deriving (Eq, Show)
 
+-- data BiTuple e a = BiTuple e a deriving (Eq, Show)
+-- data Lift    f a = Lift   (f a) deriving (Eq, Show)
+
 -- Példa:
 listOfInts :: Lift List Int
 listOfInts = Lift (Cons 1 (Cons 2 Nil))
@@ -123,7 +126,11 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance Functor f => Functor (Lift f) where
   fmap :: Functor f => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap g (Lift fa) = Lift (fmap g fa)
+
+-- f az vmi funktor
+-- g : a -> b
+-- fa : Functor f => f a
 
 -- Pár hasonló típus
 data Sum f g a = SumLeft (f a) | SumRight (g a) deriving (Eq, Show)
@@ -177,15 +184,18 @@ data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
 
 instance Functor Tree where
   fmap :: (a -> b) -> Tree a -> Tree b
-  fmap = undefined
+  fmap f Leaf = Leaf
+  fmap f (Node tr a tr') = Node (fmap f tr) (f a) (fmap f tr')
 
 instance Functor RoseTree where
   fmap :: (a -> b) -> RoseTree a -> RoseTree b
-  fmap = undefined
+  fmap f (RoseLeaf a) = RoseLeaf (f a)
+  fmap f (RoseNode as) = RoseNode (map (\a -> fmap f a) as) -- RoseTree a -> RoseTree b
 
 instance Functor Tree2 where
   fmap :: (a -> b) -> Tree2 a -> Tree2 b
-  fmap = undefined
+  fmap f (Leaf2 a) = Leaf2 (f a)
+  fmap f (Node2 l r) = Node2 (fmap f l) (fmap f r)
 
 instance Functor SkipList where
   fmap :: (a -> b) -> SkipList a -> SkipList b
