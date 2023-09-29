@@ -71,14 +71,23 @@ jegyzet átismétlése.
 
 #### Tematika
 
-- Algebrai adattípusok
-- Típusosztályok
-- Egyszerű osztályok: Eq, Ord, Show, Monoid
-- Functor, Foldable
-- Monad, egyes monádok: State, Maybe, lista, IO
-- Applicative, Traversable
-- Parser monád
-- Parser és interpreter egyszerű nyelvekhez
+|  het | eloadas | gyakorlat                                               |  
+|------|---------|---------------------------------------------------------|
+|    1 |         | ismetles                                                |
+|      |         | (,), Either, lyuk, ->, polimorfizmus, case, let, []     |
+|    2 |         | instance-ok irasa sok adattipusra                       |
+|      |         | Eq, Show, Ord, Semigroup, Monoid instance-ok            |
+|      |         | (,), Either, List, kulonbozo Tree tipusok               |
+|    3 |         | Functor, instance-ok irasa es hasznalata                |
+|    4 |         | Foldable                                                |
+|    5 |         | Monad, State, IO                                        |
+|    6 |         | Applicative, Traversable                                |
+|    7 |         | parser, regex, Alternative                              |
+|    8 |         | parser combinators                                      |
+|    9 |         | whitespace, infix parsing, simple exp language          |
+|   10 |         | while nyelv parser, interpreter                         |
+|   11 |         | while nyelv kiegeszites uj tipussal / szint.cukorkakkal |
+
 
 #### Anyagok
 
