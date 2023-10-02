@@ -158,7 +158,9 @@ instance Functor (Fun q) where
   -- fmap :: (a -> b) -> (q -> a) -> (q -> b)
   -- Hint: mi a (.) típusa?
   fmap :: (a -> b) -> Fun q a -> Fun q b
-  fmap = undefined
+  fmap f (Fun g) = Fun (f . g)
+  -- g :: q -> a
+  -- f :: a -> b
 
 
 -- Kövi órai +/- egy functor instance írása lesz
