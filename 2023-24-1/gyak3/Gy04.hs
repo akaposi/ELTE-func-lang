@@ -44,7 +44,7 @@ liftM2 :: (a -> b -> c) -> (Maybe a -> Maybe b -> Maybe c)
 liftM2 = undefined
 
 -- Ha a függvény bármire Nothing-ot ad, az eredmény legyen Nothing.
--- Egyébként a függvény alapján módosítjuk a listát.
+-- Egyébként a függvény alapján módosítjuk a fát.
 mapMaybeTree :: (a -> Maybe b) -> HTree a -> Maybe (HTree b)
 mapMaybeTree = undefined
 
