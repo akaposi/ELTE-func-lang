@@ -71,14 +71,14 @@ jegyzet átismétlése.
 
 #### Tematika
 
-|  het | eloadas | gyakorlat                                               |  
+|  hét | előadás | gyakorlat                                               |  
 |------|---------|---------------------------------------------------------|
-|    1 |         | ismetles                                                |
+|    1 |         | ismétlés                                                |
 |      |         | (,), Either, lyuk, ->, polimorfizmus, case, let, []     |
-|    2 |         | instance-ok irasa sok adattipusra                       |
+|    2 |         | instance-ok írása sok adattípusra                       |
 |      |         | Eq, Show, Ord, Semigroup, Monoid instance-ok            |
-|      |         | (,), Either, List, kulonbozo Tree tipusok               |
-|    3 |         | Functor, instance-ok irasa es hasznalata                |
+|      |         | (,), Either, List, különböző Tree típusok               |
+|    3 |         | Functor, instance-ok írása és használata                |
 |    4 |         | Foldable                                                |
 |    5 |         | Monad, State, IO                                        |
 |    6 |         | Applicative, Traversable                                |
@@ -86,7 +86,7 @@ jegyzet átismétlése.
 |    8 |         | parser combinators                                      |
 |    9 |         | whitespace, infix parsing, simple exp language          |
 |   10 |         | while nyelv parser, interpreter                         |
-|   11 |         | while nyelv kiegeszites uj tipussal / szint.cukorkakkal |
+|   11 |         | while nyelv kiegészítés új típussal / szint.cukorkákkal |
 
 
 #### Anyagok
