@@ -61,7 +61,7 @@ modify f = get >>= put . f
 -- putStrLn :: String -> IO ()      -- Ki ír egy szöveget majd sortörést
 -- print    :: Show a => a -> IO () -- Ki ír egy értéket majd sortörést
 
--- Az IO monád egy számítást képvisel ami a "való világ" állapotán változtat.
+-- Az IO monád elemei számítást képviselnek amik a "való világ" állapotán változtatnak.
 -- Két módon lehet IO-t futtatni:
 -- - GHCI-ben kiértékeled
 -- - main :: IO () függvény ha ghc fordítót használod
