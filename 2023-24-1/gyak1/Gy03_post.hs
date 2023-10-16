@@ -147,7 +147,6 @@ newtype Id a       = Id a deriving Show
 newtype Const a b  = Const a deriving Show
 newtype Fun a b    = Fun (a -> b)
 
-
 -- 2 functor törvény van
 
 -- 1. fmap id x = x
@@ -161,13 +160,20 @@ instance Functor List where
 
 
 instance Functor Maybe where
-  fmap = undefined
+  fmap f Nothing = Nothing
+  fmap f (Just a) = Just (f a)
 
 instance Functor Tree where
-  fmap = undefined
+  -- fmap :: (a -> b) -> f a -> f b -- általános
+  -- fmap :: (a -> b) -> Tree a -> Tree b
+  fmap f (Leaf a) = Leaf (f a)
+  fmap f (Node l r) = Node (fmap f l) (fmap f r)
 
 instance Functor (Either a) where
-  fmap = undefined
+  -- fmap :: (b -> c) -> f b -> f c
+  -- fmap :: (b -> c) -> Either a b -> Either a c
+  fmap f (Left a) = Left a
+  fmap f (Right b) = Right (f b)
 
 --
 
