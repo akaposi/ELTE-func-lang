@@ -41,7 +41,7 @@ A tantárgyal kapcsolatos kérdéseket a közös teams csoportban tegyétek fel.
 
 - Feladatok és vizsgák beadásának helye: https://canvas.elte.hu
 
-- Órai jegyzetek helye: https://github.com/akaposi/ELTE-func-lang/tree/master/2022-24-1
+- Órai jegyzetek helye: https://github.com/akaposi/ELTE-func-lang/tree/master/2023-24-1/ea
 
 #### Előzetes ismeretek
 
