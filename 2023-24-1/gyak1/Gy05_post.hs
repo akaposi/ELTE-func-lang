@@ -2,6 +2,7 @@
 {-# options_ghc -Wincomplete-patterns #-}
 
 import Control.Monad
+import Data.Char
 
 -- IO monád
 --------------------------------------------------------------------------------
@@ -60,26 +61,45 @@ io3' = undefined
 
 
 -- A következőt ismételd végtelenül: olvass be egy sort, majd nyomtasd ki a
--- sorban a kisbetűk számát.  A Ctrl-c-c -vel lehet megszakítani a futtatást
+-- sorban a kisbetűk számát.  A Ctrl-c -vel lehet megszakítani a futtatást
 -- ghci-ben.
 io4 :: IO ()
-io4 = undefined
+io4 = do
+  line <- getLine
+  let db = length (filter isLower line)
+  print db
+  io4
+-- io4 =
+--   getLine >>= (\line -> 
+--   print (length (filter isLower line)) >> io4)
 
 --------------------------------------------------------------------------------
 
 -- Definiáld a következő függvényeket tetszőlegesen, de típushelyesen.
 
 f1 :: Monad m => (a -> b) -> m a -> m b
-f1 = undefined
+f1 f ma = do
+   a <- ma
+   return (f a)
 
 f2 :: Monad m => m a -> m b -> m (a, b)
-f2 = undefined
+f2 ma mb = do
+  a <- ma
+  b <- mb
+  return (a, b)
 
 f3 :: Monad m => m (m a) -> m a
-f3 = undefined
+f3 mma = do
+  ma <- mma
+  ma
+  -- a <- ma
+  -- return a
 
 f4 :: Monad m => m (a -> b) -> m a -> m b
-f4 = undefined
+f4 mf ma = do
+  f <- mf
+  a <- ma
+  return (f a)
 
 f5 :: Monad m => (a -> m b) -> m a -> m b
 f5 = undefined
