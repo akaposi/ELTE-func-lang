@@ -1,8 +1,7 @@
 {-# OPTIONS_GHC -Wno-tabs -Wno-noncanonical-monad-instances #-}
-{-# LANGUAGE InstanceSigs, DeriveFunctor #-}
+{-# LANGUAGE InstanceSigs, DeriveFunctor, DeriveFoldable #-}
 
 import Data.Char
-import Data.ByteString.Internal
 import Control.Monad(ap,replicateM)
 import Prelude hiding (Traversable(..))
 
