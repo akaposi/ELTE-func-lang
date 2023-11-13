@@ -189,10 +189,9 @@ treeOfInt = undefined
 
 -- Bónusz: Írj egy parser-t, ami zárójeleket, + operátorokat és Integer literálokat tartalmazó
 -- kifejezéseket olvas! Whitespace-t mindenhol engedj meg.
---------------------------------------------------------------------------------
---   példák: 10 + 20 + 30
---           (10 + 20) + 30
---           10 + ((20 + 5))
+-- Példa: 10 + 20 + 30
+-- Példa: (10 + 20) + 30
+-- Példa: 10 + ((20 + 5))
 
 data Exp = Lit Integer | Plus Exp Exp deriving Show
 
