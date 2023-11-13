@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-tabs -Wno-noncanonical-monad-instances #-}
 {-# LANGUAGE InstanceSigs, DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
-import Control.Applicative hiding (some,many,optional,choice)
+import Control.Applicative
 import Control.Monad
 import Data.Functor
 import Data.Char
@@ -34,6 +34,27 @@ instance Monad Parser where
 	(>>=) :: Parser a -> (a -> Parser b) -> Parser b
 	(>>=) (Parser p1) f = Parser (p1 >=> uncurry (runParser . f))
 
+-- Döntés és Hiba
+instance Alternative Parser where
+	empty :: Parser a
+	empty = Parser (const empty)
+
+	(<|>) :: Parser a -> Parser a -> Parser a
+	(<|>) (Parser a) (Parser b) = Parser (\s -> a s <|> b s)
+
+-- Hiba szöveggel. Do notációban hasznos!
+instance MonadFail Parser where
+	fail :: String -> Parser a
+	fail = const empty
+
+-- Alternative és Monad kombinációja
+instance MonadPlus Parser where
+	mzero :: Parser a
+	mzero = empty
+
+	mplus :: Parser a -> Parser a -> Parser a
+	mplus = (<|>)
+
 -- Kizárólag az üres bemenetet ismeri fel
 eof :: Parser ()
 eof = Parser $ \s -> case s of
@@ -54,39 +75,6 @@ char c = void $ satisfy (==c)
 string :: String -> Parser ()
 string [] = pure ()
 string (x:xs) = char x *> string xs
-
--- Döntés és Hiba
-instance Alternative Parser where
-	empty :: Parser a
-	empty = Parser (const empty)
-
-	(<|>) :: Parser a -> Parser a -> Parser a
-	(<|>) (Parser a) (Parser b) = Parser (\s -> a s <|> b s)
-
--- optional: Futtatja v-t, ha nem sikerül Nothing-ot ad vissza
-optional :: Alternative f => f a -> f (Maybe a)
-optional v = Just <$> v <|> pure Nothing
-
--- many: 0-szor vagy többször futtatja
-many :: Alternative f => f a -> f [a]
-many v = some v <|> pure []
-
--- some: 1-szer vagy többször futtatja
-some :: Alternative f => f a -> f [a]
-some v = (:) <$> v <*> many v
-
--- Hiba szöveggel. Do notációban hasznos!
-instance MonadFail Parser where
-	fail :: String -> Parser a
-	fail = const empty
-
--- Alternative és Monad kombinációja
-instance MonadPlus Parser where
-	mzero :: Parser a
-	mzero = empty
-
-	mplus :: Parser a -> Parser a -> Parser a
-	mplus = (<|>)
 
 -- Szóközök
 ws :: Parser ()
@@ -186,6 +174,12 @@ treeOf = undefined
 
 treeOfInt :: Parser (HTree Integer)
 treeOfInt = undefined
+
+-- Írj egy Parser-t ami először beolvas egy Integer számot és utána annyi szavat olvas be.
+-- Példa: 3 rock is push
+-- Példa: 5 flag is stop and sink
+lengthPrefixed :: Parser String
+lengthPrefixed = undefined
 
 -- Bónusz: Írj egy parser-t, ami zárójeleket, + operátorokat és Integer literálokat tartalmazó
 -- kifejezéseket olvas! Whitespace-t mindenhol engedj meg.
