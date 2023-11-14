@@ -119,11 +119,11 @@ p0 = char '[' <* sepBy1 (string "baba") (char ',') <* char ']'
 -- Írjuk át a fenti p0 Parser-t úgy hogy a szavak és szimbólumok
 -- között tetszőleges szóközöket elfogadjon. (ws Parser)
 p1 :: Parser ()
-p1 = undefined
+p1 = ws <* char' '[' <* sepBy1 (string' "baba") (char' ',') <* char' ']'
 
 -- Írjuk át a fenti p1 Parser-t úgy hogy a lista hosszát adja vissza
 p2 :: Parser Integer
-p2 = undefined
+p2 = toInteger . length <$> (ws *> char' '[' *> sepBy1 (string' "baba") (char' ',') <* char' ']')
 
 -- Adott az integer parser
 integer :: Parser Integer
@@ -136,50 +136,67 @@ integer' = integer <* ws
 -- Írj egy parsert, ami felismeri Integer-ek vesszővel elválasztott listáit!
 -- Példák: "[]", "[    12 , 34555 ]", "[0,1,2,3]"
 integerList :: Parser [Integer]
-integerList = undefined
+integerList = char' '[' *> sepBy integer' (char' ',') <* char' ']'
 
 -- pList segédfüggvény: Listát olvasó parser
 pList :: Parser a -> Parser [a]
-pList = undefined
+pList a = char' '[' *> sepBy a (char' ',') <* char' ']'
 
 -- pPair segédfüggvény: Párt olvasó parser
 pPair :: Parser a -> Parser b -> Parser (a,b)
-pPair = undefined
+pPair a b = char' ',' *> ((,) <$> a <*> (char' ',' *> b <* char' ')'))
+
+bool :: Parser Bool
+bool = string "True" $> True <|> string "False" $> False
+
+bool' :: Parser Bool
+bool' = bool <* ws
 
 -- Írj egy parsert, ami felismeri Bool-ok vesszővel elválasztott listáit!
 -- Példák: "[]", "[    True , False ]", "[False,False,True,True]"
 boolList :: Parser [Bool]
-boolList = undefined
+boolList = pList bool'
+
+pMaybe :: Parser a -> Parser (Maybe a)
+pMaybe a = (Just <$> (string' "Just" *> a)) <|> Nothing <$ string' "Nothing"
 
 -- Írj egy parsert, ami [Maybe Integer] értékeket olvas be Haskell szintaxis szerint!
 -- Engedj meg bárhol whitespace-t. Milyen segédfüggvény hiányzik itt?
 listMaybeInt :: Parser [Maybe Integer]
-listMaybeInt = undefined
+listMaybeInt = pList (pMaybe integer')
 
 -- Írj egy parsert, ami [(Bool, Maybe Integer)] értékeket olvas Haskell
 -- szintaxis szerint! Engedj meg bárhol whitespace-t.
 listBoolMaybeInt :: Parser [(Bool, Maybe Integer)]
-listBoolMaybeInt = undefined
+listBoolMaybeInt = pList (pPair (bool') (pMaybe integer'))
 
 -- Írj egy parsert, ami ([Bool],[Integer]) értékeket olvas Haskell
 -- szintaxis szerint! Engedj meg bárhol whitespace-t.
 listBoolListInt :: Parser ([Bool],[Integer])
-listBoolListInt = undefined
+listBoolListInt = pPair (pList bool') (pList integer')
 
 data HTree a = HLeaf a | HNode (HTree a) (HTree a) deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
 
 -- HTree
 treeOf :: Parser a -> Parser (HTree a)
-treeOf = undefined
+treeOf a =
+	    HLeaf <$> (string' "HLeaf" *> a)
+	<|> HNode <$> (string' "HNode" *> treeOf a) <*> (treeOf a)
 
 treeOfInt :: Parser (HTree Integer)
-treeOfInt = undefined
+treeOfInt = treeOf integer'
+
+word :: Parser String
+word = some (satisfy isLetter)
+
+word' :: Parser String
+word' = word <* ws
 
 -- Írj egy Parser-t ami először beolvas egy Integer számot és utána annyi szavat olvas be.
 -- Példa: 3 rock is push
 -- Példa: 5 flag is stop and sink
 lengthPrefixed :: Parser [String]
-lengthPrefixed = undefined
+lengthPrefixed = integer >>= flip replicateM word . fromInteger
 
 -- Bónusz: Írj egy parser-t, ami zárójeleket, + operátorokat és Integer literálokat tartalmazó
 -- kifejezéseket olvas! Whitespace-t mindenhol engedj meg.
@@ -190,4 +207,6 @@ lengthPrefixed = undefined
 data Exp = Lit Integer | Plus Exp Exp deriving Show
 
 pExp :: Parser Exp
-pExp = undefined
+pExp = ws *> (Plus <$> atom <*> (char' '+' *> pExp) <|> atom)
+	where
+	atom = Lit <$> integer' <|> char' '(' *> pExp <* char' ')'
