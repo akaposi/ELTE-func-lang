@@ -195,7 +195,7 @@ data Person = MkPerson { name :: String, age :: Int, gender :: Gender }
               deriving (Eq, Show)
 
 people =
-  [ "Dominik is a 20 years old boy."
+  [ "Feri is a 30 years old boy."
   , "Mary is a 29 years old girl."
   , "Liza is an 8 years old girl."
   , "Peter is a 1 year old boy."
