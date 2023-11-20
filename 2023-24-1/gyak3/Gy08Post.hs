@@ -144,7 +144,7 @@ pList a = char' '[' *> sepBy a (char' ',') <* char' ']'
 
 -- pPair segédfüggvény: Párt olvasó parser
 pPair :: Parser a -> Parser b -> Parser (a,b)
-pPair a b = char' ',' *> ((,) <$> a <*> (char' ',' *> b <* char' ')'))
+pPair a b = char' '(' *> ((,) <$> a <*> (char' ',' *> b <* char' ')'))
 
 bool :: Parser Bool
 bool = string "True" $> True <|> string "False" $> False
