@@ -120,7 +120,7 @@ topLevel :: Parser a -> Parser a
 topLevel pa = ws *> pa <* eof
 
 -- Operátor segédfüggvények
-rightAssoc :: (a -> a -> a) -> Parser a -> Parser (a -> a -> a) -> Parser a
+rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
 rightAssoc f pa psep = foldr1 f <$> sepBy1 pa psep
 
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
