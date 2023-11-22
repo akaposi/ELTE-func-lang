@@ -157,42 +157,70 @@ data Exp =
 
 -- Szimbólum (változónév)
 pVar :: Parser Exp
-pVar = undefined
+pVar = Var <$> (some (satisfy isAlpha) <* ws)
 
 -- Természetes szám literál
 pNat :: Parser Exp
-pNat = undefined
+pNat = NatLit <$> natural'
+
+pBool :: Parser Exp
+pBool = BoolLit <$> (string' "True" $> True <|> string' "False" $> False)
 
 -- Zárójelekkel körbezárt kifejezés
 pEnclosed :: Parser Exp
-pEnclosed = undefined
+pEnclosed = char' '(' *> pExp <* char' ')'
 
 -- Környezetfüggetlen kifejezés
 atom :: Parser Exp
-atom = undefined
+atom = pVar <|> pNat <|> pBool <|> pEnclosed
 
 pNot :: Parser Exp
-pNot = undefined
+pNot = prefix Not atom (char' '!')
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = rightAssoc Mul pNot (char' '*')
 
 pAdd :: Parser Exp
-pAdd = undefined
+pAdd = rightAssoc Plus pMul (char' '+')
 
 pEq :: Parser Exp
-pEq = undefined
+pEq = nonAssoc Eq pAdd (string' "==")
 
 pExp :: Parser Exp
-pExp = undefined
+pExp = pEq
 
 -- A paraméterül kapott függvény segítségével helyettesítsük be a Var értékeket.
 substExp :: (String -> Exp) -> Exp -> Exp
-substExp = undefined
+substExp f (Plus a b) = Plus (substExp f a) (substExp f b)
+substExp f (Mul a b) = Mul (substExp f a) (substExp f b)
+substExp f (Var k) = f k
+substExp f (Not a) = Not (substExp f a)
+substExp f (Eq a b) = Eq (substExp f a) (substExp f b)
+substExp f a = a
 
 -- Írjuk meg a kifejezés kiértékelését!
 evalExp :: (String -> Maybe (Either Integer Bool)) -> Exp -> Maybe (Either Integer Bool)
-evalExp = undefined
+evalExp f (NatLit a) = pure $ Left a
+evalExp f (BoolLit a) = pure $ Right a
+evalExp f (Var s) = f s
+evalExp f (Plus a b) = do
+	(Left a) <- evalExp f a
+	(Left b) <- evalExp f b
+	return $ Left (a + b)
+evalExp f (Mul a b) = do
+	(Left a) <- evalExp f a
+	(Left b) <- evalExp f b
+	return $ Left (a * b)
+evalExp f (Not a) = do
+	(Right a) <- evalExp f a
+	return $ Right (not a)
+evalExp f (Eq a b) = do
+	a <- evalExp f a
+	b <- evalExp f b
+	case (a,b) of
+		(Left a,Left b) -> return $ Right (a == b)
+		(Right a,Right b) -> return $ Right (a == b)
+		(_,_) -> Nothing
 
 -- További gyakorlásként adjunk hozzá a kifejezésfához még több operátort.
 
@@ -222,5 +250,20 @@ reduce (App a b) = case reduce a of
 	a -> App a b
 reduce s = s
 
+ptVar :: Parser Tm
+ptVar = TVar <$> (some (satisfy isAlpha) <* ws)
+
+ptEnclosed :: Parser Tm
+ptEnclosed = char' '(' *> pTm <* char' ')'
+
+ptAtom :: Parser Tm
+ptAtom = ptVar <|> ptEnclosed
+
+ptApp :: Parser Tm
+ptApp = leftAssoc App ptAtom (pure ())
+
+ptLambda :: Parser Tm
+ptLambda = (flip (foldr Lam)) <$> (char' '\\' *> some (some (satisfy isAlpha)) <* ws) <* string' "->" <*> ptLambda <|> ptApp
+
 pTm :: Parser Tm
-pTm = undefined
+pTm = ptLambda
