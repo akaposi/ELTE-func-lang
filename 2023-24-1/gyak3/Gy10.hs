@@ -233,6 +233,7 @@ data Statement
 	= Assign String Exp       -- <var> := <e>
 	| While Exp Program       -- while <e> do <prog> end
 	| If Exp Program Program  -- if <e> then <prog> else <prog> end
+	| Print Exp
 	deriving (Eq, Show)
 
 -- Statement szintaxisban nem kell precendenciával foglalkozni, mert valójában
