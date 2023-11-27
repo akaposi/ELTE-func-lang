@@ -149,9 +149,6 @@ data Exp =
 	| Not Exp             -- not e
 	| Eq Exp Exp          -- e == e
 	| Var String          -- (változónév)
-	| Pair Exp Exp        -- (e, e)
-	| Fst Exp             -- fst e
-	| Snd Exp             -- snd e
 	deriving (Eq, Show)
 
 {-
