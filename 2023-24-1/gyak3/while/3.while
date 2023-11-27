@@ -1,0 +1,11 @@
+
+a := 15;
+b := 3;
+c := 0;
+
+while a != 0 do
+	a := a - b;
+	c := c + 1;
+end;
+
+print c;
