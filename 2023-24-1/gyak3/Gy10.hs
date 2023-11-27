@@ -313,12 +313,12 @@ inNewScope :: StateF Env a -> StateF Env a
 inNewScope = undefined
 
 -- Értékeljük ki az utasítást.
-evalStatement :: Statement -> StateF Env ()
+evalStatement :: Statement -> StateF Env String
 evalStatement = undefined
 
 -- Futtassuk a programot.
 -- Tipp 1: Hogyan van a program definiálva?
 -- Tipp 2: Melyik típusosztály függvény válik hasznunkra?
-evalProgram :: Program -> StateF Env ()
+evalProgram :: Program -> StateF Env String
 evalProgram = undefined
 
