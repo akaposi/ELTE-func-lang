@@ -1,0 +1,10 @@
+
+a := 5 + 3;
+
+print a;
+
+if a == 10 then
+	print false
+else
+	print true
+end
