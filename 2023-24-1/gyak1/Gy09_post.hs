@@ -200,7 +200,7 @@ listMaybeInt = pList maybeIntParser
 
 maybeIntParser :: Parser (Maybe Int)
 maybeIntParser = Nothing <$ string "Nothing" <|> Just <$> (string "Just " >> ws >> posInt)
-Just <$> (string "Just " >> ws >> posInt) <|> Nothing <$ (many (satisfy (!=' ')))
+-- Just <$> (string "Just " >> ws >> posInt) <|> Nothing <$ (many (satisfy (!=' ')))
 
 -- Extra: Írj egy parsert, ami [(Bool, Maybe Int)] értékeket olvas Haskell
 -- szintaxis szerint! Engedj meg bárhol whitespace-t.
@@ -236,7 +236,19 @@ people =
   ]
 
 person :: Parser Person
-person = undefined
+person = do
+  fstLetter <- inList['A'..'Z']
+  rest <- some (inList ['a'..'z'])
+  string " is a"
+  optional (char 'n')
+  char ' '
+  age <- posInt
+  string " year"
+  optional (char 's')
+  string " old "
+  gender <- Boy <$ string "boy." <|> Girl <$ string "girl."
+  return (MkPerson (fstLetter : rest) age gender)
+
 
 -- Írj egy parser-t, ami zárójeleket, +-t és pozitív Int literálokat tartalmazó
 -- kifejezéseket olvas! (Lásd előadás) Whitespace-t mindenhol engedj meg.
