@@ -94,7 +94,7 @@ fold f (N i l r) = f (N' i (fold f l) (fold f r))
 -- fold' :: x -> (Int -> x -> x -> x) -> T -> x
 
 -- types for inherited and synthesized attributes
-type I = [[Int]]
+type I = [[Int]]      -- "labels for each level"
 type S = (T, [[Int]]) -- the labelled tree and the remaining labels
 
 f :: F (I->S) -> (I -> S)
@@ -108,7 +108,7 @@ labelT :: T -> T
 labelT L         = L
 labelT (N _ l r) = N 1 l' r'
     where
-      (l', xss) = fold f l ([2..]:yss)
+      (l', xss) = fold f l ([2..]:yss)  -- this relies on laziness
       (r', yss) = fold f r xss
 
 ex :: T
