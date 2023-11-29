@@ -114,6 +114,19 @@ topLevel pa = ws *> pa <* eof
 
 -- number parsing
 
+-- intBoolTupleParser :: Parser (Int, Bool)
+-- intBoolTupleParser = do
+--   char' '('
+--   num <- posInt
+--   ws
+--   char' ','
+--   bool <- (True <$ string' "True" <|> False <$ string' "False")
+--   char' ')'
+--   return (num, bool)
+-- intBoolTupleParser = (,) <$> (char' '(' *> posInt <* ws <* char' ',') <*> ((True <$ string' "True" <|> False <$ string' "False") <* char' ')')
+
+
+
 pDigit :: Parser Int
 pDigit = digitToInt <$> satisfy isDigit
 
@@ -122,7 +135,8 @@ digitsToDecimalNumber :: [Int] -> Int
 digitsToDecimalNumber digits = foldl (\acc curr -> acc * 10 + curr) 0 digits
 
 digitsToDecimalFraction :: [Int] -> Float
-digitsToDecimalFraction digits = undefined
+digitsToDecimalFraction digits = foldr (\curr acc -> acc / 10.0 + fromIntegral curr) 0 (digits) / 10
+-- [1,2,6,3] -> 0.1263
 
 
 -- Non-negative decimal integer number
@@ -131,7 +145,15 @@ decimalNumber = digitsToDecimalNumber <$> some pDigit
 
 -- Non-negative decimal fractional number
 decimalFractional :: Parser Float
-decimalFractional = undefined
+decimalFractional = do
+  i <- decimalNumber
+  op <- optional (char '.')
+  case op of
+    Nothing -> return $ fromIntegral i
+    Just _ -> do 
+      frac <- (digitsToDecimalFraction <$> (some pDigit))
+      return $ (fromIntegral i) + frac
+
 
 -- Signed decimal fractional number
 signedDecimalFractional :: Parser Float
@@ -168,10 +190,32 @@ prefix f pa pop = (pop *> (f <$> pa)) <|> pa
 -- A + operátor jobbra asszociáljon, azaz pl. 1 + 2 + 3 olvasása legyen
 --  (Plus (Lit 1) (Plus (Lit 2) (Lit 3)))
 
-data Exp = Lit Int | Plus Exp Exp deriving Show
+data Exp = Lit Int | Plus Exp Exp | Mul Exp Exp deriving Show
+
+-- 5 +
+-- Nem lehet tovább bontani - a legerősebbek a nyelvben
+-- Atomok -----------
+
+pLit :: Parser Exp
+pLit = Lit <$> decimalNumber <* ws
+
+pParen :: Parser Exp
+pParen = char' '(' *> pPlus <* char' ')'
+--              leggyengébb parser
+
+pAtom :: Parser Exp
+pAtom = pLit <|> pParen
+
+-- Operátorok -----------------
+pMul :: Parser Exp
+pMul = rightAssoc Mul pAtom (char' '*')
+
+pPlus :: Parser Exp
+pPlus = rightAssoc Plus pMul (char' '+')
 
 pExp :: Parser Exp
-pExp = undefined
+pExp = pPlus
+-- leggyengébb parser
 
 -- Create an evaluator for the expressions defined above!
 evalExp :: Exp -> Int
