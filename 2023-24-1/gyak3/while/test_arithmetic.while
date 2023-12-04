@@ -1,8 +1,6 @@
 print(2+3);
 print(3-2);
 print(2*3);
-print(22/5);
-print(22%5);
 print(22<5);
 print(5<22);
 print(5>22);
@@ -13,6 +11,6 @@ print(5<=22);
 print(22<=5);
 print(22<=22);
 print(22>=22);
-print(5=22);
-print(5=5);
-print(((3+2)*4/5+1)%2);
+print(5==22);
+print(5==5);
+print((3+2)*4-1);
