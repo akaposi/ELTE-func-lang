@@ -294,7 +294,7 @@ modify f = get >>= put . f
 --------------------------------------------------------------------------------
 
 data Val = VInt Integer | VBool Bool
-  deriving (Eq, Show)
+	deriving (Eq, Show)
 
 -- Környezet: A definiált változókat és értékeiket tartalmazza
 type Env = [(String, Val)]
