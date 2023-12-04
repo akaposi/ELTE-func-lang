@@ -1,0 +1,18 @@
+x := 3;
+y := 5;
+if x > y then
+	print(x);
+else
+	print(y);
+end;
+if x < y then
+	print(x);
+else
+	print(y);
+end;
+if true then
+	print(x);
+end;
+if false then
+	print(y);
+end;

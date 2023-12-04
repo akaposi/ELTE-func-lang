@@ -1,0 +1,12 @@
+a := 1;
+b := 2;
+c := false;
+d := true;
+a := a + b;
+b := b - 1;
+c := a > b || c;
+d := not d;
+print(a);
+print(b);
+print(c);
+print(d);
