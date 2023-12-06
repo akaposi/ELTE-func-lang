@@ -239,13 +239,18 @@ data Statement
 -- Statement szintaxisban nem kell precendenciával foglalkozni, mert valójában
 -- csak "atomi" konstrukció van
 statement :: Parser Statement
-statement = undefined
+statement = 
+	    Assign <$> identifier <*> (string' ":=" *> pExp)
+	<|> While <$> (string' "while" *> pExp) <*> (string' "do" *> program <* string' "end")
+	<|> If <$> (string' "if" *> pExp) <*> (string' "then" *> program)
+		<*> (((string' "else" *> program) <|> pure []) <* string' "end")
+	<|> Print <$> (string' "print" *> pExp)
 
 -- Az utasításokat ';'-vel választjuk el.
 -- A probléma hogy néha az utolsó utasítást is egy ';' követ.
 -- Ezért hozzáadtam egy relaxedSepBy segédfüggvényt.
 program :: Parser Program
-program = undefined
+program = relaxedSepBy statement (char' ';')
 
 -- StateF
 --------------------------------------------------------------------------------
@@ -301,24 +306,96 @@ lookup a ((x,y):s) = if a == x then Just y else lookup a s
 -- Ha az adott nevű változó létezik, írjuk felül az értékét az Env-ben.
 -- Ha a változó nem létezik hozzuk létre a lista végén.
 updateEnv :: String -> Val -> Env -> Env
-updateEnv = undefined
+updateEnv s v [] = [(s,v)]
+updateEnv s v ((x,y):xys) = if s == x then (s,v):xys else (x,y):updateEnv s v xys
 
 -- Értékeljük ki a kifejezést. Ha nem sikerül, adjunk vissza egy String üzenetet a hibáról.
 evalExp :: Exp -> Env -> Either String Val
-evalExp = undefined
+evalExp (IntLit a) _ = Right $ VInt a
+evalExp (BoolLit a) _ = Right $ VBool a
+evalExp (Add a b) env = do
+	a <- evalExp a env
+	b <- evalExp b env
+	case (a,b) of
+		(VInt a,VInt b) -> Right $ VInt (a + b)
+		_ -> Left "Type error"
+evalExp (Sub a b) env = do
+	a <- evalExp a env
+	b <- evalExp b env
+	case (a,b) of
+		(VInt a,VInt b) -> Right $ VInt (a - b)
+		_ -> Left "Type error"
+evalExp (Mul a b) env = do
+	a <- evalExp a env
+	b <- evalExp b env
+	case (a,b) of
+		(VInt a,VInt b) -> Right $ VInt (a * b)
+		_ -> Left "Type error"
+evalExp (And a b) env = do
+	a <- evalExp a env
+	b <- evalExp b env
+	case (a,b) of
+		(VBool a,VBool b) -> Right $ VBool (a && b)
+		_ -> Left "Type error"
+evalExp (Or a b) env = do
+	a <- evalExp a env
+	b <- evalExp b env
+	case (a,b) of
+		(VBool a,VBool b) -> Right $ VBool (a || b)
+		_ -> Left "Type error"
+evalExp (Eq a b) env = do
+	a <- evalExp a env
+	b <- evalExp b env
+	case (a,b) of
+		(VBool a,VBool b) -> Right $ VBool (a == b)
+		(VInt a,VInt b) -> Right $ VBool (a == b)
+		_ -> Left "Type error"
+evalExp (Not a) env = do
+	a <- evalExp a env
+	case a of
+		(VBool a) -> Right $ VBool (not a)
+		_ -> Left "Type error"
+evalExp (Var a) env = do
+	case lookup a env of
+		(Just v) -> Right $ v
+		_ -> Left "Undefined"
+
 
 -- Értékeljük ki a bemenet StateF-t de utána dobjuk el az általa definiált új változókat.
 -- Milyen lista függvények segítenek itt?
 inNewScope :: StateF Env a -> StateF Env a
-inNewScope = undefined
+inNewScope s = do
+	l <- length <$> get
+	ret <- s
+	newEnv <- get
+	put (take l newEnv)
+	return ret
 
 -- Értékeljük ki az utasítást.
 evalStatement :: Statement -> StateF Env ()
-evalStatement = undefined
+evalStatement (Assign var exp) = do
+	env <- get
+	(Right r) <- return $ evalExp exp env
+	modify (updateEnv var r)
+evalStatement (While exp prog) = do
+	env <- get
+	(Right (VBool r)) <- return $ evalExp exp env
+	if r then do
+		inNewScope (evalProgram prog)
+		evalStatement (While exp prog)
+	else
+		return ()
+evalStatement (If exp yes no) = do
+	env <- get
+	(Right (VBool r)) <- return $ evalExp exp env
+	if r then
+		inNewScope (evalProgram yes)
+	else
+		inNewScope (evalProgram no)
+evalStatement (Print exp) = return ()
 
 -- Futtassuk a programot.
 -- Tipp 1: Hogyan van a program definiálva?
 -- Tipp 2: Melyik típusosztály függvény válik hasznunkra?
 evalProgram :: Program -> StateF Env ()
-evalProgram = undefined
-
+evalProgram = void . traverse evalStatement

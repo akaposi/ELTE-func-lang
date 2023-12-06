@@ -1,17 +1,17 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
-import Data.Functor
-import Data.Foldable
-import Data.List
-import Data.Char
-import Data.Traversable
-import Control.Monad
 import Control.Applicative
+import Control.Monad
+import Data.Char
+import Data.Foldable
+import Data.Functor
+import Data.List
+import Data.Traversable
 
 {-# ANN module "HLint: ignore Use lambda-case" #-}
 
-newtype Parser a = Parser { runParser :: String -> Maybe (a, String) } deriving Functor
+newtype Parser a = Parser {runParser :: String -> Maybe (a, String)} deriving (Functor)
 
 instance Applicative Parser where
   (<*>) = ap
@@ -24,16 +24,15 @@ instance Alternative Parser where
 instance Monad Parser where
   (Parser p1) >>= f = Parser $ p1 >=> \(a, s') -> runParser (f a) s'
 
-
 eof :: Parser ()
 eof = Parser $ \s -> case s of
   [] -> Just ((), [])
-  _  -> Nothing
+  _ -> Nothing
 
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy p = Parser $ \s -> case s of
-  (x:xs) | p x -> Just (x, xs)
-  _            -> Nothing
+  (x : xs) | p x -> Just (x, xs)
+  _ -> Nothing
 
 anyChar :: Parser Char
 anyChar = satisfy $ const True
@@ -48,7 +47,7 @@ string :: String -> Parser ()
 string = mapM_ char
 
 natural :: Parser Int
-natural = foldl1 (\acc a -> acc * 10 + a) <$>  some digit
+natural = foldl1 (\acc a -> acc * 10 + a) <$> some digit
 
 integer :: Parser Int
 integer = do
@@ -56,10 +55,11 @@ integer = do
   n <- natural
   case sign of
     Nothing -> pure n
-    Just _  -> pure $ negate n
+    Just _ -> pure $ negate n
 
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between left a right = do -- left *> a <* right
+between left a right = do
+  -- left *> a <* right
   left
   a' <- a
   a' <$ right
@@ -101,30 +101,32 @@ nonAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
 nonAssoc f pa psep = do
   exps <- sepBy1 pa psep
   case exps of
-    [e]      -> pure e
-    [e1,e2]  -> pure (f e1 e2)
-    _        -> empty
+    [e] -> pure e
+    [e1, e2] -> pure (f e1 e2)
+    _ -> empty
 
-chainr1 :: Parser a ->  Parser (a -> a -> a) ->  Parser a
+chainr1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 chainr1 v op = do
-    val <- v
-    (do
-        opr <- op
-        res <- chainr1 v op
-        pure (opr val res)
-        ) <|> pure val
+  val <- v
+  ( do
+      opr <- op
+      res <- chainr1 v op
+      pure (opr val res)
+    )
+    <|> pure val
 
-chainl1 :: Parser a ->  Parser (a -> a -> a) -> Parser a
+chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 chainl1 v op = v >>= parseLeft
-    where
-        parseLeft val = (do
-            opr <- op
-            val2 <- v
-            parseLeft (opr val val2)) <|> pure val
-
+  where
+    parseLeft val =
+      ( do
+          opr <- op
+          val2 <- v
+          parseLeft (opr val val2)
+      )
+        <|> pure val
 
 data Exp = Add Exp Exp | Mul Exp Exp | IntLit Int | Var String deriving (Eq, Show)
-
 
 pAtom :: Parser Exp
 pAtom = (IntLit <$> natural') <|> between (char' '(') pAdd (char' ')')
@@ -143,14 +145,13 @@ pAdd = chainl1 pMul (Add <$ char' '+')
 -- Állítások
 -- pl.: értékadás, control flow
 
-
 data Statement
- = Assign String Exp -- e := kif
- | If Exp [Statement]  -- if kif do p₁ end
- | For Exp [Statement] -- for kif do p₁ end
+  = Assign String Exp -- e := kif
+  | If Exp [Statement] -- if kif do p₁ end
+  | For Exp [Statement] -- for kif do p₁ end
 
 keywords :: [String]
-keywords = [ "for", "if", "do", "end", "true", "false" ]
+keywords = ["for", "if", "do", "end", "true", "false"]
 
 pIdent' :: Parser String
 pIdent' = do
@@ -185,35 +186,32 @@ type Env = [(String, Val)]
 updateEnv :: String -> Val -> Env -> Env
 updateEnv x v [] = [(x, v)]
 updateEnv x v ((y, v') : env)
-  | x == y    = (x, v) : env
+  | x == y = (x, v) : env
   | otherwise = (y, v') : updateEnv x v env
-
 
 -- Kifejezés kiértékelése
 evalExp :: Env -> Exp -> Val
 evalExp = undefined
 
-
 -- State
 
-newtype State s a = State { runState :: s -> (a,s) } deriving Functor
+newtype State s a = State {runState :: s -> (a, s)} deriving (Functor)
 
 instance Applicative (State s) where
-  pure a = State $ \s -> (a,s)
+  pure a = State $ \s -> (a, s)
   (<*>) = ap
 
 instance Monad (State s) where
   (State st) >>= f = State $ \s -> let (a, s') = st s in runState (f a) s'
 
 get :: State s s
-get = State $ \s -> (s,s)
+get = State $ \s -> (s, s)
 
 put :: s -> State s ()
 put s = State $ const ((), s)
 
 modify :: (s -> s) -> State s ()
 modify f = get >>= put . f
-
 
 -- Értékeljünk ki egy állítást!
 -- Tároljuk state-ben az Env-et

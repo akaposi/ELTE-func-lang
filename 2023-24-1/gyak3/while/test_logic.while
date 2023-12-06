@@ -1,0 +1,11 @@
+print(true && true);
+print(true && false);
+print(false && true);
+print(false && false);
+print(true || true);
+print(true || false);
+print(false || true);
+print(false || false);
+print(not false);
+print(not true);
+print(not (3 < 2 && 2 < 3) || 3 - 1 == 3);
