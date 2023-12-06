@@ -190,40 +190,82 @@ prefix f pa pop = (pop *> (f <$> pa)) <|> pa
 -- A + operátor jobbra asszociáljon, azaz pl. 1 + 2 + 3 olvasása legyen
 --  (Plus (Lit 1) (Plus (Lit 2) (Lit 3)))
 
-data Exp = Lit Int | Plus Exp Exp | Mul Exp Exp deriving Show
+data Exp =
+    Lit Int
+  | Plus Exp Exp 
+  | Mul Exp Exp 
+  | Pow Exp Exp 
+  | BoolLit Bool
+  | Not Exp
+  | Eq Exp Exp
+  deriving Show
 
 -- 5 +
 -- Nem lehet tovább bontani - a legerősebbek a nyelvben
 -- Atomok -----------
 
+pBoolLit :: Parser Exp
+pBoolLit = BoolLit <$> (True <$ string' "True" <|> False <$ string' "False") <* ws
+
 pLit :: Parser Exp
 pLit = Lit <$> decimalNumber <* ws
 
 pParen :: Parser Exp
-pParen = char' '(' *> pPlus <* char' ')'
+pParen = char' '(' *> pEq <* char' ')'
 --              leggyengébb parser
 
 pAtom :: Parser Exp
-pAtom = pLit <|> pParen
+pAtom = pLit <|> pParen <|> pBoolLit
 
 -- Operátorok -----------------
+pNot :: Parser Exp
+pNot = prefix Not pAtom (char' '!')
+
+pPow :: Parser Exp
+pPow = rightAssoc Pow pNot (char' '^')
+
 pMul :: Parser Exp
-pMul = rightAssoc Mul pAtom (char' '*')
+pMul = rightAssoc Mul pPow (char' '*')
 
 pPlus :: Parser Exp
 pPlus = rightAssoc Plus pMul (char' '+')
 
+pEq :: Parser Exp
+pEq = nonAssoc Eq pPlus (string' "==")
+
 pExp :: Parser Exp
-pExp = pPlus
+pExp = topLevel pEq
 -- leggyengébb parser
 
+data Val = VInt Int | VBool Bool deriving (Show, Eq)
+
 -- Create an evaluator for the expressions defined above!
-evalExp :: Exp -> Int
-evalExp = undefined
+evalExp :: Exp -> Val
+evalExp (Lit i) = VInt i
+evalExp (BoolLit b) = VBool b
+evalExp (Plus e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VInt (i + i2)
+  _ -> error "type error"
+evalExp (Mul e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VInt (i * i2)
+  _ -> error "type error"
+evalExp (Pow e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VInt (i ^ i2)
+  _ -> error "type error"
+evalExp (Not e1) = case (evalExp e1) of
+  VBool b -> VBool (not b)
+  _ -> error "type error"
+evalExp (Eq e1 e2) = case (evalExp e1, evalExp e2) of
+  (VInt i, VInt i2) -> VBool (i == i2)
+  (VBool b, VBool b2) -> VBool (b == b2)
+  _ -> error "type error"
 
 -- Combine the parse with the evaluator!
-evalString :: String -> Int
-evalString = undefined
+evalString :: String -> Val
+evalString str = case runParser pExp str of
+  Nothing -> error "invalid expression"
+  Just (exp, _) -> evalExp exp
+
 
 -- Extend the parser and the evaluator with the multiplication operator '*',
 -- which associates to the right and has stronger precedence, than '+'!
