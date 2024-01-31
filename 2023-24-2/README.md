@@ -15,9 +15,9 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 
 - Előadás (Kaposi Ambrus): hétfő 19.30-21.00 (D-2-502)
 - Gyakorlatok:
-  + Kód: 1, szerda 17.45-19.15 (D-2-520 Mesterséges Intelligencia labor)
-  + Kód: 2, szerda 19.30-21.00 (D-2-124 Microsoft labor)
-  + Kód: 3, szerda 19.30-21.00 (D-2-520 Mesterséges Intelligencia labor)
+  + Kód: 1, szerda 17.45-19.15 (D-2-520 Mesterséges Intelligencia labor), Török Bálint Bence
+  + Kód: 2, szerda 19.30-21.00 (D-2-124 Microsoft labor), Petes Márton
+  + Kód: 3, szerda 19.30-21.00 (D-2-520 Mesterséges Intelligencia labor), Páll Dominik
 
 #### Elérhetőségek
 
