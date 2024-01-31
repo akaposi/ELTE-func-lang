@@ -35,7 +35,7 @@ A tantárgyal kapcsolatos kérdéseket a közös teams csoportban tegyétek fel.
   megnézni. Tetszőleges szövegszerkesztő használható, én személy szerint VS Code-ot vagy Emacs-ot ajánlok.
 
 - Microsoft Teams:
-  + A Teams csoport kódja: TODO
+  + A Teams csoport kódja:  l7ebybr
   + A Teams-hez inf-es felhasználónévvel és jelszóval lehet csatlakozni.
   + A Teams a tananyag megbeszélésre és kérdések feltevésére van.
 
