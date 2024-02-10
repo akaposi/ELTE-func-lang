@@ -13,7 +13,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 
 #### Időpontok és helyszínek
 
-- Előadsás (Kaposi Ambrus): Déli Tömb 2-502 (Interaktív tábla), Hétfő 19:30-21:00
+- Előadás (Kaposi Ambrus): Déli Tömb 2-502 (Interaktív tábla), Hétfő 19:30-21:00
 - Gyakorlatok:
   - 1.-es csoport (Török Bálint Bence): Déli Tömb 2-520 (Mesterséges Intelligencia labor), Szerda 17:45-19:15
   - 2.-es csoport (Petes Márton): Déli Tömb 2-124 (Microsoft Labor), Szerda 19:30-21:00
