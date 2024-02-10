@@ -11,22 +11,22 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 - A gyakorlatok jelenléti látogatása kötelező, maximum három hiányzás engedélyezett. Gyakorlatokon jelenléti ív van.
 - Az előadások látogatása (BSc hallgatóknak) kötelező.
 
-#### Időpontok és helyszínek (MÉG VÁLTOZHAT)
+#### Időpontok és helyszínek
 
-- Előadás (Kaposi Ambrus): hétfő 19.30-21.00 (D-2-502)
+- Előadsás (Kaposi Ambrus): Déli Tömb 2-502 (Interaktív tábla), Hétfő 19:30-21:00
 - Gyakorlatok:
-  + Kód: 1, szerda 17.45-19.15 (D-2-520 Mesterséges Intelligencia labor), Török Bálint Bence
-  + Kód: 2, szerda 19.30-21.00 (D-2-124 Microsoft labor), Petes Márton
-  + Kód: 3, szerda 19.30-21.00 (D-2-520 Mesterséges Intelligencia labor), Páll Dominik
+  - 1.-es csoport (Török Bálint Bence): Déli Tömb 2-520 (Mesterséges Intelligencia labor), Szerda 17:45-19:15
+  - 2.-es csoport (Petes Márton): Déli Tömb 2-124 (Microsoft Labor), Szerda 19:30-21:00
+  - 3.-as csoport (Páll Dominik): Déli Tömb 2-520 (Mesterséges Intelligencia labor), Szerda 19:30-21:00
 
 #### Elérhetőségek
 
 A tantárgyal kapcsolatos kérdéseket a közös teams csoportban tegyétek fel. Ennek előnye, hogy mások is látják a kérdést/választ.
 
 - Kaposi Ambrus, email: akaposi @ inf.elte.hu (szóköz nélkül)
-- Török Bálint Bence, email: fcjylp @ inf.elte.hu (szóköz nélkül)
+- Török Bálint Bence (Zserbó), email: fcjylp @ inf.elte.hu (szóköz nélkül)
 - Páll Dominik, email: palldominiko8 @ gmail.com (szóköz nélkül)
-- Petes Márton, email: marci.petes @ gmail.com (szóköz nélkül)
+- Petes Márton, email: tx0lwm @ inf.elte.hu (szóköz nélkül)
 
 #### Infrastruktúra
 
@@ -35,13 +35,13 @@ A tantárgyal kapcsolatos kérdéseket a közös teams csoportban tegyétek fel.
   megnézni. Tetszőleges szövegszerkesztő használható, én személy szerint VS Code-ot vagy Emacs-ot ajánlok.
 
 - Microsoft Teams:
-  + A Teams csoport kódja:  l7ebybr
+  + A Teams csoport kódja: `l7ebybr`
   + A Teams-hez inf-es felhasználónévvel és jelszóval lehet csatlakozni.
   + A Teams a tananyag megbeszélésre és kérdések feltevésére van.
 
-- Feladatok és vizsgák beadásának helye: https://canvas.elte.hu
+- Feladatok és vizsgák beadásának helye: https://tms.inf.elte.hu/student/task-manager
 
-- Órai jegyzetek helye: https://github.com/akaposi/ELTE-func-lang/tree/master/2023-24-2/ea
+- Előadás jegyzetek helye: https://github.com/akaposi/ELTE-func-lang/tree/master/2023-24-2/ea
 
 #### Előzetes ismeretek
 
@@ -53,40 +53,41 @@ jegyzet átismétlése.
 #### Követelmények
 
 - Gyakorlati követelmény:
-  + Az első gyakorlat kivételével minden gyakorlat elején 10 perces számokérés van, a megoldást
-    canvas-ra kell feltölteni. 0, 1, vagy 2 pont jár egy feladatért.
+  + Az első gyakorlat kivételével minden gyakorlat elején 10-15 perces számokérés van, a megoldást
+    TMS-be kell feltölteni. 0, 1, vagy 2 pont jár egy feladatért.
   + Három nagyobb házi feladat ki lesz írva a félév során, mindegyikért 4 pont
-    jár. Az összes nagy házi beadási határideje a vizsgaidőszak kezdete.
+    jár. Az összes nagy házi beadási határideje a vizsgaidőszak vége.
   + Minimum 13 pont szükséges a gyakorlati követelmény teljesítéséhez. Ez
     tetszőlegesen elérhető óra eleji feladatokból vagy házi feladatokból.
+  + 28 pont megszerzése esetén a vizsgán +1 jegyet lehet szerezni, legalább 2-es megszerzése esetén.
 - Gyakorlatok látogatása kötelező, maximum három hiányzás engedélyezett.
 - Az előadások látogatása (BSc hallgatóknak) kötelező.
 - A tárgyi jegy vizsgaidőszaki vizsgából áll elő. A vizsga jelenléti. A
   vizsgázás előfeltétele a gyakorlati követelmény teljesítése. A vizsga gépes
   feladmegoldásból áll és két órás. Vizsgán minden segédeszköz/internet
-  használható, viszont együttműködés más vizsgázóval vagy külső személlyel nem
-  engedélyezett, aki ezt megsérti, elégtelen jegyet kap és nem vizsgázhat újra
-  az adott vizsgaidőszakban. A vizsga megoldást akárhányszor be lehet küldeni,
-  az utolsó beküldött verzió számít.
+  használható, viszont együttműködés más vizsgázóval, külső személlyel vagy
+  mesterséges intelligenciával (ChatGPT, BingAI stb) nem engedélyezett, aki 
+  ezt megsérti, elégtelen jegyet kap és nem vizsgázhat újra az adott 
+  vizsgaidőszakban. A vizsga megoldást akárhányszor be lehet küldeni,
+  az utolsó beküldött verzió számít. A vizsgán csak az önmagában forduló 
+  kód lesz értékelve, a kommentek figyelembe lesznek véve.
 
 #### Tematika
 
-|  hét | előadás | gyakorlat                                               |  
-|------|---------|---------------------------------------------------------|
-|    1 |         | ismétlés                                                |
-|      |         | (,), Either, lyuk, ->, polimorfizmus, case, let, []     |
-|    2 |         | instance-ok írása sok adattípusra                       |
-|      |         | Eq, Show, Ord, Semigroup, Monoid instance-ok            |
-|      |         | (,), Either, List, különböző Tree típusok               |
-|    3 |         | Functor, instance-ok írása és használata                |
-|    4 |         | Foldable                                                |
-|    5 |         | Monad, State, IO                                        |
-|    6 |         | Applicative, Traversable                                |
-|    7 |         | parser, regex, Alternative                              |
-|    8 |         | parser combinators                                      |
-|    9 |         | whitespace, infix parsing, simple exp language          |
-|   10 |         | while nyelv parser, interpreter                         |
-|   11 |         | while nyelv kiegészítés új típussal / szint.cukorkákkal |
+| Hét | Előadás | Gyakorlat                                                                               |
+|-----|---------|-----------------------------------------------------------------------------------------|
+| 1   |         | Ismétlés, parametrikus ADTk (, , Either, ->), case, let kötések, Eq, Show, Ord          |
+| 2   |         | Eq, Show, Ord folytatás, Magasabbrendű polimorfizmus, Functor, Magasabbrendű megkötések |
+| 3   |         | Hajtogatás, Foldable, Semigroup, Monoid                                                 |
+| 4   |         | Monad, State, IO                                                                        |
+| 5   |         | Reader, Writer, Except, Monád transzformerek                                            |
+| 6   |         | Traversable, Applicative                                                                |
+| 7   |         | Parser, Alternative (reguláris kifejezések)                                             |
+| 8   |         | Parser kombinátorok, egyszerű kifejezésnyelv, recursive descent parsing algoritmus      |
+| 9   |         | While nyelv állításokkal, interpreter                                                   |
+| 10  |         | Monad Transformer, Interpreter kiegészítése                                             |
+| 11  |         | <Lemaradások behozása>                                                                  |
+| 12  |         | Vizsga gyakorlás                                                                        |
 
 
 #### Anyagok
