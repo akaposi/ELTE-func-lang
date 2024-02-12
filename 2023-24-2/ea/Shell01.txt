@@ -1,0 +1,858 @@
+
+[ambi@neumann:~/git/ELTE-func-lang/2023-24-2/ea]$ ghci Notes01.hs
+GHCi, version 9.4.8: https://www.haskell.org/ghc/  :? for help
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> add Zero Zero
+
+<interactive>:5:1: error:
+    • No instance for (Show Nat) arising from a use of ‘print’
+    • In a stmt of an interactive GHCi command: print it
+ghci> :i Show
+type Show :: * -> Constraint
+class Show a where
+  showsPrec :: Int -> a -> ShowS
+  show :: a -> String
+  showList :: [a] -> ShowS
+  {-# MINIMAL showsPrec | show #-}
+  	-- Defined in ‘GHC.Show’
+instance Show Double -- Defined in ‘GHC.Float’
+instance Show Float -- Defined in ‘GHC.Float’
+instance Show () -- Defined in ‘GHC.Show’
+instance (Show a, Show b) => Show (a, b) -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c) => Show (a, b, c)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d) => Show (a, b, c, d)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e) =>
+         Show (a, b, c, d, e)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f) =>
+         Show (a, b, c, d, e, f)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f,
+          Show g) =>
+         Show (a, b, c, d, e, f, g)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h) =>
+         Show (a, b, c, d, e, f, g, h)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i) =>
+         Show (a, b, c, d, e, f, g, h, i)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j) =>
+         Show (a, b, c, d, e, f, g, h, i, j)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m, Show n) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m, n)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m, Show n, Show o) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
+  -- Defined in ‘GHC.Show’
+instance Show Bool -- Defined in ‘GHC.Show’
+instance Show Char -- Defined in ‘GHC.Show’
+instance Show Int -- Defined in ‘GHC.Show’
+instance Show Integer -- Defined in ‘GHC.Show’
+instance Show a => Show (Maybe a) -- Defined in ‘GHC.Show’
+instance Show Ordering -- Defined in ‘GHC.Show’
+instance Show GHC.Types.RuntimeRep -- Defined in ‘GHC.Show’
+instance Show a => Show (Solo a) -- Defined in ‘GHC.Show’
+instance Show Word -- Defined in ‘GHC.Show’
+instance Show a => Show [a] -- Defined in ‘GHC.Show’
+instance (Show a, Show b) => Show (Either a b)
+  -- Defined in ‘Data.Either’
+ghci> :i Num
+type Num :: * -> Constraint
+class Num a where
+  (+) :: a -> a -> a
+  (-) :: a -> a -> a
+  (*) :: a -> a -> a
+  negate :: a -> a
+  abs :: a -> a
+  signum :: a -> a
+  fromInteger :: Integer -> a
+  {-# MINIMAL (+), (*), abs, signum, fromInteger, (negate | (-)) #-}
+  	-- Defined in ‘GHC.Num’
+instance Num Double -- Defined in ‘GHC.Float’
+instance Num Float -- Defined in ‘GHC.Float’
+instance Num Int -- Defined in ‘GHC.Num’
+instance Num Integer -- Defined in ‘GHC.Num’
+instance Num Word -- Defined in ‘GHC.Num’
+ghci> :i Monad
+type Monad :: (* -> *) -> Constraint
+class Applicative m => Monad m where
+  (>>=) :: m a -> (a -> m b) -> m b
+  (>>) :: m a -> m b -> m b
+  return :: a -> m a
+  {-# MINIMAL (>>=) #-}
+  	-- Defined in ‘GHC.Base’
+instance Monoid a => Monad ((,) a) -- Defined in ‘GHC.Base’
+instance (Monoid a, Monoid b) => Monad ((,,) a b)
+  -- Defined in ‘GHC.Base’
+instance (Monoid a, Monoid b, Monoid c) => Monad ((,,,) a b c)
+  -- Defined in ‘GHC.Base’
+instance Monad ((->) r) -- Defined in ‘GHC.Base’
+instance Monad IO -- Defined in ‘GHC.Base’
+instance Monad Maybe -- Defined in ‘GHC.Base’
+instance Monad Solo -- Defined in ‘GHC.Base’
+instance Monad [] -- Defined in ‘GHC.Base’
+instance Monad (Either e) -- Defined in ‘Data.Either’
+ghci> :i Show
+type Show :: * -> Constraint
+class Show a where
+  showsPrec :: Int -> a -> ShowS
+  show :: a -> String
+  showList :: [a] -> ShowS
+  {-# MINIMAL showsPrec | show #-}
+  	-- Defined in ‘GHC.Show’
+instance Show Double -- Defined in ‘GHC.Float’
+instance Show Float -- Defined in ‘GHC.Float’
+instance Show () -- Defined in ‘GHC.Show’
+instance (Show a, Show b) => Show (a, b) -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c) => Show (a, b, c)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d) => Show (a, b, c, d)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e) =>
+         Show (a, b, c, d, e)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f) =>
+         Show (a, b, c, d, e, f)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f,
+          Show g) =>
+         Show (a, b, c, d, e, f, g)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h) =>
+         Show (a, b, c, d, e, f, g, h)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i) =>
+         Show (a, b, c, d, e, f, g, h, i)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j) =>
+         Show (a, b, c, d, e, f, g, h, i, j)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m, Show n) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m, n)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m, Show n, Show o) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
+  -- Defined in ‘GHC.Show’
+instance Show Bool -- Defined in ‘GHC.Show’
+instance Show Char -- Defined in ‘GHC.Show’
+instance Show Int -- Defined in ‘GHC.Show’
+instance Show Integer -- Defined in ‘GHC.Show’
+instance Show a => Show (Maybe a) -- Defined in ‘GHC.Show’
+instance Show Ordering -- Defined in ‘GHC.Show’
+instance Show GHC.Types.RuntimeRep -- Defined in ‘GHC.Show’
+instance Show a => Show (Solo a) -- Defined in ‘GHC.Show’
+instance Show Word -- Defined in ‘GHC.Show’
+instance Show a => Show [a] -- Defined in ‘GHC.Show’
+instance (Show a, Show b) => Show (Either a b)
+  -- Defined in ‘Data.Either’
+ghci> :i Ordering
+type Ordering :: *
+data Ordering = LT | EQ | GT
+  	-- Defined in ‘GHC.Types’
+instance Monoid Ordering -- Defined in ‘GHC.Base’
+instance Semigroup Ordering -- Defined in ‘GHC.Base’
+instance Bounded Ordering -- Defined in ‘GHC.Enum’
+instance Enum Ordering -- Defined in ‘GHC.Enum’
+instance Eq Ordering -- Defined in ‘GHC.Classes’
+instance Ord Ordering -- Defined in ‘GHC.Classes’
+instance Read Ordering -- Defined in ‘GHC.Read’
+instance Show Ordering -- Defined in ‘GHC.Show’
+ghci> :i Ord
+type Ord :: * -> Constraint
+class Eq a => Ord a where
+  compare :: a -> a -> Ordering
+  (<) :: a -> a -> Bool
+  (<=) :: a -> a -> Bool
+  (>) :: a -> a -> Bool
+  (>=) :: a -> a -> Bool
+  max :: a -> a -> a
+  min :: a -> a -> a
+  {-# MINIMAL compare | (<=) #-}
+  	-- Defined in ‘GHC.Classes’
+instance Ord () -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b) => Ord (a, b) -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c) => Ord (a, b, c)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d) => Ord (a, b, c, d)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e) => Ord (a, b, c, d, e)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f) =>
+         Ord (a, b, c, d, e, f)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g) =>
+         Ord (a, b, c, d, e, f, g)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g,
+          Ord h) =>
+         Ord (a, b, c, d, e, f, g, h)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i) =>
+         Ord (a, b, c, d, e, f, g, h, i)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i, Ord j) =>
+         Ord (a, b, c, d, e, f, g, h, i, j)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i, Ord j, Ord k) =>
+         Ord (a, b, c, d, e, f, g, h, i, j, k)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i, Ord j, Ord k, Ord l) =>
+         Ord (a, b, c, d, e, f, g, h, i, j, k, l)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i, Ord j, Ord k, Ord l, Ord m) =>
+         Ord (a, b, c, d, e, f, g, h, i, j, k, l, m)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i, Ord j, Ord k, Ord l, Ord m, Ord n) =>
+         Ord (a, b, c, d, e, f, g, h, i, j, k, l, m, n)
+  -- Defined in ‘GHC.Classes’
+instance (Ord a, Ord b, Ord c, Ord d, Ord e, Ord f, Ord g, Ord h,
+          Ord i, Ord j, Ord k, Ord l, Ord m, Ord n, Ord o) =>
+         Ord (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
+  -- Defined in ‘GHC.Classes’
+instance Ord Bool -- Defined in ‘GHC.Classes’
+instance Ord Char -- Defined in ‘GHC.Classes’
+instance Ord Double -- Defined in ‘GHC.Classes’
+instance Ord Float -- Defined in ‘GHC.Classes’
+instance Ord Int -- Defined in ‘GHC.Classes’
+instance Ord Ordering -- Defined in ‘GHC.Classes’
+instance Ord a => Ord (Solo a) -- Defined in ‘GHC.Classes’
+instance Ord Word -- Defined in ‘GHC.Classes’
+instance Ord a => Ord [a] -- Defined in ‘GHC.Classes’
+instance Ord Integer -- Defined in ‘GHC.Num.Integer’
+instance Ord a => Ord (Maybe a) -- Defined in ‘GHC.Maybe’
+instance (Ord a, Ord b) => Ord (Either a b)
+  -- Defined in ‘Data.Either’
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+
+Notes01.hs:72:1: error:
+    Invalid type signature: Three :: ...
+    Suggested fix:
+      A type signature should be of form <variables> :: <type>
+   |
+72 | Three :: Nat
+   | ^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:73:23: error:
+    • Illegal term-level use of the type constructor or class ‘Nat’
+    • defined at Notes01.hs:65:1
+    • In the first argument of ‘Suc’, namely ‘Nat’
+      In the first argument of ‘Suc’, namely ‘(Suc Nat)’
+      In the first argument of ‘Suc’, namely ‘(Suc (Suc Nat))’
+   |
+73 | three = Suc (Suc (Suc Nat))
+   |                       ^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+Ok, one module loaded.
+ghci> three
+1+1+1+0
+ghci> add three three
+1+1+1+1+1+1+0
+ghci> :i Num
+type Num :: * -> Constraint
+class Num a where
+  (+) :: a -> a -> a
+  (-) :: a -> a -> a
+  (*) :: a -> a -> a
+  negate :: a -> a
+  abs :: a -> a
+  signum :: a -> a
+  fromInteger :: Integer -> a
+  {-# MINIMAL (+), (*), abs, signum, fromInteger, (negate | (-)) #-}
+  	-- Defined in ‘GHC.Num’
+instance Num Double -- Defined in ‘GHC.Float’
+instance Num Float -- Defined in ‘GHC.Float’
+instance Num Int -- Defined in ‘GHC.Num’
+instance Num Integer -- Defined in ‘GHC.Num’
+instance Num Word -- Defined in ‘GHC.Num’
+ghci> :i Integral
+type Integral :: * -> Constraint
+class (Real a, Enum a) => Integral a where
+  quot :: a -> a -> a
+  rem :: a -> a -> a
+  div :: a -> a -> a
+  mod :: a -> a -> a
+  quotRem :: a -> a -> (a, a)
+  divMod :: a -> a -> (a, a)
+  toInteger :: a -> Integer
+  {-# MINIMAL quotRem, toInteger #-}
+  	-- Defined in ‘GHC.Real’
+instance Integral Int -- Defined in ‘GHC.Real’
+instance Integral Integer -- Defined in ‘GHC.Real’
+instance Integral Word -- Defined in ‘GHC.Real’
+ghci> :i Show
+type Show :: * -> Constraint
+class Show a where
+  showsPrec :: Int -> a -> ShowS
+  show :: a -> String
+  showList :: [a] -> ShowS
+  {-# MINIMAL showsPrec | show #-}
+  	-- Defined in ‘GHC.Show’
+instance Show Nat -- Defined at Notes01.hs:75:10
+instance Show Double -- Defined in ‘GHC.Float’
+instance Show Float -- Defined in ‘GHC.Float’
+instance Show () -- Defined in ‘GHC.Show’
+instance (Show a, Show b) => Show (a, b) -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c) => Show (a, b, c)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d) => Show (a, b, c, d)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e) =>
+         Show (a, b, c, d, e)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f) =>
+         Show (a, b, c, d, e, f)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f,
+          Show g) =>
+         Show (a, b, c, d, e, f, g)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h) =>
+         Show (a, b, c, d, e, f, g, h)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i) =>
+         Show (a, b, c, d, e, f, g, h, i)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j) =>
+         Show (a, b, c, d, e, f, g, h, i, j)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m, Show n) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m, n)
+  -- Defined in ‘GHC.Show’
+instance (Show a, Show b, Show c, Show d, Show e, Show f, Show g,
+          Show h, Show i, Show j, Show k, Show l, Show m, Show n, Show o) =>
+         Show (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o)
+  -- Defined in ‘GHC.Show’
+instance Show Bool -- Defined in ‘GHC.Show’
+instance Show Char -- Defined in ‘GHC.Show’
+instance Show Int -- Defined in ‘GHC.Show’
+instance Show Integer -- Defined in ‘GHC.Show’
+instance Show a => Show (Maybe a) -- Defined in ‘GHC.Show’
+instance Show Ordering -- Defined in ‘GHC.Show’
+instance Show GHC.Types.RuntimeRep -- Defined in ‘GHC.Show’
+instance Show a => Show (Solo a) -- Defined in ‘GHC.Show’
+instance Show Word -- Defined in ‘GHC.Show’
+instance Show a => Show [a] -- Defined in ‘GHC.Show’
+instance (Show a, Show b) => Show (Either a b)
+  -- Defined in ‘Data.Either’
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+
+Notes01.hs:75:10: error:
+    • No instance for (Real Nat)
+        arising from the superclasses of an instance declaration
+    • In the instance declaration for ‘Integral Nat’
+   |
+75 | instance Integral Nat where
+   |          ^^^^^^^^^^^^
+
+Notes01.hs:75:10: error:
+    • No instance for (Enum Nat)
+        arising from the superclasses of an instance declaration
+    • In the instance declaration for ‘Integral Nat’
+   |
+75 | instance Integral Nat where
+   |          ^^^^^^^^^^^^
+Failed, no modules loaded.
+ghci> :i Integral
+type Integral :: * -> Constraint
+class (Real a, Enum a) => Integral a where
+  quot :: a -> a -> a
+  rem :: a -> a -> a
+  div :: a -> a -> a
+  mod :: a -> a -> a
+  quotRem :: a -> a -> (a, a)
+  divMod :: a -> a -> (a, a)
+  toInteger :: a -> Integer
+  {-# MINIMAL quotRem, toInteger #-}
+  	-- Defined in ‘GHC.Real’
+instance Integral Int -- Defined in ‘GHC.Real’
+instance Integral Integer -- Defined in ‘GHC.Real’
+instance Integral Word -- Defined in ‘GHC.Real’
+ghci> :i toInt
+
+<interactive>:1:1: error: Not in scope: ‘toInt’
+ghci> :i toIntegral
+
+<interactive>:1:1: error: Not in scope: ‘toIntegral’
+ghci> :i Int
+type Int :: *
+data Int = GHC.Types.I# GHC.Prim.Int#
+  	-- Defined in ‘GHC.Types’
+instance Integral Int -- Defined in ‘GHC.Real’
+instance Num Int -- Defined in ‘GHC.Num’
+instance Real Int -- Defined in ‘GHC.Real’
+instance Bounded Int -- Defined in ‘GHC.Enum’
+instance Enum Int -- Defined in ‘GHC.Enum’
+instance Eq Int -- Defined in ‘GHC.Classes’
+instance Ord Int -- Defined in ‘GHC.Classes’
+instance Read Int -- Defined in ‘GHC.Read’
+instance Show Int -- Defined in ‘GHC.Show’
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:81:27: error:
+    Ambiguous occurrence ‘toInteger’
+    It could refer to
+       either ‘Prelude.toInteger’,
+              imported from ‘Prelude’ at Notes01.hs:1:1
+              (and originally defined in ‘GHC.Real’)
+           or ‘Main.toInteger’, defined at Notes01.hs:76:3
+   |
+81 |   toInteger (Suc n) = 1 + toInteger n
+   |                           ^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+
+Notes01.hs:78:10: error:
+    • The constraint ‘MyNum a’
+        is no smaller than the instance head ‘Show a’
+      (Use UndecidableInstances to permit this)
+    • In the instance declaration for ‘Show a’
+   |
+78 | instance MyNum a => Show a where
+   |          ^^^^^^^^^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:79:18: error:
+    Ambiguous occurrence ‘toInteger’
+    It could refer to
+       either ‘Prelude.toInteger’,
+              imported from ‘Prelude’ at Notes01.hs:1:1
+              (and originally defined in ‘GHC.Real’)
+           or ‘Main.toInteger’, defined at Notes01.hs:76:3
+   |
+79 |   show x = show (toInteger x)
+   |                  ^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:78:10: error:
+    • The constraint ‘MyNum a’
+        is no smaller than the instance head ‘Show a’
+      (Use UndecidableInstances to permit this)
+    • In the instance declaration for ‘Show a’
+   |
+78 | instance MyNum a => Show a where
+   |          ^^^^^^^^^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:78:10: error:
+    • The constraint ‘MyNum a’
+        is no smaller than the instance head ‘Show a’
+      (Use UndecidableInstances to permit this)
+    • In the instance declaration for ‘Show a’
+   |
+78 | instance (MyNum a) => Show a where
+   |          ^^^^^^^^^^^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:80:12: error:
+    • Overlapping instances for Show Integer
+        arising from a use of ‘show’
+      Matching instances:
+        instance MyNum a => Show a -- Defined at Notes01.hs:79:10
+        instance Show Integer -- Defined in ‘GHC.Show’
+    • In the expression: show (toIntegr x)
+      In an equation for ‘show’: show x = show (toIntegr x)
+      In the instance declaration for ‘Show a’
+   |
+80 |   show x = show (toIntegr x)
+   |            ^^^^
+
+Notes01.hs:82:10: error:
+    • Overlapping instances for Show Nat
+        arising from a use of ‘GHC.Show.$dmshowsPrec’
+      Matching instances:
+        instance MyNum a => Show a -- Defined at Notes01.hs:79:10
+        instance Show Nat -- Defined at Notes01.hs:82:10
+    • In the expression: GHC.Show.$dmshowsPrec @(Nat)
+      In an equation for ‘showsPrec’:
+          showsPrec = GHC.Show.$dmshowsPrec @(Nat)
+      In the instance declaration for ‘Show Nat’
+   |
+82 | instance Show Nat where
+   |          ^^^^^^^^
+
+Notes01.hs:82:10: error:
+    • Overlapping instances for Show Nat
+        arising from a use of ‘GHC.Show.$dmshowList’
+      Matching instances:
+        instance MyNum a => Show a -- Defined at Notes01.hs:79:10
+        instance Show Nat -- Defined at Notes01.hs:82:10
+    • In the expression: GHC.Show.$dmshowList @(Nat)
+      In an equation for ‘showList’:
+          showList = GHC.Show.$dmshowList @(Nat)
+      In the instance declaration for ‘Show Nat’
+   |
+82 | instance Show Nat where
+   |          ^^^^^^^^
+
+Notes01.hs:85:26: error:
+    • Overlapping instances for Show Nat arising from a use of ‘show’
+      Matching instances:
+        instance MyNum a => Show a -- Defined at Notes01.hs:79:10
+        instance Show Nat -- Defined at Notes01.hs:82:10
+    • In the second argument of ‘(++)’, namely ‘show n’
+      In the expression: "1+" ++ show n
+      In an equation for ‘show’: show (Suc n) = "1+" ++ show n
+   |
+85 |   show (Suc n) = "1+" ++ show n
+   |                          ^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:80:12: error:
+    • Overlapping instances for Show Integer
+        arising from a use of ‘show’
+      Matching instances:
+        instance MyNum a => Show a -- Defined at Notes01.hs:79:10
+        instance Show Integer -- Defined in ‘GHC.Show’
+    • In the expression: show (toIntegr x)
+      In an equation for ‘show’: show x = show (toIntegr x)
+      In the instance declaration for ‘Show a’
+   |
+80 |   show x = show (toIntegr x)
+   |            ^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:88:18: error:
+    • Could not deduce (MyNum (Csomag a))
+        arising from a use of ‘toIntegr’
+      from the context: MyNum a
+        bound by the instance declaration at Notes01.hs:87:10-37
+    • In the first argument of ‘show’, namely ‘(toIntegr x)’
+      In the expression: show (toIntegr x)
+      In an equation for ‘show’: show x = show (toIntegr x)
+   |
+88 |   show x = show (toIntegr x)
+   |                  ^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> add Three Three
+
+<interactive>:37:5: error:
+    Data constructor not in scope: Three :: Nat
+    Suggested fix: Perhaps use variable ‘three’ (line 73)
+
+<interactive>:37:11: error:
+    Data constructor not in scope: Three :: Nat
+    Suggested fix: Perhaps use variable ‘three’ (line 73)
+ghci> add three three
+
+<interactive>:38:1: error:
+    • No instance for (Show Nat) arising from a use of ‘print’
+    • In a stmt of an interactive GHCi command: print it
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> add three three
+
+<interactive>:40:1: error:
+    • No instance for (Show Nat) arising from a use of ‘print’
+    • In a stmt of an interactive GHCi command: print it
+ghci> Csomag (add three three)
+6
+ghci> :i Monoid
+type Monoid :: * -> Constraint
+class Semigroup a => Monoid a where
+  mempty :: a
+  mappend :: a -> a -> a
+  mconcat :: [a] -> a
+  {-# MINIMAL mempty #-}
+  	-- Defined in ‘GHC.Base’
+instance Monoid () -- Defined in ‘GHC.Base’
+instance (Monoid a, Monoid b) => Monoid (a, b)
+  -- Defined in ‘GHC.Base’
+instance (Monoid a, Monoid b, Monoid c) => Monoid (a, b, c)
+  -- Defined in ‘GHC.Base’
+instance (Monoid a, Monoid b, Monoid c, Monoid d) =>
+         Monoid (a, b, c, d)
+  -- Defined in ‘GHC.Base’
+instance (Monoid a, Monoid b, Monoid c, Monoid d, Monoid e) =>
+         Monoid (a, b, c, d, e)
+  -- Defined in ‘GHC.Base’
+instance Monoid b => Monoid (a -> b) -- Defined in ‘GHC.Base’
+instance Monoid a => Monoid (IO a) -- Defined in ‘GHC.Base’
+instance Semigroup a => Monoid (Maybe a) -- Defined in ‘GHC.Base’
+instance Monoid Ordering -- Defined in ‘GHC.Base’
+instance Monoid a => Monoid (Solo a) -- Defined in ‘GHC.Base’
+instance Monoid [a] -- Defined in ‘GHC.Base’
+ghci> :i Semigroup
+type Semigroup :: * -> Constraint
+class Semigroup a where
+  (<>) :: a -> a -> a
+  GHC.Base.sconcat :: GHC.Base.NonEmpty a -> a
+  GHC.Base.stimes :: Integral b => b -> a -> a
+  {-# MINIMAL (<>) #-}
+  	-- Defined in ‘GHC.Base’
+instance Semigroup () -- Defined in ‘GHC.Base’
+instance (Semigroup a, Semigroup b) => Semigroup (a, b)
+  -- Defined in ‘GHC.Base’
+instance (Semigroup a, Semigroup b, Semigroup c) =>
+         Semigroup (a, b, c)
+  -- Defined in ‘GHC.Base’
+instance (Semigroup a, Semigroup b, Semigroup c, Semigroup d) =>
+         Semigroup (a, b, c, d)
+  -- Defined in ‘GHC.Base’
+instance (Semigroup a, Semigroup b, Semigroup c, Semigroup d,
+          Semigroup e) =>
+         Semigroup (a, b, c, d, e)
+  -- Defined in ‘GHC.Base’
+instance Semigroup b => Semigroup (a -> b) -- Defined in ‘GHC.Base’
+instance Semigroup a => Semigroup (IO a) -- Defined in ‘GHC.Base’
+instance Semigroup a => Semigroup (Maybe a)
+  -- Defined in ‘GHC.Base’
+instance Semigroup Ordering -- Defined in ‘GHC.Base’
+instance Semigroup a => Semigroup (Solo a) -- Defined in ‘GHC.Base’
+instance Semigroup [a] -- Defined in ‘GHC.Base’
+instance Semigroup (Either a b) -- Defined in ‘Data.Either’
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+
+Notes01.hs:100:10: error:
+    • No instance for (Semigroup Integer)
+        arising from the superclasses of an instance declaration
+    • In the instance declaration for ‘Monoid Integer’
+    |
+100 | instance Monoid Integer where
+    |          ^^^^^^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:102:3: error:
+    ‘mappaned’ is not a (visible) method of class ‘Monoid’
+    |
+102 |   mappaned = (+)
+    |   ^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:102:3: error:
+    ‘mappaned’ is not a (visible) method of class ‘Monoid’
+    |
+102 |   mappaned (Csomag x) (Csomag y)  =
+    |   ^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:102:3: error:
+    ‘mappand’ is not a (visible) method of class ‘Monoid’
+    |
+102 |   mappand (Csomag x) (Csomag y)  =
+    |   ^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:100:10: error:
+    • No instance for (Semigroup (Csomag Integer))
+        arising from the superclasses of an instance declaration
+    • In the instance declaration for ‘Monoid (Csomag Integer)’
+    |
+100 | instance Monoid (Csomag Integer) where
+    |          ^^^^^^^^^^^^^^^^^^^^^^^
+Failed, no modules loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted )
+
+Notes01.hs:99:10: warning: [-Wmissing-methods]
+    • No explicit implementation for
+        ‘<>’
+    • In the instance declaration for ‘Semigroup (Csomag Integer)’
+   |
+99 | instance Semigroup (Csomag Integer) where
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Notes01.hs:103:3: warning: [-Wnoncanonical-monoid-instances]
+    Noncanonical ‘mappend’ definition detected
+    in the instance declaration for ‘Monoid (Csomag Integer)’.
+    ‘mappend’ will eventually be removed in favour of ‘(<>)’
+    Either remove definition for ‘mappend’ (recommended) or define as ‘mappend = (<>)’
+    See also: https://gitlab.haskell.org/ghc/ghc/-/wikis/proposal/semigroup-monoid
+    |
+103 |   mappend (Csomag x) (Csomag y)  =
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> :R
+unknown command ':R'
+use :? for help.
+ghci> :r
+Ok, one module loaded.
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> 1 <> 3
+
+<interactive>:56:1: error:
+    • Ambiguous type variable ‘a0’ arising from a use of ‘print’
+      prevents the constraint ‘(Show a0)’ from being solved.
+      Probable fix: use a type annotation to specify what ‘a0’ should be.
+      Potentially matching instances:
+        instance (Show a, Show b) => Show (Either a b)
+          -- Defined in ‘Data.Either’
+        instance Show Ordering -- Defined in ‘GHC.Show’
+        ...plus 27 others
+        ...plus 85 instances involving out-of-scope types
+        (use -fprint-potential-instances to see them all)
+    • In a stmt of an interactive GHCi command: print it
+ghci> 1 <> (3 :: Integer)
+
+<interactive>:57:3: error:
+    • No instance for (Semigroup Integer) arising from a use of ‘<>’
+    • In the expression: 1 <> (3 :: Integer)
+      In an equation for ‘it’: it = 1 <> (3 :: Integer)
+ghci> 1 `mappend` (3 :: Integer)
+
+<interactive>:58:3: error:
+    • No instance for (Monoid Integer) arising from a use of ‘mappend’
+    • In the expression: 1 `mappend` (3 :: Integer)
+      In an equation for ‘it’: it = 1 `mappend` (3 :: Integer)
+ghci> Osszeadassal 1 `mappend` (Osszeadassal3)
+
+<interactive>:59:27: error:
+    Data constructor not in scope: Osszeadassal3 :: Osszeadassal a
+    Suggested fix: Perhaps use ‘Osszeadassal’ (line 99)
+ghci> Osszeadassal 1 `mappend` (Osszeadassal 3)
+
+<interactive>:60:1: error:
+    • No instance for (Show (Osszeadassal Integer))
+        arising from a use of ‘print’
+    • In a stmt of an interactive GHCi command: print it
+ghci> Osszeadassal 1 `mappend` (Osszeadassal 3)
+
+<interactive>:61:1: error:
+    • No instance for (Show (Osszeadassal Integer))
+        arising from a use of ‘print’
+    • In a stmt of an interactive GHCi command: print it
+ghci> :r
+[1 of 2] Compiling Main             ( Notes01.hs, interpreted ) [Source file changed]
+Ok, one module loaded.
+ghci> Osszeadassal 1 `mappend` (Osszeadassal 3)
+Osszeadassal 4
+ghci> Osszeadassal 1 `mappend` (Szorzassal 3)
+
+<interactive>:64:27: error:
+    • Couldn't match expected type: Osszeadassal a
+                  with actual type: Szorzassal a0
+    • In the second argument of ‘mappend’, namely ‘(Szorzassal 3)’
+      In the expression: Osszeadassal 1 `mappend` (Szorzassal 3)
+      In an equation for ‘it’:
+          it = Osszeadassal 1 `mappend` (Szorzassal 3)
+    • Relevant bindings include
+        it :: Osszeadassal a (bound at <interactive>:64:1)
+ghci> Szorzassal 1 `mappend` (Szorzassal 3)
+Szorzassal 3
+ghci> 
