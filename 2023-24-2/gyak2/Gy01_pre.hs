@@ -46,7 +46,23 @@ Pragmák:
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+xor x y = x /= y
+
+xor' :: Bool -> Bool -> Bool
+xor' True True = False
+xor' True False = True
+xor' False True = True
+xor' False False = False
+
+xor'' :: Bool -> Bool -> Bool
+xor'' False x = x
+xor'' x False = x
+xor'' _ _ = False
+
+xor''' :: Bool -> Bool -> Bool
+xor''' x y = case x of
+  True -> not y
+  False -> y
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -71,7 +87,7 @@ id' x = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (a, (b, (c, d))) = (b, c)
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -79,7 +95,7 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 = id
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
 f3 = undefined
@@ -101,7 +117,7 @@ f6 = undefined
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\a -> fst (f a), \a -> snd (f a))
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
 f8 = undefined
@@ -114,7 +130,8 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 (Left a) = Right a
+f9 (Right b) = Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
 f10 = undefined
@@ -159,21 +176,23 @@ class Show a where
 
 -- Egyszerű data, nincs típusparamétere
 -- Legyen két konstruktora, RGB aminek három szám paramétere van és HSL aminek szintén három szám paramétere van
-data Colour
+data Colour = RGB Int Int Int | HSL Int Int Int
 
 -- Mik a lista konstruktorai és azok paraméterei?
 -- GHCi meg tudja mondani
-data List a -- = ???
+data List a = Nil | Cons a (List a)
 
 -- Bináris fa
 -- Ilyen nincs beépítve nekünk kell kitalálni
 -- Minden belső csúcsnak pontosan 2 részfája legyen
-data Tree a
+data Tree a = EmptyTree | TreeCons a (Tree a) (Tree a)
 
 -- Írjunk ezekre a datákra instance-okat!
 instance Eq Colour where
   (==) :: Colour -> Colour -> Bool -- régebbi GHC-ben nem lehetett ezt kiírni InstanceSigs nélkül
-  (==) = undefined
+  (==) (RGB x y z) (RGB a b c) = x == a && y == b && c == z
+  (==) (HSL x y z) (HSL a b c) = x == a && y == b && c == z
+  (==) _ _ = False
 
 instance Show Colour where
   show :: Colour -> String
@@ -191,9 +210,15 @@ instance (Show a) => Show (List a) where -- Extra Show a kikötés különben ne
 
 instance (Eq a) => Eq (List a) where
   (==) :: List a -> List a -> Bool
-  (==) = undefined
+  (==) Nil Nil = True
+  (==) (Cons x xs) (Cons y ys) = x == y && xs == ys
+  (==) _ _ = False
 
 -- Bónusz
 instance (Eq a) => Eq (Tree a) where
   (==) :: Tree a -> Tree a -> Bool
   (==) = undefined
+
+data Tree' a = Leaf a | Node (Tree' a) (Tree' a)
+data LiList a = Nill | Cons2 a a (LiList a)
+data ABList a b = ACons a (ABList a b) | BCons b (ABList a b) | ABNil
