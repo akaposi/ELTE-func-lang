@@ -1,13 +1,14 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
+{-# Language InstanceSigs #-}
 
 module Gy01 where
 
 {-
 
 Tematika:
-- Tms EA oldalán olvasható a hosszab verzió
+- Canvas EA oldalán olvasható a hosszab verzió
 - Követelmény:
-  - Óra elején KisZH (12 * 2 pont) tms kb 10-15 perc, csak gyakorlati feladatok
+  - Óra elején KisZH (12 * 2 pont) canvasban kb 10-15 perc, csak gyakorlati feladatok
   - Félév folyamán 3 db házi (3 * 4 pont) (első kb félév közepén)
   - Az összes 36 pontból 13-at kell összeszedni, akkor lehet menni vizsgázni
   - A 13 ponton túl a KisZH és a Házik nem kötelezőek
@@ -45,7 +46,36 @@ Pragmák:
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+xor True True = False
+xor True False = True
+xor False True = True
+xor False False = False
+
+xor' :: Bool -> Bool -> Bool
+xor' True True = False
+xor' False False = False
+xor' _ _ = True
+
+xor'' :: Bool -> Bool -> Bool
+xor'' = (/=)
+
+xor''' :: Bool -> Bool -> Bool
+xor''' x y = case x of
+  True -> not y
+  False -> y
+
+trueIfBla :: Int -> Maybe Bool
+trueIfBla x
+  | mod x 2 == 0 = Nothing
+  | x > 10 = Just True
+  | otherwise = Just False
+
+-- maybeNot :: Int -> Maybe Bool
+-- maybeNot x = case trueIfBla x of
+--   Nothing ->
+--   Just b -> case b of
+--     True ->
+--     False -> 
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -56,7 +86,6 @@ case x of
 -}
 
 -- Let/Where kifejezések: lokális definíciók:
-twelve :: Int
 twelve = x + x
   where
     x = 6
@@ -70,31 +99,31 @@ id' x = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (a, (b, (c, d))) = (b, c)
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
 
--- Minden függvényre van több megoldás (beépített fügvénnyel pl)
+-- Minden függvényre van több megoldás (beépített függvénnyel pl)
 
-f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 :: (a -> b) -> (a -> b)
+f2 = id 
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 = (.)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 = flip
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
 -- snd :: (a,b) -> b
 
 f5 :: ((a, b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
-f5 = undefined
+f5 = curry
 
 f6 :: (a -> b -> c) -> (a, b) -> c
-f6 = undefined
+f6 = uncurry
 
 -- Ha az eredménybe függvényt kell megadni használj lambdákat!
 -- pl.: \x -> x
@@ -113,10 +142,11 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 (Left a) = Right a
+f9 (Right b) = Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
-f10 = undefined
+f10 f = (\a -> f (Left a), \b -> f (Right b))
 
 f11 :: (a -> c, b -> c) -> (Either a b -> c)
 f11 = undefined
@@ -138,7 +168,14 @@ f14 = undefined
 -- Definiáljuk a map függvényt listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
-map' = undefined
+map' f as = [ f x | x <- as]
+
+mapRecursive :: (a -> b) -> [a] -> [b]
+mapRecursive f [] = []
+mapRecursive f (a:as) = f a : mapRecursive f as
+
+mapFold :: (a -> b) -> [a] -> [b]
+mapFold f as = foldr ((:) . f) [] as
 
 -- Daták és osztályok
 -- Ismert típusosztályok: Eq, Ord, Show
@@ -158,7 +195,7 @@ class Show a where
 
 -- Egyszerű data, nincs típusparamétere
 -- Legyen két konstruktora, RGB aminek három szám paramétere van és HSL aminek szintén három szám paramétere van
-data Colour
+data Colour = Blue | Red
 
 -- Mik a lista konstruktorai és azok paraméterei?
 -- GHCi meg tudja mondani
