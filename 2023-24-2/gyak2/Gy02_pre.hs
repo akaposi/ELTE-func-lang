@@ -1,4 +1,4 @@
-{-# LANGUAGE InstanceSigs, QuantifiedConstraints, StandaloneDeriving, StandaloneKindSignatures #-}
+{-# LANGUAGE InstanceSigs, QuantifiedConstraints, StandaloneDeriving, StandaloneKindSignatures, StarIsType #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Gy02 where
@@ -22,20 +22,27 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 -- Pl.: Single a -> Single b vagy List a -> List b
 -- Mivel a fenti típusok mind valamilyen szintent tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
+map' :: (a -> b) -> [a] -> [b]
+map' f [] = []
+map' f (x : xs) = f x : map' f xs
+
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a b) = Tuple (f a) (f b)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a b c d e) = Quintuple (f a) (f b) (f c) (f d) (f e)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f m = case m of
+  Nothing -> Nothing
+  Just a -> Just (f a)
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList _ Nil = Nil
+mapList f (Cons a xs) = Cons (f a) (mapList f xs)
 
 -- Ezt a mappolhatósági tulajdonságot le tudjuk írni a magasabbrendú polimorfizmus segítségével
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmus típusfüggvényekre alkalmazzuk):
@@ -58,6 +65,8 @@ class Functor f where
   {-# MINIMAL fmap #-}
         -- Defined in ‘GHC.Base’
 -}
+
+
 
 -- A Functornak szabálya konyhanyelven: megtartja az adat struktúráját
 -- Tehát a konstruktorok sorrendjét, helyét és számát nem változtatja.
@@ -86,25 +95,38 @@ instance Functor List where
 
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a as) = NECons2 (f a) (fmap f as)
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left fixed) = Left fixed
+  fmap f (Right a) = Right (f a)
+
+{-
+
+t
+t :: a -> f t
+t :: f a -> fmap f t
+t :: Int -> t
+
+-}
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
-  fmap = undefined
+  fmap f (BiTuple fixed a) = BiTuple fixed (f a)
 
 instance Functor (TriEither fixed1 fixed2) where
   fmap :: (a -> b) -> TriEither fixed1 fixed2 a -> TriEither fixed1 fixed2 b
-  fmap = undefined
+  fmap f (RightT a) = RightT (f a)
+  fmap f (LeftT a) = LeftT a
+  fmap _ (MiddleT a) = MiddleT a
 
 instance Functor (BiList fixed) where
   fmap :: (a -> b) -> BiList fixed a -> BiList fixed b
@@ -128,11 +150,14 @@ listOfInts = Lift (Cons 1 (Cons 2 Nil))
 maybeABool :: Lift Maybe Bool
 maybeABool = Lift Nothing -- pont nincs bool :(
 
+tupleOfInts :: Lift ((,) Int) Bool
+tupleOfInts = Lift (1, True)
+
 -- Le kell az első paramétert fixálnunk, hogy tudjunk rá Functor-t írni
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap f (Lift t) = Lift (fmap f t)-- t :: f a
 
 -- f az vmi funktor
 -- g : a -> b
@@ -155,7 +180,7 @@ instance (Functor f, Functor g) => Functor (Product f g) where
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
@@ -186,6 +211,7 @@ type Fix :: (* -> *) -> * -> *
 data Fix f a = Fix (f (Fix f a))
 data Join a b = Join (a -> a -> b)
 data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
+data GenericRosetree f a = MkRoseTree (f (GenericRosetree f a)) | RoseLeaf' a
 
 --- Írjunk rájuk Functor instance-ot!
 
