@@ -199,37 +199,52 @@ data Colour = Blue | Red
 
 -- Mik a lista konstruktorai és azok paraméterei?
 -- GHCi meg tudja mondani
-data List a -- = ???
+data List a = Nil | Cons a (List a)
+-- [1, 2, 3]
+-- []
+-- (x:xs)
 
 -- Bináris fa
 -- Ilyen nincs beépítve nekünk kell kitalálni
 -- Minden belső csúcsnak pontosan 2 részfája legyen
-data Tree a
+data Tree a = Leaf a | Node (Tree a) (Tree a)
 
 -- Írjunk ezekre a datákra instance-okat!
 instance Eq Colour where
   (==) :: Colour -> Colour -> Bool -- régebbi GHC-ben nem lehetett ezt kiírni InstanceSigs nélkül
-  (==) = undefined
+  -- (==) c c' = show c == show c'
+  (==) Blue Blue = True
+  (==) Red Red = True
+  (==) _ _ = False
 
 instance Show Colour where
   show :: Colour -> String
-  show = undefined -- Elég szubjektív
+  show Blue = "Blue" -- Elég szubjektív
+  show Red = "Red"
 
 instance Ord Colour where
   (<=) :: Colour -> Colour -> Bool -- Fura kérdés, színeket nem nagyon lehet így összehasonlítani
-  (<=) = undefined
+  (<=) Blue Red = True
+  (<=) Blue Blue = True
+  (<=) Red Red = True
+  (<=) Red Blue = False 
 
 --        Kontextus    Instance head
 --         v            v
 instance (Show a) => Show (List a) where -- Extra Show a kikötés különben nem tudnák kiírni az elemeket
   show :: List a -> String
-  show = undefined
+  show Nil = "[]"
+  show (Cons a as) = show a ++ " : " ++ show as
 
 instance (Eq a) => Eq (List a) where
   (==) :: List a -> List a -> Bool
-  (==) = undefined
+  (==) Nil Nil = True
+  (==) (Cons a as) (Cons a' as') = a == a' && as == as'
+  (==) _ _ = False
 
 -- Bónusz
 instance (Eq a) => Eq (Tree a) where
   (==) :: Tree a -> Tree a -> Bool
-  (==) = undefined
+  (==) (Leaf a) (Leaf a') = a == a'
+  (==) (Node l r) (Node l' r') = l == l' && r == r'
+  (==) _ _ = False 
