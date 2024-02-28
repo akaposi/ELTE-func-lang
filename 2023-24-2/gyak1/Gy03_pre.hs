@@ -31,19 +31,21 @@ data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 data FList f a = FNil | FCons (f a) (f (FList f a))
 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
-foldrSingle = undefined
+foldrSingle f x (Single y) = f y x
 
 foldrTuple :: (a -> b -> b) -> b -> Tuple a -> b
-foldrTuple = undefined
+foldrTuple f b (Tuple a a') = f a (f a' b)
 
 foldrQuintuple :: (a -> b -> b) -> b -> Quintuple a -> b
-foldrQuintuple = undefined
+foldrQuintuple f x (Quintuple y1 y2 y3 y4 y5) = f y1 $ f y2 $ f y3 $ f y4 x
 
 foldrList :: (a -> b -> b) -> b -> List a -> b
-foldrList = undefined
+foldrList f b Nil = b
+foldrList f b (Cons a as) = f a $ foldrList f b as
 
 foldrMaybe :: (a -> b -> b) -> b -> Maybe a -> b
-foldrMaybe = undefined
+foldrMaybe _ x Nothing = x
+foldrMaybe f x (Just a) = f a x
 
 -- Hasonlóan a mappolhatósághoz, a hajtogatás is általánosítható a Foldable típusosztály segítéségvel
 {-
@@ -92,16 +94,41 @@ instance Foldable List where
   foldr :: (a -> b -> b) -> b -> List a -> b
   foldr = foldrList
 
+  foldMap :: Monoid m => (a -> m) -> List a -> m
+  foldMap f Nil = mempty
+  foldMap f (Cons a as) = f a <> foldMap f as
+
 instance Foldable Maybe where
   foldr :: (a -> b -> b) -> b -> Maybe a -> b
   foldr = foldrMaybe
 
 instance Foldable NonEmpty where
+{-
+data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
+-}
+  -- t :: a -> f a ...
+  -- t :: rekurzív a-ra -> foldr f ... t
+  -- ha nincs több paraméter -> b
+
+  foldr :: (a -> b -> b) -> b -> NonEmpty a -> b
+  foldr f b (Last a) = f a b
+  foldr f b (NECons a as) = f a (foldr f b as)
 
 instance Foldable NonEmpty2 where
 
 instance Foldable Tree where
+{-
+data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show)
+-}
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr f b (Leaf a) = f a b
+  foldr f b (Node t a t') = foldr f (f a (foldr f b t')) t
 
+  foldMap :: Monoid m => (a -> m) -> Tree a -> m
+  foldMap f (Leaf a) = f a
+  foldMap f (Node t a t') = foldMap f t <> f a <> foldMap f t'
+
+-- Unsatured Type Families
 instance Foldable (Either fixed) where
 
 instance Foldable (BiTuple fixed) where
@@ -135,17 +162,19 @@ Ez Haskellben a Semigroup típusosztály
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (&&)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = undefined
+  (<>) = (+)
 
 data Endo a = MkEndo (a -> a)
 
+
+--- (a -> a) -> (a -> a) -> a -> a
 instance Semigroup (Endo a) where
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  MkEndo f <> MkEndo g = MkEndo (f . g)
 
 {-
 Egy halmazhoz több művelet is választható, hogy félcsoportot alkossanak
@@ -173,15 +202,15 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = True
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
+  mempty = 0
 
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id
 
 
 -- A foldr művelet alternatívája: foldMap
