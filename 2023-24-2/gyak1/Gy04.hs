@@ -25,7 +25,15 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+{-
+magicFunction h
+  | (Just asd) <- incrementIfEven h = combineThrees (*) asd h
+  | otherwise = Nothing
+-}
+
+magicFunction h = case incrementIfEven h of
+  (Just asd) -> combineThrees (*) asd h 
+  Nothing -> Nothing
 
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
@@ -38,13 +46,19 @@ class Functor m => Monad m where
   (>>) :: m a -> m b -> m b
   return :: a -> m a
   {-# MINIMAL (>>=), return #-}
+  (>>=): m a --> (a -> m b) }--> m (m b) --> m b (join)
 -}
 -- A >>= (ún bind) művelet modellezi egy előző "mellékhatásos" számítás eredményének a felhasználását.
 -- Maybe esetén (>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b
 --                                   ^ csak akkot fut le ha az első paraméter Just a
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x = (incrementIfEven x) >>= (combineThrees (*) x)
+
+-- >>> :t combineThrees
+-- combineThrees :: Integral a => (a -> a -> a) -> a -> a -> Maybe a
+-- >>> :t combineThrees (*) 5
+-- combineThrees (*) 5 :: Integral a => a -> Maybe a
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -57,7 +71,10 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
+magicFunctionDo x = do
+  let k = incrementIfEven x 
+  h <- k
+  combineThrees (*) x h
 
 
 -- Monád példa: IO monád
@@ -80,25 +97,37 @@ print :: Show a => a -> IO ()
 -- d, beolvas egy számot minden listaelemhez és azt hozzáadja
 
 readAndConcat :: IO ()
-readAndConcat = undefined
+{-
+readAndConcat = do
+  l1 <- getLine
+  l2 <- getLine
+  putStrLn $ l1 ++ l2
+-}
+
+readAndConcat = getLine >>= (getLine >>=) <$> (putStrLn <$>) <$> (++)
 
 readAndConcat' :: IO ()
 readAndConcat' = undefined
 
 readAndSq :: IO ()
-readAndSq = undefined
+readAndSq = do
+  num :: Int <- readLn
+  print (num * num)
 
 readAndSq' :: IO ()
 readAndSq' = undefined
 
 printAll :: Show a => [a] -> IO ()
-printAll = undefined
+printAll [] = putStrLn ": []"
+printAll (x : xs) = putStr (": " ++ show x ++ " ") >> printAll xs
 
 printAll' :: Show a => [a] -> IO ()
 printAll' = undefined
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd ls = do
+  num :: a <- readLn
+  pure $ map (+ num) ls
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd' = undefined
@@ -144,10 +173,13 @@ modify f = State $ \s -> ((), f s)
 -- Minden állapotválotzást megírható >>=, return, get és put segítségével
 -- Írjuk meg bindal/do notációval az incrementAndEven állapotváltozást
 incrementAndEvenBind :: State Int Bool
-incrementAndEvenBind = undefined
+incrementAndEvenBind = get >>= \curr -> put (curr +1) >> (pure $ even curr)
 
 incrementAndEvenDo :: State Int Bool
-incrementAndEvenDo = undefined
+incrementAndEvenDo = do
+  curr <- get
+  put (curr + 1)
+  pure $ even curr
 
 -- runState-el lehet tesztelni, pl runState incrementAndEvenBind 3 == (False, 4)
 
