@@ -73,10 +73,23 @@ instance (Functor f, Contravariant g) => Contravariant (Arr f g) where
   contramap :: (a -> b) -> Arr f g b -> Arr f g a
   contramap h (Arr i) = Arr (contramap h . i . fmap h)
 
+data H a = H ((a -> Bool) -> Int)   -- functor
+data I' a = I' { unI' :: a -> Bool }   -- contravariant
+type I = Arr Id (Const Bool)
+
+fromI :: I a -> I' a
+fromI (Arr f) = I' (\a -> unConst (f (Id a)))
+-- f :: Id a -> Const Bool a
+toI :: I' a -> I a
+toI (I' f) = Arr (\(Id a) -> Const (f a))
+
+contramapI :: (Int -> Bool) -> I Bool -> I Int
+contramapI = contramap
+
 newtype Id a = Id a
   deriving Functor
 
-newtype Const b a = Const b
+newtype Const b a = Const { unConst :: b }
   deriving (Functor)
 
 instance Contravariant (Const c) where
@@ -136,12 +149,19 @@ plList = true `cons` false `cons` true `cons` nil
 id' :: ListBOOL -> ListBOOL
 id' xs = iteListBOOL xs nil cons
 
--- mapnot :: ListBOOL -> ListBOOL
--- mapnot xs = iteListBOOL xs nil (\b bs -> neg b `cons` bs)
+mapnot :: ListBOOL -> ListBOOL
+mapnot xs = iteListBOOL xs nil c
+  where
+    c :: BOOL -> ListBOOL -> ListBOOL
+    c b bs = neg b `cons` bs
 
--- map' :: (BOOL -> BOOL) -> ListBOOL -> ListBOOL
--- map' f xs = iteListBOOL xs nil (\b bs -> f b `cons` bs)
-
+{-
+map' :: (BOOL -> BOOL) -> ListBOOL -> ListBOOL
+map' f xs = iteListBOOL xs nil
+  where
+    c :: BOOL -> ListBOOL -> ListBOOL
+    c b bs = f b `cons` bs
+-}
 -- showListBOOL $ id' plList
 
 -- data-val megadott tipus "szep" esetben megfelel egy algebrai elmeletnek
