@@ -5,6 +5,68 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Except
 import Control.Monad.IO.Class
+import Control.Monad
+
+-- Egyszerű feladat (1 pont)
+-- Olvassunk be egy X számot majd olvassunk be X darab számot és adjuk azokat vissza egy listába
+-- pl.: readNums
+-- > 2
+-- > 13
+-- > 1
+-- [13, 1]
+readNums :: IO [Int]
+readNums = do
+  x <- readLn :: IO Int
+  readX x
+
+readX :: Int -> IO [Int]
+readX 0 = return []
+readX x = do--(readLn :: IO Int) >>= \y -> readX (x - 1) >>= \xs -> return (y : xs)
+  y <- readLn :: IO Int
+  xs <- readX (x - 1)
+  return (y : xs)
+
+-- Nehezebb feladat (2 pont)
+-- Címkézzünk meg egy fát (INORDER BEJÁRÁS SZERINT) State-el!
+-- Használjunk State-t és monád műveleteket!
+-- Az állapot a számláló legyen, a mellékhatás a megcímkézett fa!
+data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show, Functor)
+
+labelTreeSt :: Tree a -> State Int (Tree (a, Int))
+labelTreeSt (Leaf a) = do
+  x <- get
+  put (x + 1)
+  return (Leaf (a, x))
+labelTreeSt (Node tr a tr') = do
+  tr1 <- labelTreeSt tr
+  x <- get
+  put (x + 1)
+  tr2 <- labelTreeSt tr'
+  return (Node tr1 (a, x) tr2)
+
+labelTree :: Tree a -> Tree (a, Int)
+labelTree tr = fst (runState (labelTreeSt tr) 0)
+
+adding :: Num a => [a] -> State a a -- állapotváltozás utáni
+adding [] = get
+adding (x : xs) = do
+  modify (+x)
+  adding xs
+
+producting :: Num a => [a] -> State a a
+producting [] = get
+producting (x : xs) = do
+  modify (*x)
+  producting xs
+
+labelList :: [a] -> State Int [(a, Int)]
+labelList [] = return []
+labelList (x : xs) = do
+  i <- get
+  put (i + 1)
+  xs' <- labelList xs
+  return ((x, i) : xs')
+
 
 -- A State monád állapot változást reprezentált
 -- Vegyünk három új Monádot:
@@ -30,10 +92,15 @@ canWriteHere path = do
 -- local :: (r -> r) -> Reader r a -> Reader r a
 -- Lokális megváltoztatja a környezetet a második paraméterben
 
-sudo :: Reader Env () -> Reader Env ()
+getHomeDir :: Reader Env String
+getHomeDir = do
+  MkEnv homeDir isAdmin <- ask
+  return homeDir
+
+sudo :: Reader Env a -> Reader Env a
 sudo doas = do
   MkEnv homeDir adm <- ask
-  when adm $ local (const (MkEnv "/root" True)) doas
+  local (const (MkEnv "/root" True)) doas
 
 -- Feladatok
 
@@ -103,6 +170,26 @@ tryDiv x y = do
 
 runCalc :: Except String Int
 runCalc = catchError (tryDiv 1 0) $ \_ -> return 11
+
+-- READER
+-- Ha a felhasználó home directoryja root, adjunk vissza
+-- true-t egyébként false-ot
+isInRoot :: Reader Env Bool
+isInRoot = undefined
+
+-- Megmondja hogy az összes útvonalra tud-e írni a felhasználó (akkor tud írni ha az a homedir vagy root a felh)
+hasAccessToAll :: [String] -> Reader Env Bool
+hasAccessToAll = undefined
+
+-- WRITER
+-- Szorozzunk össze két számot és az írási környezetbe írjuk be, ha valamelyik szám 0
+mulAndLog :: Int -> Int -> Writer [String] Int
+mulAndLog = undefined
+
+-- EXCEPT
+-- Összeszoroz egy listányi számot, hibát dob ha valamelyik szám 0
+mulAll :: [Int] -> Except String Int
+mulAll = undefined
 
 
 -- Cheatsheet:
