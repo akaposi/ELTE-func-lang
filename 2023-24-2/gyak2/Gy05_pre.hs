@@ -22,7 +22,7 @@ import Control.Monad.IO.Class
 
 data Env = MkEnv { homeDir :: String, isAdmin :: Bool }
 
-canWriteHere :: String -> Rader Env Bool
+canWriteHere :: String -> Reader Env Bool
 canWriteHere path = do
   MkEnv homeDir adm <- ask
   return (adm || path == homeDir)
