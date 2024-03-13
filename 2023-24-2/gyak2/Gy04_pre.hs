@@ -25,7 +25,10 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+magicFunction x = case incrementIfEven x of
+  Nothing -> Nothing
+  Just y -> combineThrees (*) x y
+
 
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
@@ -44,7 +47,7 @@ class Functor m => Monad m where
 --                                   ^ csak akkot fut le ha az első paraméter Just a
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x = incrementIfEven x >>= \y -> combineThrees (*) x y
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -57,7 +60,15 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
+magicFunctionDo x = do
+  y <- incrementIfEven x
+  combineThrees (*) x y
+
+readTwoLines :: IO ()
+readTwoLines = do
+  x <- readLn :: IO Int
+  y <- readLn :: IO Int
+  print (x + y)
 
 
 -- Monád példa: IO monád
@@ -80,25 +91,36 @@ print :: Show a => a -> IO ()
 -- d, beolvas egy számot minden listaelemhez és azt hozzáadja
 
 readAndConcat :: IO ()
-readAndConcat = undefined
+readAndConcat = do
+  x <- getLine
+  y <- getLine
+  print (x ++ y)
 
 readAndConcat' :: IO ()
 readAndConcat' = undefined
 
 readAndSq :: IO ()
-readAndSq = undefined
+readAndSq = do
+  x <- readLn :: IO Int
+  print (x * x)
 
 readAndSq' :: IO ()
 readAndSq' = undefined
 
 printAll :: Show a => [a] -> IO ()
-printAll = undefined
+printAll [] = return ()
+printAll (x : xs) = do
+  print x
+  printAll xs
 
 printAll' :: Show a => [a] -> IO ()
-printAll' = undefined
+printAll' [] = return ()
+printAll' (x : xs) = print x >> printAll' xs
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd xs = do
+  x <- readLn
+  return (map (+x) xs)
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd' = undefined
@@ -125,6 +147,11 @@ get = State $ \s -> (s,s)
 put :: s -> State s ()
 put s = State $ const ((), s)
 
+modify' :: (s -> s) -> State s ()
+modify' f = do
+  x <- get
+  put (f x)
+
 -- runState :: State s a -> s -> (a,s)
 -- lefuttat egy állapotváltozást egy adott kezdeti állapotra
 
@@ -144,10 +171,13 @@ modify f = State $ \s -> ((), f s)
 -- Minden állapotválotzást megírható >>=, return, get és put segítségével
 -- Írjuk meg bindal/do notációval az incrementAndEven állapotváltozást
 incrementAndEvenBind :: State Int Bool
-incrementAndEvenBind = undefined
+incrementAndEvenBind = do
+  x <- get
+  put (x + 1)
+  return (even x)
 
 incrementAndEvenDo :: State Int Bool
-incrementAndEvenDo = undefined
+incrementAndEvenDo = get >>= \x -> put (x + 1) >> return (even x)
 
 -- runState-el lehet tesztelni, pl runState incrementAndEvenBind 3 == (False, 4)
 
@@ -158,10 +188,24 @@ incrementAndEvenDo = undefined
 -- d, összeadj az állapotbeli lista összes elemét és kiűríti azt (csak a primitív kombinátorokat és az a,-t használd)
 
 behead :: State [a] (Maybe a)
-behead = undefined
+behead = do
+  x <- get
+  case x of
+    [] -> return Nothing
+    (x : xs) -> do
+      put xs
+      return (Just x)
 
 takeFromSt :: Integral i => i -> State [a] [a]
-takeFromSt = undefined
+takeFromSt i | i <= 0 = return []
+takeFromSt i = do
+  xs <- get
+  case xs of
+    [] -> return []
+    (x : xs) -> do
+      put xs
+      xs' <- takeFromSt (i - 1)
+      return (x : xs')
 
 takeWhileFromSt :: (a -> Bool) -> State [a] [a]
 takeWhileFromSt = undefined
