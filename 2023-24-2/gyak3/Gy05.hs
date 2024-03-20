@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Gy05 where
 
 import Control.Monad.State
@@ -78,6 +79,23 @@ calculation2 = do
   tell (tail messages)
   tell ["Majd eredmény + 1"]
   return (res + 1)
+
+
+-- READER
+-- Ha a felhasználó home directoryja root, adjunk vissza
+-- true-t egyébként false-ot
+isInRoot :: Reader Env Bool
+isInRoot = undefined
+
+-- WRITER
+-- Szorozzunk össze két számot és az írási környezetbe írjuk be, ha valamelyik szám 0
+mulAndLog :: Int -> Int -> Writer [String] Int
+mulAndLog = undefined 
+
+-- EXCEPT
+-- Összeszoroz egy listányi számot, hibát dob ha valamelyik szám 0
+mulAll :: [Int] -> Except String Int
+mulAll = undefined
 
 
 -- Except: hibakörnyezet, képes hibakezelésre
