@@ -182,6 +182,12 @@ addStuff = do
 data Expr = Liter Int | Var String | Add Expr Expr
 
 {-
+-- imperativ nyelv: van egy rho globalis valtozom
+evaluate :: Expr -> Int
+evaluate (Liter i) = i
+evaluate (Add e1 e2) = evaluate e1 + evaluate e2
+evaluate (Var s) = rho s
+
 evaluate :: Expr -> (String -> Int) -> Int
 evaluate (Liter i) rho = i
 evaluate (Add e1 e2) rho = evaluate e1 rho + evaluate e2 rho
