@@ -217,7 +217,23 @@ newtype State  s a = State  { runState  :: s -> (a,s) } ==> newtype StateT  s m 
 newtype Reader r a = Reader { runReader :: r -> a }     ==> newtype ReaderT r m a = ReaderT { runReaderT :: r -> m a  }
 newtype Writer w a = Writer { runWriter :: (a, w) }     ==> newtype WriterT s m a = WriterT { runWriterT :: m (a, w) }
 newtype Except e a = Except { runExcept :: Either e a } ==> newtype ExceptT e m a = ExceptT { runExceptT :: m (Either e a) }
+-}
+readerAndExcept :: ExceptT String (Reader Int) Int
+readerAndExcept = do
+  i <- ask
+  when (i == 0) $ throwError "i == 0"
+  return i
 
+readerAndExcept' :: (MonadError String m, MonadReader Int m) => m Int
+readerAndExcept' = do
+  i <- ask
+  when (i == 0) $ throwError "i == 0"
+  return i
+
+h :: Either String Int
+h = runReader (runExceptT readerAndExcept) 1
+
+{-
 Mindenhol az eredményt egy tetszőleges monádba csomagoljuk, így tudjuk nestelni a mellékhatásokat
 A standard libraryben lévő primitív műveletek a nestelt monádokat is megtalálják
 -}
@@ -253,6 +269,40 @@ logInput = do
 runMe :: IO ()
 runMe = runWriterT logInput >>= print
 
+--- READER ÉS WRITERT
+-- Kiolvassa az értéket az olvasási könryezetből és kiírja X-szer az írási környeztebe
+readAndPrintX :: Int -> WriterT [String] (Reader a) [a]
+readAndPrintX x = do
+  a <- ask
+  case x of
+    0 -> return []
+    x -> do
+      xs <- readAndPrintX (x - 1)
+      return (a : xs)
+
+--- STATE ÉS IO
+--- Addig olvas számokat STDIN-ról amíg az összegük egy páros szám nem lesz-e
+--- Ezt a számot a state környezetbe tároljuk el
+readUntilEven :: (MonadIO m, MonadState Int m) => m Int
+readUntilEven = do
+  sval <- get
+  case (sval `mod` 2) of
+    0 -> return sval
+    _ -> do
+      num <- liftIO (readLn :: IO Int)
+      modify (+ num)
+      readUntilEven
+
+
+
+
+logInput' :: (MonadWriter [String] m, MonadIO m) => m ()
+logInput' = do
+  result <- liftIO getLine
+  tell [result]
+
+
+
 -- Fontos hibakezelésnél! Nem mindegy melyik helyen van az ExceptT!
 orderMatters :: (MonadError String m, MonadWriter [String] m) => m ()
 orderMatters = do
@@ -278,3 +328,16 @@ o2 = runWriter (runExceptT orderMatters)
 -- Definiáljuk a createNewUser függvényt, amely egy új felhasználót hozzáad a rendszerhez
 -- Definiáljuk a login függvényt amely a jelenlegi felhasználó nevével megpróbál belépni
 -- Definiáljuk a tryLoginAs függvényt, amely paraméterül kap egy felhasználónevet, azzal megpróbál belépni, és ha az sikertelen ezt kiírja a writerbe (ne hasaljon el)
+
+type MonadLogin m = (MonadState [String] m, MonadReader String m, MonadWriter [String] m, MonadError String m)
+type Login a = StateT [String] (ReaderT String (WriterT [String] (Except String))) a
+
+createNewUser :: String -> Login ()
+createNewUser newUser = modify (newUser :)
+
+login :: MonadLogin m => m ()
+login = do
+  usrname <- ask
+  tell [usrname ++ " be akar jelentkezni"]
+  users <- get
+  if usrname `elem` users then tell [usrname ++ " sikeresen bejelentkezett"] else throwError "Nincs ilyen felhasználó"

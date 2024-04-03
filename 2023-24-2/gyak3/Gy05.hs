@@ -60,11 +60,11 @@ mwiReader = undefined
 
 calculation :: Writer [String] Int
 calculation = do
-  tell ["1-esel kezdünk"]
+  tell ["1-esel kezdunk"]
   let x = 1
-  tell ["Aztán egy 2-es"]
+  tell ["Aztan egy 2-es"]
   let y = 2
-  tell ["Majd az összeg", "Egyszerre többet is tud loggolni"]
+  tell ["Majd az osszeg", "Egyszerre tobbet is tud loggolni"]
   return (x + y)
 
 --                         v lefuttatja ezt a writert
@@ -73,11 +73,11 @@ calculation = do
 
 calculation2 :: Writer [String] Int
 calculation2 = do
-  tell ["Na vágjunk bele"]
+  tell ["Na vagjunk bele"]
   (res, messages) <- listen calculation
-  tell ["Elhagyjuk a résszámolás első üzenetét", "A többit reportáljuk"]
+  tell ["Elhagyjuk a resszamolas elso üzenetet", "A tobbit reportaljuk"]
   tell (tail messages)
-  tell ["Majd eredmény + 1"]
+  tell ["Majd eredmeny + 1"]
   return (res + 1)
 
 
@@ -110,7 +110,7 @@ mulAll = undefined
 
 tryDiv :: Int -> Int -> Except String Int
 tryDiv x y = do
-  when (y == 0) $ throwError "0-val való osztás"
+  when (y == 0) $ throwError "0-val valo osztas"
   return (div x y)
 
 
