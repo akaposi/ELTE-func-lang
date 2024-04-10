@@ -6,7 +6,8 @@ import Prelude hiding (Maybe(..), Either(..))
 -- Definiáljuk egy függvényt, amely egy "mellékhatásos" függvényt végig mappol egy listán
 --                                          v az m mellékhatást összegyűjtjük
 mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
-mapMList = undefined
+mapMList f []       = pure []
+mapMList f (x : xs) = mapMList f xs >>= \ls -> f x >>= \b -> pure $ b : ls
 
 -- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
 data Single a = Single a deriving (Eq, Show, Functor, Foldable)
@@ -30,16 +31,22 @@ data FList f a = FNil | FCons (f a) (f (FList f a)) deriving (Functor, Foldable)
 
 -- Írjuk meg ezt a műveletet pár fenti típusra!
 mapMSingle :: Monad m => (a -> m b) -> Single a -> m (Single b)
-mapMSingle = undefined
+mapMSingle f (Single a) = f a >>= pure . Single  
 
 mapMTuple :: Monad m => (a -> m b) -> Tuple a -> m (Tuple b)
-mapMTuple = undefined
+mapMTuple f (Tuple a b) = f a >>= \c -> f b >>= \ d -> pure $ Tuple c d
 
 mapMQuintuple :: Monad m => (a -> m b) -> Quintuple a -> m (Quintuple b)
-mapMQuintuple = undefined
+mapMQuintuple f (Quintuple a1 a2 a3 a4 a5) = f a1 >>= \b1 ->
+  f a2 >>= \b2 ->
+    f a3 >>= \b3 ->
+      f a4 >>= \b4 ->
+        f a5 >>= pure . Quintuple b1 b2 b3 b4
 
 mapMMaybe :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
-mapMMaybe = undefined
+mapMMaybe f Nothing  = pure $ Nothing
+mapMMaybe f (Just a) = f a >>= pure . Just
+
 
 -- Ehhez a mellékhatásos mappoláshoz viszont a Monád megkötés sokat enged meg
 -- A monád fő művelete a (>>=) :: m a -> (a -> m b) -> m b
@@ -64,7 +71,7 @@ class Functor f => Applicative f where
 -- liftA műveletek csak liftA3-ig vannak standard libraryben, viszont arbitrary liftA írtható a <*> segítségével
 -- pl.:
 liftA4 :: Applicative f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
-liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
+liftA4 func fa fb fc = ((func <$> fa) <*> fb) <*> fc
 -- func :: a -> b -> c -> d
 -- func <$> fa :: f (b -> c -> d)
 -- func <$> fa <*> fb :: f (c -> d)
@@ -73,7 +80,11 @@ liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
 -- Írjuk meg a mapM műveletet Applicative segítségével
 -- Az algoritmus ugyanaz mint a funktornál csak függvényalkalmazás helyett <*> és független értékek esetén pure
 mapA :: Applicative f => (a -> f b) -> List a -> f (List b)
-mapA = undefined
+mapA f Nil         = pure Nil
+mapA f (Cons a ls) = let 
+  re = mapA f ls 
+  in Cons <$> f a <*> re
+
 
 -- Ez a mappolhatósági tulajdonság lesz az úgynevezett Traversable típusosztály
 {-
@@ -85,14 +96,19 @@ class (Functor t, Foldable t) => Traversable t where
   mapM :: Monad m => (a -> m b) -> t a -> m (t b)
   sequence :: Monad m => t (m a) -> m (t a)
   {-# MINIMAL traverse | sequenceA #-}
-        -- Defined in ‘Data.Traversable’
 -}
 
 instance Traversable Single where
+  traverse :: Applicative f => (a -> f b) -> Single a -> f (Single b)
+  traverse f (Single a) = Single <$> f a 
 
 instance Traversable Tuple where
+  sequenceA (Tuple a b) = Tuple <$> a <*> b
+
 
 instance Traversable Quintuple where
+  sequenceA (Quintuple a1 a2 a3 a4 a5) = Quintuple <$> a1 <*> a2 <*> a3 <*> a4 <*> a5
+  traverse f (Quintuple a1 a2 a3 a4 a5) = Quintuple <$> f a1 <*> f a2 <*> f a3 <*> f a4 <*> f a5
 
 instance Traversable List where
   traverse :: Applicative f => (a -> f b) -> List a -> f (List b)
@@ -103,14 +119,27 @@ instance Traversable List where
   sequenceA (Cons x xs) = Cons <$> x <*> sequenceA xs
 
 instance Traversable Maybe where
+  sequenceA Nothing  = pure  $  Nothing
+  sequenceA (Just a) = Just <$> a
+
 
 instance Traversable NonEmpty where
 
 instance Traversable NonEmpty2 where
 
 instance Traversable Tree where
+  sequenceA :: Applicative f => Tree (f a) -> f (Tree a)
+  sequenceA (Leaf a)       = Leaf <$> a
+  sequenceA (Node t1 a t2) = Node <$> sequenceA t1 <*> a <*> sequenceA t2
+
+
+(|>) = flip ($)
 
 instance Traversable (Either fixed) where
+  sequenceA :: Applicative f => Either fixed (f a) -> f (Either fixed a)
+  sequenceA (Left fixed) = Left  fixed |>  pure
+  sequenceA (Right a)    = Right       <$>  a
+
 
 instance Traversable (BiTuple fixed) where
 
@@ -124,6 +153,8 @@ instance Traversable f => Traversable (Apply f) where
 instance Traversable f => Traversable (Fix f) where
 
 instance (Traversable f, Traversable g) => Traversable (Compose f g) where
+  sequenceA :: (Traversable f, Traversable g, Applicative h) => Compose f g (h a) -> h (Compose f g a)
+  sequenceA (MkCompose a) = fmap MkCompose $ sequenceA $ sequenceA <$> a
 
 instance Traversable f => Traversable (Sum f fixed) where
 
