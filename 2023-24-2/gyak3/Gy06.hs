@@ -6,11 +6,7 @@ import Prelude hiding (Maybe(..), Either(..))
 -- Definiáljuk egy függvényt, amely egy "mellékhatásos" függvényt végig mappol egy listán
 --                                          v az m mellékhatást összegyűjtjük
 mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
-mapMList f [] = return []
-mapMList f (x : xs) = do
-  jobbmintazx' <- f x
-  jobbmintazxs' <- mapMList f xs
-  return (jobbmintazx' : jobbmintazxs')
+mapMList = undefined
 
 -- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
 data Single a = Single a deriving (Eq, Show, Functor, Foldable)
@@ -34,28 +30,16 @@ data FList f a = FNil | FCons (f a) (f (FList f a)) deriving (Functor, Foldable)
 
 -- Írjuk meg ezt a műveletet pár fenti típusra!
 mapMSingle :: Monad m => (a -> m b) -> Single a -> m (Single b)
-mapMSingle f (Single a) = do
-  b <- f a
-  return (Single b)
+mapMSingle = undefined
 
 mapMTuple :: Monad m => (a -> m b) -> Tuple a -> m (Tuple b)
-mapMTuple f (Tuple a a') = do
-  b <- f a
-  b' <- f a'
-  return (Tuple b b')
+mapMTuple = undefined
 
 mapMQuintuple :: Monad m => (a -> m b) -> Quintuple a -> m (Quintuple b)
-mapMQuintuple f (Quintuple a b c d e) = do
-  a' <- f a
-  b' <- f b
-  c' <- f c
-  d' <- f d
-  e' <- f e
-  return (Quintuple a' b' c' d' e')
+mapMQuintuple = undefined
 
 mapMMaybe :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
-mapMMaybe f Nothing = return Nothing
-mapMMaybe f (Just a) = f a >>= \b -> return (Just b)
+mapMMaybe = undefined
 
 -- Ehhez a mellékhatásos mappoláshoz viszont a Monád megkötés sokat enged meg
 -- A monád fő művelete a (>>=) :: m a -> (a -> m b) -> m b
@@ -89,8 +73,7 @@ liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
 -- Írjuk meg a mapM műveletet Applicative segítségével
 -- Az algoritmus ugyanaz mint a funktornál csak függvényalkalmazás helyett <*> és független értékek esetén pure
 mapA :: Applicative f => (a -> f b) -> List a -> f (List b)
-mapA f Nil = pure Nil
-mapA f (Cons a as) = Cons <$> f a <*> mapA f as
+mapA = undefined
 
 -- Ez a mappolhatósági tulajdonság lesz az úgynevezett Traversable típusosztály
 {-
@@ -107,7 +90,6 @@ class (Functor t, Foldable t) => Traversable t where
 
 instance Traversable Single where
 
-
 instance Traversable Tuple where
 
 instance Traversable Quintuple where
@@ -121,24 +103,14 @@ instance Traversable List where
   sequenceA (Cons x xs) = Cons <$> x <*> sequenceA xs
 
 instance Traversable Maybe where
-  traverse :: Applicative f => (a -> f b) -> Maybe a -> f (Maybe b)
-  traverse f Nothing = pure Nothing
-  traverse f (Just a) = Just <$> f a
 
 instance Traversable NonEmpty where
--- data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show, Functor, Foldable)
-  traverse :: Applicative f => (a -> f b) -> NonEmpty a -> f (NonEmpty b)
-  traverse f (Last a) = Last <$> f a
-  traverse f (NECons a as) = NECons <$> f a <*> traverse f as
 
 instance Traversable NonEmpty2 where
 
 instance Traversable Tree where
 
 instance Traversable (Either fixed) where
-  traverse :: Applicative f => (a -> f b) -> Either fixed a -> f (Either fixed b)
-  traverse f (Left e) = Left <$> pure e
-  traverse f (Right a) = Right <$> f a
 
 instance Traversable (BiTuple fixed) where
 
@@ -148,12 +120,8 @@ instance Traversable (BiList fixed) where
 
 -- Magasabbrendű megkötések
 instance Traversable f => Traversable (Apply f) where
-  traverse :: (Applicative g, Traversable f) => (a -> g b) -> Apply f a -> g (Apply f b)
-  traverse f (MkApply fa) = MkApply <$> traverse f fa
 
 instance Traversable f => Traversable (Fix f) where
-  traverse :: (Applicative g, Traversable f) => (a -> g b) -> Fix f a -> g (Fix f b)
-  traverse f (MkFix fa) = MkFix <$> traverse (traverse f) fa
 
 instance (Traversable f, Traversable g) => Traversable (Compose f g) where
 
