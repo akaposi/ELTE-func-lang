@@ -89,7 +89,10 @@ calculation2 = do
 -- Ha a felhasználó home directoryja root, adjunk vissza
 -- true-t egyébként false-ot
 isInRoot :: Reader Env Bool
-isInRoot = undefined
+isInRoot = do
+  MkEnv homeDir isAdm <- ask
+  -- if homeDir == "root" then return True else return False
+  return (homeDir == "root")
 
 -- WRITER
 -- Szorozzunk össze két számot és az írási környezetbe írjuk be, ha valamelyik szám 0
@@ -107,7 +110,11 @@ mulAndLog i i' = do
 -- EXCEPT
 -- Összeszoroz egy listányi számot, hibát dob ha valamelyik szám 0
 mulAll :: [Int] -> Except String Int
-mulAll = undefined
+mulAll [] = return 1
+mulAll (a:as) = if a == 0 then throwError "0 a szam" else do
+  as' <- mulAll as
+  return (a * as')
+
 
 
 -- Except: hibakörnyezet, képes hibakezelésre
@@ -221,3 +228,29 @@ o2 = runWriter (runExceptT orderMatters)
 -- Definiáljuk a createNewUser függvényt, amely egy új felhasználót hozzáad a rendszerhez
 -- Definiáljuk a login függvényt amely a jelenlegi felhasználó nevével megpróbál belépni
 -- Definiáljuk a tryLoginAs függvényt, amely paraméterül kap egy felhasználónevet, azzal megpróbál belépni, és ha az sikertelen ezt kiírja a writerbe (ne hasaljon el)
+
+type Logintype m = (MonadError String m, MonadWriter [String] m,  MonadReader String m, MonadState [String] m) 
+
+createNewUser :: (Logintype m) => String -> m ()
+createNewUser str = do
+  users <- get
+  if elem str users
+    then do
+      throwError "Ilyen felhasznalo mar letezik!"
+    else do
+      put (str:users)
+      tell ["A " ++ str ++ " nevu felhasznalot felvettuk a rendszerbe"]
+
+-- runCreateNewUser :: ((), [String])
+runCreateNewUser = runState (runWriterT (runReaderT (runExceptT (createNewUser "korte")) "alma")) ["alma", "korte", "barack"]
+
+login :: (MonadError String m, MonadWriter [String] m,  MonadReader String m, MonadState [String] m) => m ()
+login = do
+  current_user <- ask
+  users <- get
+  if elem current_user users
+    then do
+      tell ["A " ++ current_user ++ " nevu felhasznalo bejelentkezett a rendszerbe"]
+      local (const current_user) -- reader hianyzik 
+    else do
+      throwError "Nincs ilyen felhasznalo"
