@@ -53,15 +53,20 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 
 -- Parseoljunk be legalább 1 számjegyet!
 atLeastOneDigit :: Parser [Int]
-atLeastOneDigit = undefined
+atLeastOneDigit = some digit
 
 -- Ennek segítségével tudunk már természetes számokat parseolni
 natural :: Parser Int
-natural = undefined
+natural = foldl (\acc x -> acc * 10 + x) 0 <$> atLeastOneDigit
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
-integer = undefined
+integer = do
+  sign <- optional (negate <$ char '-' <|> id <$ char '+')
+  v <- natural
+  case sign of
+    Nothing -> pure v
+    Just f -> pure (f v)
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
@@ -73,28 +78,28 @@ float = do
     pure $ s * (r / 10 + fromIntegral i)
 
 -- Definiáljunk egy parsert ami két adott parser között parseol valami mást
--- pl bewteen (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
+-- pl between (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between = undefined
+between l a r = l *> a <* r
 
 
 -- Definiáljunk egy parsert ami valami elválasztó karakterrel elválasztott parsereket parseol (legalább 1-et)
 -- pl
--- runParser (sepBy1 anyChar (char ',')) "a,b,c,d" == Just ([a,b,c,d], "")
--- runParser (sepBy1 anyChar (char ',')) "a" == Just ([a], "")
--- runParser (sepBy1 anyChar (char ',')) "" == Nothing
+-- runParser (sepBy1 anyChar (char ',')) "a,b,c,d" == Right (['a','b','c','d'], "")
+-- runParser (sepBy1 anyChar (char ',')) "a" == Right (['a'], "")
+-- runParser (sepBy1 anyChar (char ',')) "" == Left _
 
 sepBy1 :: Parser a -> Parser delim -> Parser {- nem üres -} [a]
-sepBy1 = undefined
+sepBy1 a delim = (:) <$> a <*> many (delim *> a)
 
 -- Ugyanaz mint a fenti, de nem követeli meg, hogy legalább 1 legyen
 sepBy :: Parser a -> Parser delim -> Parser [a]
-sepBy = undefined
+sepBy a delim = sepBy1 a delim <|> pure []
 
 -- Írjunk egy parsert ami egy listaliterált parseol számokkal benne!
 -- pl [1,2,30,40,-10]
 listOfNumbers :: Parser [Int]
-listOfNumbers = undefined
+listOfNumbers = between (char '[') (sepBy integer (char ',')) (char ']')
 
 -- Whitespace-k elhagyása
 ws :: Parser ()
@@ -123,7 +128,7 @@ string' str = tok $ string str
 
 -- Írjuk újra a listOfNumbers parsert úgy, hogy engedjen space-eket a számok előtt és után illetve a [ ] előtt és után!
 goodListofNumbers :: Parser [Int]
-goodListofNumbers = undefined
+goodListofNumbers = between (char' '[') (sepBy integer' (char' ',')) (char' ']')
 
 -- Hajtogató parserek
 
@@ -132,11 +137,11 @@ goodListofNumbers = undefined
 -- Jobbra asszocialó kifejezést parseoljon.
 -- Sep által elválasztott kifejezéseket gyűjtsön össze, majd azokra a megfelelő sorrendbe alkalmazza a függvényt
 rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-rightAssoc = undefined
+rightAssoc f a sep = foldr1 f <$> sepBy1 a sep
 
 -- Ugyanaz mint a rightAssoc csak balra
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-leftAssoc  = undefined
+leftAssoc f a sep = foldl1 f <$> sepBy1 a sep
 
 -- Nem kötelező HF
 -- Olyan parser amit nem lehet láncolni (pl == mert 1 == 2 == 3 == 4 se jobbra se balra nem asszociál tehát nincs értelmezve)
@@ -178,6 +183,9 @@ data Exp
   | Exp :+ Exp -- összeadás
   | Exp :* Exp -- szorzás
   | Exp :^ Exp -- hatványozás
+  | Exp :# Exp
+  | Exp :- Exp
+  | Exp :/ Exp
   deriving (Eq, Show)
 
 -- Recursive Descent Parsing algoritmus
@@ -196,16 +204,23 @@ data Exp
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
 pAtom :: Parser Exp
-pAtom = undefined
+pAtom = (FloatLit <$> (float <* ws)) <|> (IntLit <$> integer') <|> (Var <$> some (satisfy isLetter) <* ws)
+  <|> (between (char' '(') pAdd (char' ')'))
 
 pPow :: Parser Exp
-pPow = undefined
+pPow = rightAssoc (:^) pAtom (char' '^')
+
+pHash :: Parser Exp
+pHash = leftAssoc (:#) pPow (char' '#')
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = leftAssoc (:*) pHash (char' '*')
+
+pDiv :: Parser Exp
+pDiv = chainr1 pMul ((:/) <$ undefined)
 
 pAdd :: Parser Exp
-pAdd = undefined
+pAdd = chainl1 pDiv ((:+) <$ char' '+' <|> (:-) <$ char' '-') ---leftAssoc (:+) pMul (char' '+')
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
@@ -247,3 +262,8 @@ pNonKeyword = undefined
 
 pKeyword :: String -> Parser ()
 pKeyword = undefined
+
+
+(+++) :: Int -> Int -> Int
+(+++) = (+)
+infixr 6 +++
