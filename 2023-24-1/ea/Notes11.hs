@@ -61,7 +61,7 @@ levLabel i (Nd _ ts) =
 
 data F x = L' | N' Int x x
            deriving Show
-data T   = L  | N  Int T T
+data T   = L  | N  Int T T        -- =  Fix F
            deriving Show
 
 -- minden f :: * -> * elkodol egy adattipust
@@ -97,7 +97,8 @@ fold f (N i l r) = f (N' i (fold f l) (fold f r))
 type I = [[Int]]      -- "labels for each level"
 type S = (T, [[Int]]) -- the labelled tree and the remaining labels
 
-f :: F (I->S) -> (I -> S)
+f :: F (I->S) -> (I -> S)  -- Synthesized folfele, Inherited lefele
+-- ite :: (F A -> A) -> T -> A
 f L'             xss          = (L,       xss)
 f (N' _ isl isr) ((x:xs):xss) = (N x l r, xs:zss)
     where
