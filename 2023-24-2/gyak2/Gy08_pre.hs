@@ -186,7 +186,11 @@ data Exp
   | Exp :# Exp
   | Exp :- Exp
   | Exp :/ Exp
+  | Exp :@ Exp
+  | Exp :$ Exp
+  | Exp :€ Exp
   deriving (Eq, Show)
+
 
 -- Recursive Descent Parsing algoritmus
 -- 1, összeírjuk egy táblázatba az operátorok precedeciáját és kötési irányát (ez adott) csökkenő sorrendben
@@ -198,7 +202,7 @@ data Exp
 +--------------------+--------------------+--------------------+
 | *                  | Balra              | 14                 |
 +--------------------+--------------------+--------------------+
-| +                  | Balra              | 12                 |
+| +,-                | Balra              | 12                 |
 +--------------------+--------------------+--------------------+
 -}
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
@@ -207,20 +211,23 @@ pAtom :: Parser Exp
 pAtom = (FloatLit <$> (float <* ws)) <|> (IntLit <$> integer') <|> (Var <$> some (satisfy isLetter) <* ws)
   <|> (between (char' '(') pAdd (char' ')'))
 
+pDollar :: Parser Exp
+pDollar = chainr1 pAtom ((:$) <$ char' '$')
+
 pPow :: Parser Exp
-pPow = rightAssoc (:^) pAtom (char' '^')
+pPow = rightAssoc (:^) pDollar (char' '^')
 
 pHash :: Parser Exp
-pHash = leftAssoc (:#) pPow (char' '#')
+pHash = chainl1 pPow ((:#) <$ char' '#' <|> (:@) <$ char' '@')
 
 pMul :: Parser Exp
 pMul = leftAssoc (:*) pHash (char' '*')
 
 pDiv :: Parser Exp
-pDiv = chainr1 pMul ((:/) <$ undefined)
+pDiv = chainr1 pMul ((:/) <$ char' '/')
 
 pAdd :: Parser Exp
-pAdd = chainl1 pDiv ((:+) <$ char' '+' <|> (:-) <$ char' '-') ---leftAssoc (:+) pMul (char' '+')
+pAdd = chainl1 pDiv ((:+) <$ char' '+' <|> (:-) <$ char' '-' <|> (:€) <$ char' '€') ---leftAssoc (:+) pMul (char' '+')
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
