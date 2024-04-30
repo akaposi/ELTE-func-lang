@@ -1,5 +1,3 @@
--- jovo ora 26 perccel rovidebb (ez mar kumulalt ertek)
-
 -- tipuspolinomok derivalasa (Korpa Peter Zsolt)
 
 -- jovo ora:
@@ -16,7 +14,5 @@ label (Node l _ r) i = Node (label l (i+1)) i (label r (i+2))
 -- koinduktiv Church kodolas
 -- type Stream a = exists b.((b -> (a,b)),b)
 -- exists b . f = forall u. (forall b . f -> u) -> u
-
--- parametricitas, type () = forall a . a -> a
 
 -- hatekony Haskell forditas (Kovacs Andras): https://github.com/AndrasKovacs/staged/blob/main/newpaper/paper.pdf
