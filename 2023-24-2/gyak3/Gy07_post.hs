@@ -68,12 +68,16 @@ string s = mapM_ char s
 -- Ez lesz az Alternative típusosztály
 instance Alternative Parser where
   empty :: Parser a -- Garantáltan elhasaló parser
-  empty = undefined
+  empty = Parser $ \s -> Nothing
   (<|>) :: Parser a -> Parser a -> Parser a -- Ha a baloldali sikertelen, futassuk le a jobboldalit (hint: A Maybe is egy alternatív)
-  (<|>) = undefined
+  (<|>) pa pa' = Parser $ \s -> case runParser pa s of
+    Nothing -> runParser pa' s
+    Just r -> Just r
 
 -- Definiáljunk egy parsert ami egy 'a' vagy egy 'b' karaktert parseol
 
+aOrBParser :: Parser ()
+aOrBParser = char 'a' <|> char 'b'
 
 -- many :: Parser a -> Parser [a]
 -- 0 vagy többször lefuttatja a parsert
@@ -89,17 +93,24 @@ some' p = (:) <$> p <*> many' p -- Lefuttatja 1x és utána 0 vagy többször
 -- optional' :: Parser a -> Parser (Maybe a)
 -- ha elhasalna a parser, mégse hasal el
 optional' :: Parser a -> Parser (Maybe a)
-optional' p = undefined
+optional' p = Parser $ \ s -> case runParser p s of
+  Nothing -> Just (Nothing, s)
+  Just (a, s') -> Just (Just a, s')
 
 -- replicateM :: Int -> Parser a -> Parser [a]
 -- n-szer lefuttat egy parsert
 replicateM' :: Integral i => i -> Parser a -> Parser [a]
-replicateM' = undefined
+replicateM' i pa
+  | i <= 0 = return []
+  | otherwise = do
+    a <- pa
+    as' <- replicateM' (i - 1) pa
+    return (a:as')
 
 -- asum :: [Parser a] -> Parser a
 -- Sorban megpróbálja az összes parsert lefuttatni
 asum' :: [Parser a] -> Parser a
-asum' = undefined
+asum' pas = foldr (<|>) empty pas
 
 -- Regex féle parserek
 {-
@@ -120,27 +131,27 @@ asum' = undefined
 
 -- alm(a|ák)
 p1 :: Parser ()
-p1 = undefined
+p1 = string "alm" >> (char 'a' <|> string "ák")
 
 -- c(i+)ca
 p2 :: Parser ()
-p2 = undefined
+p2 = char 'c' >> some (char 'i') >> string "ca"
 
 -- (c*)i?(c+)a{3}
 p3 :: Parser ()
-p3 = undefined
+p3 = () <$ (many (char 'c') >> optional (char 'i') >> some (char 'c') >> replicateM 3 (char 'a'))
 
 -- (alma|banana)?
 p4 :: Parser ()
-p4 = undefined
+p4 = void $ optional (string "alma" <|> string "banana")
 
 -- [A-Z]{10}
 p5 :: Parser ()
-p5 = undefined
+p5 = replicateM_ 10 (satisfy (`elem` ['A'..'Z']))
 
 -- \d{2}
 p6 :: Parser ()
-p6 = undefined
+p6 = replicateM_ 2 (digitToInt <$> satisfy isDigit)
 
 -- \d+.*$
 p7 :: Parser ()
@@ -154,6 +165,7 @@ p8 = undefined
 p9 :: Parser ()
 p9 = undefined
 
+--   {2,} -- legalább 2 | pa >> some pa
 -- \d{2,}-?$
 p10 :: Parser ()
 p10 = undefined
