@@ -179,6 +179,8 @@ chainl1 v op = v >>= parseLeft
 data Exp
   = IntLit Int -- integer literál pl 1, 2
   | FloatLit Double -- lebegőpontos szám literál, pl 1.0 vagy 2.3
+  | BoolLit Bool
+  | LamLit String Exp
   | Var String -- változónév
   | Exp :+ Exp -- összeadás
   | Exp :* Exp -- szorzás
@@ -189,6 +191,7 @@ data Exp
   | Exp :@ Exp
   | Exp :$ Exp
   | Exp :€ Exp
+  | Factorial Exp
   deriving (Eq, Show)
 
 
@@ -208,11 +211,14 @@ data Exp
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
 pAtom :: Parser Exp
-pAtom = (FloatLit <$> (float <* ws)) <|> (IntLit <$> integer') <|> (Var <$> some (satisfy isLetter) <* ws)
+pAtom = (LamLit <$> (pKeyword "lam" *> pNonKeyword) <*> (string' "->" *> pAdd)) <|> (FloatLit <$> (float <* ws)) <|> (IntLit <$> integer') <|> (BoolLit True <$ pKeyword "true" <|> BoolLit False <$ pKeyword "false") <|> (Var <$> pNonKeyword)
   <|> (between (char' '(') pAdd (char' ')'))
 
+pFactorial :: Parser Exp
+pFactorial = (Factorial <$> pAtom <* char' '!') <|> pAtom
+
 pDollar :: Parser Exp
-pDollar = chainr1 pAtom ((:$) <$ char' '$')
+pDollar = chainr1 pFactorial ((:$) <$ char' '$')
 
 pPow :: Parser Exp
 pPow = rightAssoc (:^) pDollar (char' '^')
@@ -262,15 +268,14 @@ pAdd = chainl1 pDiv ((:+) <$ char' '+' <|> (:-) <$ char' '-' <|> (:€) <$ char'
 -- Adjunk a nyelvhez lambda kifejezéseket
 
 keywords :: [String]
-keywords = undefined
+keywords = ["true", "false", "lam"]
 
 pNonKeyword :: Parser String
-pNonKeyword = undefined
+pNonKeyword = do
+  varname <- tok $ some (satisfy isLetter)
+  if varname `elem` keywords then
+    throwError "pNonKeyword: Parsed a keyword"
+  else pure varname
 
 pKeyword :: String -> Parser ()
-pKeyword = undefined
-
-
-(+++) :: Int -> Int -> Int
-(+++) = (+)
-infixr 6 +++
+pKeyword = string'

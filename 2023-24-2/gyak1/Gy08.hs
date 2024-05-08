@@ -7,9 +7,31 @@ import Control.Applicative
 import Data.Char
 import Data.List
 import Data.Bifunctor
+import Data.Functor
+import Control.Monad
 
 -- Parser hibaüzenettel
 type Parser a = StateT String (Except [String]) a
+
+-- Oktális számok: 0o__
+octal :: Parser Int
+octal = do
+  string "0o"
+  digits <- some digit
+  when (any (\d -> d >= 8) digits) $ parseError "non valid octal digit"
+  return $ foldl (\acc x -> acc * 8 + x) 0 digits
+
+-- hexadecimális számok: 0x__ (csak nagy betűs karakterekkel!)
+
+hexDigit :: Parser Int
+hexDigit = (\c -> ord c - ord 'A' + 10) <$> satisfy (\c -> c >= 'A' && c <= 'F')
+
+hexa :: Parser Int
+hexa = do
+  string "0x"
+  digits <- some (digit <|> hexDigit)
+  return $ foldl (\acc x -> acc * 16 + x) 0 digits
+
 
 runParser :: Parser a -> String -> Either String (a, String)
 runParser p s = first (\x -> concat $ drop (length x - 1) x) $ runExcept (runStateT p s)
@@ -43,15 +65,20 @@ string str = mapM_ (\c -> char c <|> parseError ("string: mismatch on char " ++ 
 
 -- Parseoljunk be legalább 1 számjegyet!
 atLeastOneDigit :: Parser [Int]
-atLeastOneDigit = undefined
+atLeastOneDigit = some digit
 
 -- Ennek segítségével tudunk már természetes számokat parseolni
 natural :: Parser Int
-natural = undefined
+natural = foldl (\r a -> r * 10 + a) 0 <$> atLeastOneDigit
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
-integer = undefined
+integer = do
+  sign <- optional (negate <$ char '-' <|> id <$ char '+')
+  v <- natural
+  case sign of
+    Nothing -> pure v
+    Just f -> pure (f v)
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
@@ -65,7 +92,7 @@ float = do
 -- Definiáljunk egy parsert ami két adott parser között parseol valami mást
 -- pl bewteen (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between = undefined
+between l a r = l *> a <* r
 
 
 -- Definiáljunk egy parsert ami valami elválasztó karakterrel elválasztott parsereket parseol (legalább 1-et)
@@ -164,10 +191,15 @@ chainl1 v op = v >>= parseLeft
 data Exp
   = IntLit Int -- integer literál pl 1, 2
   | FloatLit Double -- lebegőpontos szám literál, pl 1.0 vagy 2.3
+  | BoolLit Bool
   | Var String -- változónév
   | Exp :+ Exp -- összeadás
   | Exp :* Exp -- szorzás
   | Exp :^ Exp -- hatványozás
+  | Exp :% Exp
+  | Exp :- Exp
+  | Exp :# Exp
+  | Exp :/ Exp
   deriving (Eq, Show)
 
 -- Recursive Descent Parsing algoritmus
@@ -185,17 +217,26 @@ data Exp
 -}
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
+pBool :: Parser Exp
+pBool = BoolLit True <$ string' "true" <|> BoolLit False <$ string' "false"
+
 pAtom :: Parser Exp
-pAtom = undefined
+pAtom = (pBool <|> FloatLit <$> tok float <|> IntLit <$> integer' <|> (Var <$> some (satisfy isLetter)) <|> between (char' '(') pAdd (char' ')'))
 
 pPow :: Parser Exp
-pPow = undefined
+pPow = chainr1 pAtom ((:^) <$ char' '^' <|> (:%) <$ char' '%')
+
+pHash :: Parser Exp
+pHash = chainl1 pPow ((:#) <$ char' '#')
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = chainl1 pHash ((:*) <$ char' '*')
+
+pSub :: Parser Exp
+pSub = chainr1 pMul ((:-) <$ char' '-' <|> (:/) <$ char' '/')
 
 pAdd :: Parser Exp
-pAdd = undefined
+pAdd = chainl1 pSub ((:+) <$ char' '+')
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert

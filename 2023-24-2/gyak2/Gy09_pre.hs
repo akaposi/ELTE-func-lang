@@ -177,7 +177,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not"]
+keywords = ["true", "false", "not", "while", "do", "end", "lam", "if", "then"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -227,29 +227,62 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
+  deriving Show
 
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = many statement
 
 statement :: Parser Statement
-statement = undefined
+statement = asum [sIf, sWhile, sAssign] <* char' ';'
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = do
+  pKeyword "if"
+  e <- pExp
+  pKeyword "then"
+  prog <- program
+  pKeyword "end"
+  pure (If e prog)
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = do
+  pKeyword "while"
+  e <- pExp
+  pKeyword "do"
+  prog <- program
+  pKeyword "end"
+  pure (While e prog)
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = do
+  var <- pNonKeyword
+  string' ":="
+  e <- pExp
+  pure (Assign var e)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
   Left e -> Left e
   Right (x,_) -> Right x
+
+{-
+
+do sts while e end === do-while ciklus
+if e then sts else sts end === if-else elágazás
+for st ; e ; st ; do sts end === for-ciklus
+funk var (vars) begin sts end === függvénydefiníció
+delete var == delete állítás
+create var == create állítás
+@var == label
+jump var == jump állítás
+< vars > := exprs === parallel assignment
+
+-}
+
+
 
 -- Interpreter
 -- Kiértékelt értékek típusa:
