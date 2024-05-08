@@ -268,21 +268,6 @@ parseProgram s = case runParser (topLevel program) s of
   Left e -> Left e
   Right (x,_) -> Right x
 
-{-
-
-do sts while e end === do-while ciklus
-if e then sts else sts end === if-else elágazás
-for st ; e ; st ; do sts end === for-ciklus
-funk var (vars) begin sts end === függvénydefiníció
-delete var == delete állítás
-create var == create állítás
-@var == label
-jump var == jump állítás
-< vars > := exprs === parallel assignment
-
--}
-
-
 
 -- Interpreter
 -- Kiértékelt értékek típusa:
