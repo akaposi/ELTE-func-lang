@@ -227,16 +227,17 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
+  | Label String Statement    -- v : s
   deriving Show
 
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = many statement
+program = many (statement  <* char' ';')
 
 statement :: Parser Statement
-statement = asum [sIf, sWhile, sAssign] <* char' ';'
+statement = asum [sIf, sWhile, sAssign]
 
 sIf :: Parser Statement
 sIf = do
