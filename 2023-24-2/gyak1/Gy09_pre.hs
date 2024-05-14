@@ -227,24 +227,53 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
+  | Label String [Statement]  -- v: p
+  | GoTo String               -- goto v
+  | Return Exp
 
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = concat <$> sepBy (sAssigns <|> singleton <$> statement) (char' ';')
 
 statement :: Parser Statement
-statement = undefined
+statement = asum [
+  sIf,
+  sWhile,
+  sLabel,
+  sAssign,
+  sGoto,
+  sReturn
+  ] <|> throwError "statement: No valid statements found!"
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = string "if" *> (If <$> (pExp <* string' "then") <*> (program <* string' "end"))
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = string "while" *> (While <$> (pExp <* string' "do") <*> (program <* string' "end"))
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = Assign <$> (pNonKeyword <* string' ":=") <*> pExp
+
+sAssigns :: Parser [Statement]
+sAssigns = do
+  vars <- sepBy1 pNonKeyword (char' ',')
+  string' ":="
+  exps <- sepBy1 pExp (char' ',')
+  if length vars /= length exps then
+    throwError "sAssings: Not enough variable names or values!"
+  else
+    pure $ zipWith Assign vars exps
+
+sLabel :: Parser Statement
+sLabel = Label <$> (pNonKeyword <* char ':') <*> program
+
+sGoto :: Parser Statement
+sGoto = GoTo <$> (string' "goto" *> pNonKeyword)
+
+sReturn :: Parser Statement
+sReturn = string' "return" *> (Return <$> pExp)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -258,6 +287,15 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
+  deriving (Show)
+
+instance Eq Val where
+  (==) :: Val -> Val -> Bool
+  (==) (VInt i) (VInt j) = i == j
+  (==) (VFloat i) (VFloat j) = i == j
+  (==) (VBool b) (VBool bb) = b == bb
+  (==) _ _ = False
+  
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
@@ -265,18 +303,83 @@ data InterpreterError
   = TypeError String -- típushiba üzenettel
   | ScopeError String -- variable not in scope üzenettel
   | DivByZeroError String -- 0-val való osztás hibaüzenettel
+  deriving (Show)
 
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp (IntLit a) _ = pure $ VInt a
+evalExp (FloatLit f) _ = pure $ VFloat f
+evalExp (BoolLit b) _ = pure $ VBool b
+evalExp (LamLit s e) env = pure $ VLam s env e
+evalExp (Var a) env = case lookup a env of
+  Just a -> pure a
+  Nothing -> throwError $ ScopeError ("Can not find variable in scope: " ++ a)
+evalExp (Not e) env = (evalExp e env) >>= \b -> case b of
+  (VBool b) -> pure $ VBool (not b)
+  _ -> throwError $ TypeError "Can not 'not' non-bool values!"
+evalExp (e1 :+ e2) env = evalExp e1 env >>= \v1 -> evalExp e2 env >>= \v2 -> case (v1, v2) of
+  (VInt a , VInt b) -> pure $ VInt (a + b)
+  (VFloat f , VFloat g) -> pure $ VFloat (f + g)
+  (VInt a , VFloat g) -> pure $ VFloat ((fromIntegral a) + g)
+  (VFloat f, VInt b) -> pure $ VFloat (f + (fromIntegral b))
+  _ -> throwError $ TypeError "Addition only works on numbers!"
+evalExp (e1 :- e2) env = evalExp e1 env >>= \v1 -> evalExp e2 env >>= \v2 -> case (v1, v2) of
+  (VInt a , VInt b) -> pure $ VInt (a - b)
+  (VFloat f , VFloat g) -> pure $ VFloat (f - g)
+  (VInt a , VFloat g) -> pure $ VFloat ((fromIntegral a) - g)
+  (VFloat f, VInt b) -> pure $ VFloat (f - (fromIntegral b))
+  _ -> throwError $ TypeError "Substraction only works on numbers!"
+evalExp (e1 :* e2) env = evalExp e1 env >>= \v1 -> evalExp e2 env >>= \v2 -> case (v1, v2) of
+  (VInt a , VInt b) -> pure $ VInt (a * b)
+  (VFloat f , VFloat g) -> pure $ VFloat (f * g)
+  (VInt a , VFloat g) -> pure $ VFloat ((fromIntegral a) * g)
+  (VFloat f, VInt b) -> pure $ VFloat (f * (fromIntegral b))
+  _ -> throwError $ TypeError "Multiplication only works on numbers!"
+evalExp (e1 :/ e2) env = evalExp e1 env >>= \v1 -> evalExp e2 env >>= \v2 -> case (v1, v2) of
+  (VInt _ , VInt 0) -> throwError $ DivByZeroError "Unable to divide by zero!"
+  (VFloat _ , VInt 0) -> throwError $ DivByZeroError "Unable to divide by zero!"
+  (VInt a , VInt b) -> pure $ VInt (a + b)
+  (VFloat f , VFloat g) -> if (abs g <= 0.0000000000001) then (throwError $ DivByZeroError "Unable to divide by zero!") else pure $ VFloat (f + g)
+  (VInt a , VFloat g) -> if (abs g <= 0.0000000000001) then (throwError $ DivByZeroError "Unable to divide by zero!") else pure $ VFloat ((fromIntegral a) + g)
+  (VFloat f, VInt b) -> pure $ VFloat (f + (fromIntegral b))
+  _ -> throwError $ TypeError "Addition only works on numbers!"
+evalExp (e1 :== e2) env = VBool <$> ((==) <$> evalExp e1 env <*> evalExp e2 env)
+evalExp (e1 :$ e2) env = evalExp e1 env >>= \lam -> case lam of
+  (VLam v env e3) -> evalExp e2 env >>= \inp -> evalExp e3 ((v, inp) : env)
+  _ -> throwError $ TypeError "Can not apply paramater to non-lambda expression!"
+
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement (If e bo) = get >>= evalExp e >>= \b -> case b of
+  (VBool b) -> get >>= \h -> if b then void $ traverse evalStatement bo else pure ()
+  _ -> throwError $ TypeError "In if statement the expression must be a bool!"
+evalStatement (While e bo) = get >>= evalExp e >>= \b -> case b of
+  (VBool b) -> get >>= \h -> if b then void $ traverse evalStatement bo else pure ()
+  _ -> throwError $ TypeError "In while statement the expression must be a bool!"
+evalStatement (Assign s e) = get >>= \st -> evalExp e st >>= \v -> put ((s ,v) : st)
+evalStatement (Label s st) = void $ traverse evalStatement st
+evalStatement (GoTo s) = pure ()
+evalStatement (Return e) = get >>= \st -> evalExp e st >>= \v -> put (("ans", v) : st)
+
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
 
+evalProgram' :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m (Maybe String)
+evalProgram' s = let h = (mapM evalStatement s >>= \_ -> get) in (lookup "ans" <$> h) >>= \m -> pure $ (show <$> m)
+
 -- Egészítsük ki a nyelvet egy print állítással (hint: MonadIO megkötés)
 -- Egészítsük ki a nyelvet más típusokkal (tuple, either stb)
+
+pe :: (MonadError InterpreterError m, MonadState Env m) => String -> m (Maybe String) 
+pe str = case parseProgram str of
+  (Left err)  -> throwError $ ScopeError err
+  (Right val) -> evalProgram' val 
+
+-- >>> :t evalStateT
+-- evalStateT :: Monad m => StateT s m a -> s -> m a
+
+-- >>> evalStateT ((pe "return 0") :: StateT Env (Either InterpreterError) (Maybe String)) []
+-- Right (Just "VInt 0")

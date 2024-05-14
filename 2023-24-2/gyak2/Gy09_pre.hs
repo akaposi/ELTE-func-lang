@@ -227,8 +227,6 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
-  | Label String Statement    -- v : s
---  | ParallelAssign [(String, Exp)]
   deriving Show
 
 -- Írjunk ezekre parsereket!
