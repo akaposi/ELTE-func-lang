@@ -292,6 +292,14 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
+  deriving Show
+
+{-
+if (1 == 1) {
+  y := 2
+}
+x := y
+-}
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
@@ -299,6 +307,7 @@ data InterpreterError
   = TypeError String -- típushiba üzenettel
   | ScopeError String -- variable not in scope üzenettel
   | DivByZeroError String -- 0-val való osztás hibaüzenettel
+  deriving Show
 
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
@@ -306,7 +315,7 @@ evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
 evalExp exp env = case exp of
   IntLit i -> return (VInt i)
   FloatLit f -> return (VFloat f)
-  BoolLit b -> undefined
+  BoolLit b -> return (VBool b)
   LamLit s e -> return (VLam s env e)
   Var str -> case lookup str env of
     Just v -> return v
@@ -375,6 +384,13 @@ updateEnv ((s', v'):xs) s v
   | s == s' = (s, v) : xs
   | otherwise = (s', v') : updateEnv xs s v
 
+inBlockScope :: MonadState Env m => m a -> m a
+inBlockScope f = do
+  env <- get
+  a <- f
+  modify (take (length env))
+  pure a
+
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
 evalStatement st = case st of
@@ -386,7 +402,7 @@ evalStatement st = case st of
     env <- get
     v1 <- evalExp e env
     case v1 of
-      VBool True -> evalProgram sts
+      VBool True -> inBlockScope $ evalProgram sts
       VBool _ -> pure ()
       _ -> throwError (TypeError $ "operand of if is not a bool")
   While e sts -> do
@@ -394,7 +410,7 @@ evalStatement st = case st of
     v1 <- evalExp e env
     case v1 of
       VBool True -> do
-        evalProgram sts
+        inBlockScope $ evalProgram sts
         evalStatement (While e sts)
       VBool _ -> pure ()
       _ -> throwError (TypeError $ "operand of if is not a bool")
