@@ -228,6 +228,7 @@ data Statement
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
   | Label String Statement    -- v : s
+--  | ParallelAssign [(String, Exp)]
   deriving Show
 
 -- Írjunk ezekre parsereket!
@@ -238,6 +239,22 @@ program = many (statement  <* char' ';')
 
 statement :: Parser Statement
 statement = asum [sIf, sWhile, sAssign]
+
+{--
+sPAssign :: Parser Statement
+sPAssign = do
+  names <- sepBy1 pNonKeyword (char' ',')
+  string' ":="
+  exps <- sepBy1 pExp (char' ',')
+  when (not (compareLengths names exps)) $ throwError "almafa"
+  return (ParallelAssign $ zip names exps)
+-}
+compareLengths :: [a] -> [b] -> Bool
+compareLengths [] [] = True
+compareLengths [] _ = False
+compareLengths _ [] = False
+compareLengths (x : xs) (y : ys) = compareLengths xs ys
+
 
 sIf :: Parser Statement
 sIf = do
@@ -288,11 +305,101 @@ data InterpreterError
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp exp env = case exp of
+  IntLit i -> return (VInt i)
+  FloatLit f -> return (VFloat f)
+  BoolLit b -> undefined
+  LamLit s e -> return (VLam s env e)
+  Var str -> case lookup str env of
+    Just v -> return v
+    Nothing -> throwError (ScopeError $ "variable not in scope " ++ str)
+  e1 :+ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VInt (i1 + i2))
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 + f2))
+      _ -> throwError (TypeError $ "type error in the operands of +")
+  e1 :- e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VInt (i1 - i2))
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 - f2))
+      _ -> throwError (TypeError $ "type error in the operands of -")
+  e1 :* e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VInt (i1 * i2))
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 * f2))
+      _ -> throwError (TypeError $ "type error in the operands of *")
+  e1 :/ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> if i2 == 0 then throwError (DivByZeroError "almafa") else return (VInt (div i1 i2))
+      (VFloat f1, VFloat f2) -> if f2 == 0 then throwError (DivByZeroError "almafább") else return (VFloat (f1 / f2))
+      _ -> throwError (TypeError $ "type error in the operands of /")
+  e1 :== e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VBool (i1 == i2))
+      (VFloat f1, VFloat f2) -> return (VBool (f1 == f2))
+      (VBool b1, VBool b2) -> return (VBool (b1 == b2))
+      _ -> throwError (TypeError $ "type error in the operands of *")
+  e1 :$ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case v1 of
+      (VLam s env' e) -> evalExp e ((s, v2) : env')
+      _ -> throwError (TypeError $ "type error in funapp")
+{-
+  = IntLit Int           -- 1 2 ...
+  | FloatLit Double      -- 1.0 2.11 ...
+  | BoolLit Bool         -- true false
+  | Var String           -- x y ...
+  | LamLit String Exp    -- \x -> e
+  | Exp :+ Exp           -- e1 + e2
+  | Exp :* Exp           -- e1 * e2
+  | Exp :- Exp           -- e1 - e2
+  | Exp :/ Exp           -- e1 / e2
+  | Exp :== Exp          -- e1 == e2
+  | Exp :$ Exp           -- e1 $ e2
+  | Not Exp              -- not e
+
+-}
+
+updateEnv :: Env -> String -> Val -> Env
+updateEnv [] s v = [(s,v)]
+updateEnv ((s', v'):xs) s v
+  | s == s' = (s, v) : xs
+  | otherwise = (s', v') : updateEnv xs s v
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement st = case st of
+  Assign x e -> do
+    env <- get
+    v <- evalExp e env
+    modify (\env' -> updateEnv env' x v)
+  If e sts -> do
+    env <- get
+    v1 <- evalExp e env
+    case v1 of
+      VBool True -> evalProgram sts
+      VBool _ -> pure ()
+      _ -> throwError (TypeError $ "operand of if is not a bool")
+  While e sts -> do
+    env <- get
+    v1 <- evalExp e env
+    case v1 of
+      VBool True -> do
+        evalProgram sts
+        evalStatement (While e sts)
+      VBool _ -> pure ()
+      _ -> throwError (TypeError $ "operand of if is not a bool")
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
