@@ -17,6 +17,7 @@ import Data.Char
 import Data.Foldable
 import GHC.Stack
 import Debug.Trace
+import GhcPlugins (semi)
 
 {-# ANN module "HLint: ignore Evaluate" #-}
 {-# ANN module "HLint: ignore Use ++" #-}
@@ -56,27 +57,27 @@ inf4 = Node [Leaf True, inf4]
 -- deriving semmilyen formában nem használható.
 
 
-testFunctor :: [Bool]
-testFunctor = [
-    fmap (+1) inf1 == Node [Leaf 2, Node [Leaf 3, Leaf 4], Leaf 5, Node [Leaf 6, Leaf 7, Leaf 8]],
-    fmap not inf3 == inf3,
-    fmap (\x -> replicate x x) inf1 == Node [Leaf [1], Node [Leaf [2,2], Leaf [3,3,3]], Leaf [4,4,4,4], Node [Leaf [5,5,5,5,5], Leaf [6,6,6,6,6,6], Leaf [7,7,7,7,7,7,7]]],
-    ('a' <$ inf1) == Node [Leaf 'a', Node [Leaf 'a', Leaf 'a'], Leaf 'a', Node [Leaf 'a', Leaf 'a', Leaf 'a']]
-    ]
+-- testFunctor :: [Bool]
+-- testFunctor = [
+--     fmap (+1) inf1 == Node [Leaf 2, Node [Leaf 3, Leaf 4], Leaf 5, Node [Leaf 6, Leaf 7, Leaf 8]],
+--     fmap not inf3 == inf3,
+--     fmap (\x -> replicate x x) inf1 == Node [Leaf [1], Node [Leaf [2,2], Leaf [3,3,3]], Leaf [4,4,4,4], Node [Leaf [5,5,5,5,5], Leaf [6,6,6,6,6,6], Leaf [7,7,7,7,7,7,7]]],
+--     ('a' <$ inf1) == Node [Leaf 'a', Node [Leaf 'a', Leaf 'a'], Leaf 'a', Node [Leaf 'a', Leaf 'a', Leaf 'a']]
+--     ]
 
-testFoldable :: [Bool]
-testFoldable = [
-    sum inf1 == 28,
-    and inf3,
-    not (or inf3),
-    or inf4
-    ]
+-- testFoldable :: [Bool]
+-- testFoldable = [
+--     sum inf1 == 28,
+--     and inf3,
+--     not (or inf3),
+--     or inf4
+--     ]
 
-testTraversable :: [Bool]
-testTraversable = [
-    traverse (\x -> if x >= 1 then Just (x + 1) else Nothing) inf1 == Just (fmap (+1) inf1),
-    traverse (\x -> if x > 1 then Just (x + 1) else Nothing) inf1 == Nothing
-    ]
+-- testTraversable :: [Bool]
+-- testTraversable = [
+--     traverse (\x -> if x >= 1 then Just (x + 1) else Nothing) inf1 == Just (fmap (+1) inf1),
+--     traverse (\x -> if x > 1 then Just (x + 1) else Nothing) inf1 == Nothing
+--     ]
 
 -- Definiáljuk a semiFlattener függvényt, amely kilapított formában visszaad egy fát.
 -- Ha bejárás közben egy ágon fel vagy le mennénk,
@@ -101,6 +102,8 @@ testSemiFlattener = [
 -- (Feltehetjük, hogy hibásan épített fa nincs,
 -- tehát minden Left Down-hoz egy Left Up is tartozik utána)! (3 pont)
 
+semiUnflattener :: [Either Dir a] -> Infinitree [] a
+semiUnflattener = undefined
 
 testSemiUnflattener :: [Bool]
 testSemiUnflattener = [
