@@ -104,7 +104,7 @@ Az alábbi műveletet használjuk a tesztek során
 runAtm atmMonad initialState initialUser = runExcept $ runWriterT $ runReaderT (runStateT atmMonad initialState) initialUser
 ```
 
-Definiáljuk a `loginAs` függvényt, amely egy `String` bankkáryát kap paraméterül és egy atm monád transzformert. A függvény futassa le a paraméterül kapott transzformerta abban az olvasási környezetben, amelyben a jelen bankkártya a paraméterül kapott `String`. A belépést logoljuk az írási környezetbe.
+Definiáljuk a `loginAs` függvényt, amely egy `String` bankkáryát kap paraméterül és egy atm monád transzformert. A függvény futassa le a paraméterül kapott transzformert abban az olvasási környezetben, amelyben a jelen bankkártya a paraméterül kapott `String`. A belépést logoljuk az írási környezetbe.
 __(2 pont)__
 
 Tesztek:
