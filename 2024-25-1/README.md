@@ -24,7 +24,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 - Kaposi Ambrus, email: akaposi @ inf.elte.hu (szóköz nélkül)
 - Török Bálint Bence (Zserbó), email: fcjylp @ inf.elte.hu (szóköz nélkül)
 - Petes Márton, email: tx0lwm @ inf.elte.hu (szóköz nélkül)
-- Korpa Péter, email: *TBA*
+- Korpa Péter, email: qkfn4m @ inf.elte.hu (szóköz nélkül)
 
 #### Infrastruktúra
 
