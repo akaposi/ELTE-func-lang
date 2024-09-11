@@ -16,8 +16,8 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 - Előadás (Kaposi Ambrus): Déli Tömb 2-712, Szerda 16:00-17:30
 - Gyakorlatok:
   - 1.-es csoport (Petes Márton): Déli Tömb 2-124 (Microsoft Labor), Szerda 19:30-21:00
-  - 2.-es csoport (Török Bálint Bence): Déli Tömb 2-108 (PC5), Szerda 16:00-17:30 (**Az időpont és a helyszín az előadással való ütközés miatt még változhat**)
-  - 3.-as csoport (Korpa Péter): Déli Tömb 2-124 (Microsoft Laborr), Hétfő 19:30-21:00
+  - 2.-es csoport (Török Bálint Bence): Északi Tömb 0.99 (TáTK gépterem), Szerda 17:45-19:15
+  - 3.-as csoport (Korpa Péter): Déli Tömb 2-124 (Microsoft Labor), Hétfő 19:30-21:00
 
 #### Elérhetőségek
 
