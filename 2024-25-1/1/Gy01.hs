@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
+{-# LANGUAGE InstanceSigs #-}
 
 module Gy01 where
 
@@ -45,7 +46,7 @@ Pragmák:
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+xor x y = case x of { True -> not y; False -> y }
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -70,7 +71,7 @@ id' x = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (_, (b, (c, _))) = (b, c)
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -78,32 +79,32 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 = ($)
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 = (.)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 = flip
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
 -- snd :: (a,b) -> b
 
 f5 :: ((a, b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
-f5 = undefined
+f5 f a b = f (a, b)
 
 f6 :: (a -> b -> c) -> (a, b) -> c
-f6 = undefined
+f6 f (a,b) = f a b
 
 -- Ha az eredménybe függvényt kell megadni használj lambdákat!
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\a -> fst (f a), \b -> snd (f b))
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
-f8 = undefined
+f8 (fb, fc) a = (fb a, fc a)
 
 -- ADT-k emlékeztető:
 -- Either adattípus. Két konstruktora van, Left és Right, ami vagy a-t vagy b-t tárol:
@@ -113,13 +114,17 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 e = case e of
+  Left a -> Right a
+  Right b -> Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
-f10 = undefined
+f10 f = (\a -> f (Left a), f . Right)
 
 f11 :: (a -> c, b -> c) -> (Either a b -> c)
-f11 = undefined
+f11 (f,g) a = case a of
+  Left z -> f z
+  Right z -> g z
 
 -- Bónusz
 
@@ -158,21 +163,23 @@ class Show a where
 
 -- Egyszerű data, nincs típusparamétere
 -- Legyen két konstruktora, RGB aminek három szám paramétere van és HSL aminek szintén három szám paramétere van
-data Colour
+data Colour = RGB Int Int Int | HSL Int Int Int
 
 -- Mik a lista konstruktorai és azok paraméterei?
 -- GHCi meg tudja mondani
-data List a -- = ???
+data List a = Nil | Cons a (List a)-- = ???
 
 -- Bináris fa
 -- Ilyen nincs beépítve nekünk kell kitalálni
 -- Minden belső csúcsnak pontosan 2 részfája legyen
-data Tree a
+data Tree a = Node (Tree a) (Tree a) | Leaf a
 
 -- Írjunk ezekre a datákra instance-okat!
 instance Eq Colour where
   (==) :: Colour -> Colour -> Bool -- régebbi GHC-ben nem lehetett ezt kiírni InstanceSigs nélkül
-  (==) = undefined
+  (RGB r1 g1 b1) == (RGB r2 g2 b2) = r1 == r2 && g1 == g2 && b1 == b2
+  (HSL h1 s1 l1) == (HSL h2 s2 l2) = h1 == h2 && s1 == s2 && l1 == l2
+  _ == _ = False
 
 instance Show Colour where
   show :: Colour -> String
@@ -190,7 +197,9 @@ instance (Show a) => Show (List a) where -- Extra Show a kikötés különben ne
 
 instance (Eq a) => Eq (List a) where
   (==) :: List a -> List a -> Bool
-  (==) = undefined
+  Nil == Nil = True
+  Cons x xs == Cons y ys = x == y && xs == ys
+  _ == _ = False
 
 -- Bónusz
 instance (Eq a) => Eq (Tree a) where
