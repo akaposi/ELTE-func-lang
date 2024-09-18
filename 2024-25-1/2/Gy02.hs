@@ -1,5 +1,6 @@
 {-# LANGUAGE InstanceSigs, QuantifiedConstraints, StandaloneDeriving, StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
+{-# LANGUAGE StarIsType #-}
 
 module Gy02 where
 
@@ -23,19 +24,22 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 -- Mivel a fenti típusok mind valamilyen szintent tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a b) = Tuple (f a) (f b)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a b c d e) = Quintuple (f a) (f b) (f c) (f d) (f e)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe _ Nothing = Nothing
+mapMaybe f (Just a) = Just (f a)
+
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f Nil = Nil
+mapList f (Cons a xs) = Cons (f a) (mapList f xs)
 
 -- Ezt a mappolhatósági tulajdonságot le tudjuk írni a magasabbrendú polimorfizmus segítségével
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmus típusfüggvényekre alkalmazzuk):
@@ -86,29 +90,35 @@ instance Functor List where
 
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last $ f a
+  fmap f (NECons a xs) = NECons (f a) (fmap f xs)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a xs) = NECons2 (f a) (fmap f xs)
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left fixed) = Left fixed
+  fmap f (Right a) = Right $ f a
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
-  fmap = undefined
+  fmap f (BiTuple fixed a) = BiTuple fixed (f a)
 
 instance Functor (TriEither fixed1 fixed2) where
   fmap :: (a -> b) -> TriEither fixed1 fixed2 a -> TriEither fixed1 fixed2 b
-  fmap = undefined
+  fmap f (LeftT fixed1) = LeftT fixed1
+  fmap f (MiddleT fixed2) = MiddleT fixed2
+  fmap f (RightT a) = RightT $ f a
 
 instance Functor (BiList fixed) where
   fmap :: (a -> b) -> BiList fixed a -> BiList fixed b
-  fmap = undefined
+  fmap f (ACons fixed xs) = ACons fixed (fmap f xs)
+  fmap f (BCons a xs) = BCons (f a) (fmap f xs)
+  fmap f ABNill = ABNill
 
 -- "nagyon" magasabbrendú polimorfizmus. Ha egy Type -> Type kindú valamit és egy típust adunk meg, csak akkor lesz teljes
 
@@ -132,7 +142,7 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap g (Lift k) = Lift $ fmap g k
 
 -- f az vmi funktor
 -- g : a -> b
@@ -145,17 +155,18 @@ data Compose f g a = Compose (f (g a)) deriving (Eq, Show)
 
 instance (Functor f, Functor g) => Functor (Sum f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Sum f g a -> Sum f g b
-  fmap = undefined
+  fmap f (SumLeft fa) = SumLeft $ fmap f fa
+  fmap f (SumRight ga) = SumRight $ fmap f ga
 
 instance (Functor f, Functor g) => Functor (Product f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Product f g a -> Product f g b
-  fmap = undefined
+  fmap h (Product fa ga) = Product (fmap h fa) (fmap h ga)
 
 -- Nehéz
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap h (Compose fga) = Compose $ fmap (fmap h) fga
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
@@ -164,11 +175,15 @@ instance Functor (Fun q) where
   -- fmap :: (a -> b) -> (q -> a) -> (q -> b)
   -- Hint: mi a (.) típusa?
   fmap :: (a -> b) -> Fun q a -> Fun q b
-  fmap = undefined
+  fmap f (Fun h) = Fun (f . h)
 
 -- Egyéb érdekesség:
 data UselessF f a = Mk1 (f Int) a
 --                       ^ f nincs olyan pozícióban, hogy fmap-olni kéne rajta, tehát a Functor f megkötés felesleges
+
+instance Functor (UselessF k) where
+  fmap :: (a -> b) -> UselessF k a -> UselessF k b
+  fmap f (Mk1 alma a) = Mk1 alma $ f a
 
 -- Gyakorlás:
 
@@ -186,6 +201,22 @@ type Fix :: (* -> *) -> * -> *
 data Fix f a = Fix (f (Fix f a))
 data Join a b = Join (a -> a -> b)
 data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
+
+instance (Functor f, Functor g, Functor h) => Functor (TriCompose f g h) where
+  fmap :: (Functor f, Functor g, Functor h) => (a -> b) -> TriCompose f g h a -> TriCompose f g h b
+  fmap k (TriCompose fgha) = TriCompose $ fmap (fmap (fmap k)) fgha
+
+instance Functor f => Functor (Free f) where
+  fmap f (Pure a) = Pure $ f a
+  fmap f (Free ffa ) = Free $ fmap (fmap f) ffa
+
+instance Functor f => Functor (Fix f) where
+  fmap :: Functor f => (a -> b) -> Fix f a -> Fix f b
+  fmap f (Fix ffa) = Fix $ fmap (fmap f) ffa
+
+instance Functor (Join c) where
+  fmap :: (a -> b) -> Join c a -> Join c b
+  fmap f (Join g) = Join $ (f .) . g
 
 --- Írjunk rájuk Functor instance-ot!
 
