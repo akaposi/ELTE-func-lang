@@ -143,7 +143,7 @@ f13 = undefined
 f14 :: (a -> a -> b) -> ((a -> b) -> a) -> b
 f14 f g = f' $ g f'
   where
-    f' :: a -> b
+    --f' :: a -> b
     f' a = f a a 
 
 -- Listák emlékeztető
@@ -152,7 +152,8 @@ f14 f g = f' $ g f'
 -- Definiáljuk a map függvényt listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
-map' = undefined
+map' f [] = []
+map' f (x:xs) = f x : (map' f xs)
 
 -- Daták és osztályok
 -- Ismert típusosztályok: Eq, Ord, Show

@@ -1,7 +1,7 @@
 {-# LANGUAGE InstanceSigs, QuantifiedConstraints, StandaloneDeriving, StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
-module Gy02 where
+module Gy02_pre where
 
 import Prelude hiding (Either (..), Maybe (..))
 
