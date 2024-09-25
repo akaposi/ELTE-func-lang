@@ -13,6 +13,14 @@ data Quintuple a = Quintuple a a a a a deriving (Eq, Show)
 data List a = Nil | Cons a (List a) deriving (Eq, Show)
 data Maybe a = Just a | Nothing deriving (Eq, Show)
 data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
+
+ne :: NonEmpty Int
+ne = NECons (10) (NECons (9) (Last 8))
+
+h :: NonEmpty Int -> Int
+h (Last a) = (a)
+h (NECons a xs) {- a : xs -} = a + h xs
+
 data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
 data Either e a = Left e | Right a deriving (Eq, Show)
 data BiTuple e a = BiTuple e a deriving (Eq, Show)
@@ -140,8 +148,8 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 
 -- Le kell az első paramétert fixálnunk, hogy tudjunk rá Functor-t írni
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
-instance (Functor f) => Functor (Lift f) where
-  fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
+instance (Functor fixed) => Functor (Lift fixed) where
+  fmap :: (Functor fixed) => (a -> b) -> Lift fixed a -> Lift fixed b
   fmap g (Lift k) = Lift $ fmap g k
 
 -- f az vmi funktor
@@ -192,6 +200,7 @@ data RoseTree a = RoseLeaf a | RoseNode [RoseTree a] deriving (Eq, Show)
 data Tree2 a = Leaf2 a | Node2 (Tree2 a) (Tree2 a) deriving (Eq, Show)
 data SkipList a = Skip (SkipList a) | SCons a (SkipList a) | SNill deriving (Eq, Show)
 data CrazyType a = C1 a a | C2 a Int | C3 (CrazyType a) deriving (Eq, Show)
+
 data Either3 a b c = Left3 a | Middle3 b | Right3 c deriving (Eq, Show)
 data Triplet a b c = Triplet a b c deriving (Eq, Show)
 data SplitTree a b = SplitTree (Tree a) a b (Tree b) deriving (Eq, Show)
