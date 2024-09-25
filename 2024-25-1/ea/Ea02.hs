@@ -109,10 +109,3 @@ let b = p2 in
 let c = p3 in
 p4
 -}
-
-
--- kovetkezo ora 7 perccel rovidebb
-
--- Eq, Ord, Magasabbrendű polimorfizmus, Functor, Magasabbrendű megkötések
-
--- {-# options_ghc -fwarn-incomplete-patterns #-}
