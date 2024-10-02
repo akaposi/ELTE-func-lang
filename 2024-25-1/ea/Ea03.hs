@@ -113,20 +113,41 @@ instance (Enum a, Eq b) => Eq (a -> b) where
       go i | f i == g i = go (succ i)
            | otherwise  = False
 
-g1, g2 :: Bool -> Bool
-g1 = const True
-g2 = const True
+-- Enum kizarolag a .. notation miatt van
 
+g1, g2 :: Bool -> Bool
+g1 = not
+g2 = not
+
+-- g1 == g2 exceptiont ad
+
+-- const True == constr True vegtelen ciklust ad
+
+-- (\x -> x+x) (1+2) = (\x -> x+x) 3 = 3+3 = 6  -- CBV, ertek szerinti parameteratadas, strict evaluation
+-- (\x -> x+x) (1+2) = (1+2)+(1+2) = 3+(1+2) = 3+3 = 6  -- call by name, lazy evaluation, non-strict evaluation
+-- (\x -> 4) (1+2) = (\x -> 4) 3 = 4 -- CBV
+-- (\x -> 4) (1+2) = 4 -- call by name
+
+-- (\x -> x+x) (1+2) = (1+2)+(1+2) = 3+3 = 6 -- call by need, szukseg szerinti kiertekeles, lazy
 {-
+(\x -> x+x) (1+2) = ·+· =   ·+· = 6
+                    | |     | | 
+                     \|      \| 
+                     VV      VV 
+                     1+2      3        -}
+
+szam :: Int
+szam = (1+2)+(1+2) -- let x = (1+2) in x+x  -- common subexpression elimination
+
+-- Int, unboxed Int
+
 go :: Bool -> Bool
 go i | g1 i == g2 i = go (succ i)
      | otherwise  = False
--}
 
+{-
 go :: Bool -> Bool
 go i = case g1 i == g2 i of
   True -> go (succ i)
   _    -> False
-
-
--- HF: g1 == g2 miert nem exception???
+-}
