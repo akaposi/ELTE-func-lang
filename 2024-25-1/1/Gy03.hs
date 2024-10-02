@@ -3,6 +3,15 @@ module Gy03 where
 
 import Prelude hiding (Maybe(..), Either(..))
 
+
+data CrazyType3 f a b = C1' (f a) (f b) | C2' a b b | C3' (CrazyType3 f a b) b deriving Eq
+
+instance Functor f => Functor (CrazyType3 f fixed) where
+  fmap f (C1' fa fb) = C1' fa (fmap f fb)
+  fmap f (C2' a b1 b2) = C2' a (f b1) (f b2)
+  fmap f (C3' ct b) = C3' (fmap f ct) (f b)
+
+
 -- Hajtogatás: Listára való rekurzió szimulációja
 -- foldr :: (a ->  b  ->  b ) ->  b -> [a] -> b
 --   (:) :: (a -> [a] -> [a])
@@ -31,19 +40,21 @@ data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 data FList f a = FNil | FCons (f a) (f (FList f a))
 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
-foldrSingle = undefined
+foldrSingle f b (Single a) = f a b
 
 foldrTuple :: (a -> b -> b) -> b -> Tuple a -> b
-foldrTuple = undefined
+foldrTuple f b (Tuple a1 a2) = f a1 (f a2 b) -- a1 `f` a2 `f` b
 
 foldrQuintuple :: (a -> b -> b) -> b -> Quintuple a -> b
-foldrQuintuple = undefined
+foldrQuintuple f b (Quintuple a1 a2 a3 a4 a5) = f a1 $ f a2 $ f a3 $ f a4 $ f a5 b
 
 foldrList :: (a -> b -> b) -> b -> List a -> b
-foldrList = undefined
+foldrList f b (Cons a list) = f a $ foldrList f b list
+foldrList f b Nil = b
 
 foldrMaybe :: (a -> b -> b) -> b -> Maybe a -> b
-foldrMaybe = undefined
+foldrMaybe f b Nothing = b
+foldrMaybe f b (Just a) = f a b
 
 -- Hasonlóan a mappolhatósághoz, a hajtogatás is általánosítható a Foldable típusosztály segítéségvel
 {-
@@ -91,16 +102,30 @@ instance Foldable Quintuple where
 instance Foldable List where
   foldr :: (a -> b -> b) -> b -> List a -> b
   foldr = foldrList
+  foldMap :: Monoid m => (a -> m) -> List a -> m
+  foldMap f Nil = mempty
+  foldMap f (Cons a as) = f a <> foldMap f as
 
 instance Foldable Maybe where
   foldr :: (a -> b -> b) -> b -> Maybe a -> b
   foldr = foldrMaybe
 
 instance Foldable NonEmpty where
+-- data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
+  foldr :: (a -> b -> b) -> b -> NonEmpty a -> b
+  foldr f b (Last a) = f a b
+  foldr f b (NECons a nexs) = f a (foldr f b nexs)
 
 instance Foldable NonEmpty2 where
 
 instance Foldable Tree where
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr f b (Leaf a) = f a b
+  foldr f b (Node l a r) = foldr f (f a (foldr f b r)) l
+
+  foldMap :: Monoid m => (a -> m) -> Tree a -> m
+  foldMap f (Leaf a) = f a
+  foldMap f (Node l a r) = foldMap f l <> f a <> foldMap f r
 
 instance Foldable (Either fixed) where
 
@@ -135,17 +160,17 @@ Ez Haskellben a Semigroup típusosztály
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (&&)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = undefined
+  (<>) = (+)
 
-data Endo a = MkEndo (a -> a)
+data Endo a = Endo (a -> a)
 
 instance Semigroup (Endo a) where
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  (<>) (Endo f) (Endo g) = Endo (f . g)
 
 {-
 Egy halmazhoz több művelet is választható, hogy félcsoportot alkossanak
@@ -173,15 +198,15 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = True
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
+  mempty = 0
 
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = Endo id
 
 
 -- A foldr művelet alternatívája: foldMap
