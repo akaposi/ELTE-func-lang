@@ -25,8 +25,13 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+magicFunction a = helper (incrementIfEven a) (\b ->
+                  helper (combineThrees (*) a b) (\c ->
+                  Just (b + c)))
 
+helper :: Maybe a -> (a -> Maybe b) -> Maybe b
+helper Nothing f = Nothing
+helper (Just a) f = f a
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
 -- Erre a megoldás a Monád típusosztály
@@ -42,9 +47,16 @@ class Functor m => Monad m where
 -- A >>= (ún bind) művelet modellezi egy előző "mellékhatásos" számítás eredményének a felhasználását.
 -- Maybe esetén (>>=) :: Maybe a -> (a -> Maybe b) -> Maybe b
 --                                   ^ csak akkot fut le ha az első paraméter Just a
-
+{-
+magicFunction :: Integral a => a -> Maybe a
+magicFunction a = helper (incrementIfEven a) (\b ->
+                  helper (combineThrees (*) a b) (\c ->
+                  Just (b + c)))
+-}
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x = incrementIfEven x >>= \xPlus1 ->
+                   combineThrees (*) x xPlus1 >>= \c ->
+                   return (xPlus1 + c)
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció

@@ -44,7 +44,9 @@ class Functor m => Monad m where
 --                                   ^ csak akkot fut le ha az első paraméter Just a
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x = incrementIfEven x >>= \xPlus1 ->
+                   combineThrees (*) x xPlus1 >>= \c ->
+                   return (xPlus1 + c)
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -57,7 +59,15 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
+magicFunctionDo x = do
+  xPlus1 <- incrementIfEven x
+  c <- combineThrees (*) x xPlus1
+  return (xPlus1 + c)
+
+almaThenBalma :: IO ()
+almaThenBalma = do
+  putStrLn "alma" -- _ <- putStrLn "alma"
+  putStrLn "balma"
 
 
 -- Monád példa: IO monád
@@ -80,10 +90,15 @@ print :: Show a => a -> IO ()
 -- d, beolvas egy számot minden listaelemhez és azt hozzáadja
 
 readAndConcat :: IO ()
-readAndConcat = undefined
+readAndConcat = do
+  x <- getLine
+  y <- getLine
+  putStrLn (x ++ y)
 
 readAndConcat' :: IO ()
-readAndConcat' = undefined
+readAndConcat' = getLine >>= \first ->
+  getLine >>= \second ->
+  putStrLn (first ++ second)
 
 readAndSq :: IO ()
 readAndSq = undefined
@@ -92,13 +107,21 @@ readAndSq' :: IO ()
 readAndSq' = undefined
 
 printAll :: Show a => [a] -> IO ()
-printAll = undefined
+printAll [] = return ()
+printAll (x : xs) = print x >> printAll xs
 
 printAll' :: Show a => [a] -> IO ()
-printAll' = undefined
+printAll' [] = return ()
+printAll' (x : xs) = do
+  print x
+  printAll xs
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd [] = return []
+readAndAdd (x : xs) = do
+  x' <- readLn
+  xs' <- readAndAdd xs
+  return (x + x' : xs')
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd' = undefined
