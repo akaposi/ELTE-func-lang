@@ -158,7 +158,7 @@ printAll (x:xs) = do
   printAll xs
 
 printAll' :: Show a => [a] -> IO ()
-printAll' = foldr (\a io -> io >> print a) (putStrLn "") -- :: (a -> IO () -> IO ()) -> IO () -> [a] -> IO ()
+printAll' = foldr (\a io -> print a >> io ) (putStrLn "") -- :: (a -> IO () -> IO ()) -> IO () -> [a] -> IO ()
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd [] = return []
@@ -181,8 +181,6 @@ readAndAddF = foldr (\x io -> do {y <- readLn; xs <- io; return $ (x + y) : xs})
 readAndAddF' :: (Read a, Num a) => [a] -> IO [a]
 readAndAddF' = foldr (\x io -> do {xs <- io; y <- readLn; return $ (x + y) : xs}) (return [])
 
-
-a xs = foldr (\ a xs' -> a : xs') [] xs
 -- Ezeket nem kell megoldani
 
 
