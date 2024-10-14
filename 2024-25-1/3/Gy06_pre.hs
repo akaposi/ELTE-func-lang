@@ -1,140 +1,134 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, QuantifiedConstraints, StandaloneDeriving #-}
-module Gy06 where
+import Control.Monad.State
+import Control.Monad.Reader
+import Control.Monad.Writer
+import Control.Monad.Except
+import Control.Monad.IO.Class
 
-import Prelude hiding (Maybe(..), Either(..))
+-- A State monád állapot változást reprezentált
+-- Vegyünk két új Monádot:
 
--- Definiáljuk egy függvényt, amely egy "mellékhatásos" függvényt végig mappol egy listán
---                                          v az m mellékhatást összegyűjtjük
-mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
-mapMList = undefined
 
--- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
-data Single a = Single a deriving (Eq, Show, Functor, Foldable)
-data Tuple a = Tuple a a deriving (Eq, Show, Functor, Foldable)
-data Quintuple a = Quintuple a a a a a deriving (Eq, Show, Functor, Foldable)
-data List a = Nil | Cons a (List a) deriving (Eq, Show, Functor, Foldable)
-data Maybe a = Just a | Nothing deriving (Eq, Show, Functor, Foldable)
-data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show, Functor, Foldable)
-data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show, Functor, Foldable)
-data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show, Functor, Foldable)
-data Either e a = Left e | Right a deriving (Eq, Show, Functor, Foldable)
-data BiTuple e a = BiTuple e a deriving (Eq, Show, Functor, Foldable)
-data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show, Functor, Foldable)
-data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show, Functor, Foldable)
-data Apply f a = MkApply (f a) deriving (Eq, Show, Functor, Foldable)
-data Fix f a = MkFix (f (Fix f a)) deriving (Functor, Foldable)
-data Compose f g a = MkCompose (f (g a)) deriving (Eq, Show, Functor, Foldable)
-data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show, Functor, Foldable)
-data Prod f a b = FProd (f a) (f b) deriving (Eq, Show, Functor, Foldable)
-data FList f a = FNil | FCons (f a) (f (FList f a)) deriving (Functor, Foldable)
+-- Reader: olvasási környezet, például globális konstans
+-- newtype Reader r a = Reader { runReader :: r -> a }
+--                                                ^ state-nek elhagytuk a kimeneti paraméterét
 
--- Írjuk meg ezt a műveletet pár fenti típusra!
-mapMSingle :: Monad m => (a -> m b) -> Single a -> m (Single b)
-mapMSingle = undefined
+-- Hogy néz ki a bind Reader-er
 
-mapMTuple :: Monad m => (a -> m b) -> Tuple a -> m (Tuple b)
-mapMTuple = undefined
-
-mapMQuintuple :: Monad m => (a -> m b) -> Quintuple a -> m (Quintuple b)
-mapMQuintuple = undefined
-
-mapMMaybe :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
-mapMMaybe = undefined
-
--- Ehhez a mellékhatásos mappoláshoz viszont a Monád megkötés sokat enged meg
--- A monád fő művelete a (>>=) :: m a -> (a -> m b) -> m b
--- Ami mellékhatásos műveletek közti függőséged modellez.
--- Viszont mappolásnál az egyes elemek között eredmény alapú függőség nincs
--- Applicative típusosztály: A Functor és a Monád között van
 {-
-:i Applicative
-type Applicative :: (* -> *) -> Constraint
-class Functor f => Applicative f where
-  pure :: a -> f a
-  (<*>) :: f (a -> b) -> f a -> f b
-  liftA2 :: (a -> b -> c) -> f a -> f b -> f c
-  (*>) :: f a -> f b -> f b
-  (<*) :: f a -> f b -> f a
-  {-# MINIMAL pure, ((<*>) | liftA2) #-}
-        -- Defined in ‘Control.Applicative’
--}
--- A típusosztály koncepciója az fmap művelet általánosítása tetszőleges paraméterű függvényre, pl.:
--- liftA2 :: (a -> b -> c) -> f a -> f b -> f c
--- Ehhez viszont szükség van (egymástól független) mellékhatások kombinációjára
--- liftA műveletek csak liftA3-ig vannak standard libraryben, viszont arbitrary liftA írtható a <*> segítségével
--- pl.:
-liftA4 :: Applicative f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
-liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
--- func :: a -> b -> c -> d
--- func <$> fa :: f (b -> c -> d)
--- func <$> fa <*> fb :: f (c -> d)
--- func <$> fa <*> fb <*> fc :: f d
--- Ezeket az ún app láncot fogjuk használni mapA írásnál is!
--- Írjuk meg a mapM műveletet Applicative segítségével
--- Az algoritmus ugyanaz mint a funktornál csak függvényalkalmazás helyett <*> és független értékek esetén pure
-mapA :: Applicative f => (a -> f b) -> List a -> f (List b)
-mapA = undefined
 
--- Ez a mappolhatósági tulajdonság lesz az úgynevezett Traversable típusosztály
-{-
-:i Traversable
-type Traversable :: (* -> *) -> Constraint
-class (Functor t, Foldable t) => Traversable t where
-  traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
-  sequenceA :: Applicative f => t (f a) -> f (t a)
-  mapM :: Monad m => (a -> m b) -> t a -> m (t b)
-  sequence :: Monad m => t (m a) -> m (t a)
-  {-# MINIMAL traverse | sequenceA #-}
-        -- Defined in ‘Data.Traversable’
+    Reader r a = r -> a
+    és a Reader r a egy monád
+
+    bind :: m a -> (a -> m b) -> m b
+    bind :: Reader r a -> (a -> Reader r b) -> Reader r b
+    bind :: (r -> a)   -> (a ->  (r -> b) ) -> (r -> b)
 -}
 
-instance Traversable Single where
+bind :: Reader r a -> (a -> Reader r b) -> Reader r b
+bind r' f = reader $ \r -> let a = ((runReader r') r) in runReader (f a) r
 
-instance Traversable Tuple where
+-- Primitív műveletek
 
-instance Traversable Quintuple where
+-- ask :: Reader r r
+-- ask = Reader id
+-- Visszaadja környezetet, ugyanaz mint a get state-nél
 
-instance Traversable List where
-  traverse :: Applicative f => (a -> f b) -> List a -> f (List b)
-  traverse = mapA
+data Env = MkEnv { homeDir :: String, isAdmin :: Bool }
 
-  sequenceA :: Applicative f => List (f a) -> f (List a)
-  sequenceA Nil = pure Nil
-  sequenceA (Cons x xs) = Cons <$> x <*> sequenceA xs
+canWriteHere :: String -> Reader Env Bool
+canWriteHere path = do
+  MkEnv homeDir adm <- ask
+  return (adm || path == homeDir)
 
-instance Traversable Maybe where
+-- Írjuk meg az ask-ot
 
-instance Traversable NonEmpty where
+ask' :: Reader r r
+ask' = reader $ \r -> r
 
-instance Traversable NonEmpty2 where
+-- local :: (r -> r) -> Reader r a -> Reader r a
+-- Lokális megváltoztatja a környezetet a második paraméterben
 
-instance Traversable Tree where
+sudo :: Reader Env () -> Reader Env ()
+sudo doas = do
+  MkEnv homeDir adm <- ask
+  when adm $ local (const (MkEnv "/root" True)) doas
 
-instance Traversable (Either fixed) where
+-- Írjuk meg a local-t
 
-instance Traversable (BiTuple fixed) where
+local' :: (r -> r) -> Reader r a -> Reader r a
+local' f ra = reader $ \r -> runReader ra (f r)
 
-instance Traversable (TriEither fixed1 fixed2) where
+-- Feladatok
 
-instance Traversable (BiList fixed) where
 
--- Magasabbrendű megkötések
-instance Traversable f => Traversable (Apply f) where
 
-instance Traversable f => Traversable (Fix f) where
+-- Írjunk egy olyan map függvényt reader segítségével, amely az egyes listaelemek indexével is összekombinálja az elemeket.
+-- Az olvasási környezetben tároljuk a jelenlegi indexet
+mapWithIndex :: Integral i => (i -> a -> b) -> [a] -> [b]
+mapWithIndex f xs = runReader (mwiReader f xs) 0
 
-instance (Traversable f, Traversable g) => Traversable (Compose f g) where
+mwiReader :: Integral i => (i -> a -> b) -> [a] -> Reader i [b]
+mwiReader f [] = return []
+mwiReader f (a:as) = do
+    i <- ask
+    let b = f i a
+    bs <- local (+1) (mwiReader f as)
+    return $ b : bs
 
-instance Traversable f => Traversable (Sum f fixed) where
+-- Pl.: (mapWithIndex (\i a -> (i+1) * a) $ take 10 [1,1..]) == [1..10]
 
-instance Traversable f => Traversable (Prod f fixed) where
+data Tree a= Leaf a | Node (Tree a) (Tree a)
 
-instance Traversable f => Traversable (FList f) where
+-- Számoljuk meg egy fa magasságát Reader-el
 
--- Kiegészítő tananyag: Applicative Do
+heightReader :: Tree a -> Reader Int Int
+heightReader (Leaf a) = do
+    i <- ask
+    return i
+heightReader (Node l r) = do
+    i <- local (+1) (heightReader l)
+    i' <- local (+1) (heightReader r)
+    return (max i i')
 
--- Mágia, ignore me
-deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (Fix f a)
-deriving instance (Show a, forall a. Show a => Show (f a)) => Show (Fix f a)
-deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (FList f a)
-deriving instance (Show a, forall a. Show a => Show (f a)) => Show (FList f a)
+-- e = Leaf ()
+-- runReader (heightReader (Node (Node e (Node e e)) e)) 0 == 3
+
+-- Writer: írási környezet, például loggingra hasznos
+-- newtype Writer w a = Writer { runWriter :: (a, w) }
+--                                           ^ state-nek elhagytuk a bemeneti paraméterét
+-- Primitív műveletek
+
+-- tell :: Monoid w => w -> Writer w () -- üzenet írása, a >>= kombinálja az ezzel írt üzeneteket <>-vel
+-- tell w = Writer (w, ())
+-- ugyanaz mint a put State-nél
+
+calculation :: Writer [String] Int
+calculation = do
+  tell ["1-esel kezdünk"]
+  let x = 1
+  tell ["Aztán egy 2-es"]
+  let y = 2
+  tell ["Majd az összeg", "Egyszerre többet is tud loggolni"]
+  return (x + y)
+
+--                         v lefuttatja ezt a writert
+-- listen :: Monoid w => Writer w a -> Writer w (a, w) -- és visszaadja a loggolásait
+-- listen (Writer res) = Writer (res, res)
+
+calculation2 :: Writer [String] Int
+calculation2 = do
+  tell ["Na vágjunk bele"]
+  (res, messages) <- listen calculation
+  tell ["Elhagyjuk a résszámolás első üzenetét", "A többit ismét reportáljuk"]
+  tell (tail messages)
+  tell ["Majd eredmény + 1"]
+  return (res + 1)
+
+--                                v alkalmazza a függvényt a saját kiírandó szövegeire
+-- pass :: Monoid w => Writer w (a, w -> w) -> Writer a
+-- pass (Writer w (a, f)) = Writer (f w) a
+
+--silence :: Monoid w => Writer w a -> Writer w a
+--silence w = pass $ do
+--  a <- w
+--  return (a, const [])
