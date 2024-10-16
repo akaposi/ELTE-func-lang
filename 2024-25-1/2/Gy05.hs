@@ -1,5 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# OPTIONS_GHC -Wno-noncanonical-monad-instances #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
+{-# HLINT ignore "Use lambda-case" #-}
 module Gyak05 where
 
 import Control.Monad
@@ -23,19 +26,21 @@ import Control.Monad.Except
 --, hogy ha egy Jegyet bele rakunk, zölden világít és a Nyitva állapotra váltunk
 
 -- Definiáljuk az állapotok típusát
-data MachineState
+data MachineState = Open | Closed
   deriving (Eq, Show)
 
 -- Definiáljuk a fények típusát
-data LightColour
+data LightColour = R | G | Y
   deriving (Eq, Show)
 
 
 -- Definiáljuk az átmenetek függvényeit
 -- A függvények egy kezdeti állapotból egy végállapotba és egy világító fénybe képeznek
 push, insertTicket :: MachineState -> (LightColour, MachineState)
-push = undefined
-insertTicket = undefined
+push Open   = (G, Closed)
+push Closed = (R, Closed)
+insertTicket Open    = (Y, Open)
+insertTicket Closed  = (G, Open)
 
 -- Ennek a segítségével például le tudjuk modellezni, hogy Pistike 2x próbál jegy nélkül bemenni
 pistike :: MachineState -> ([LightColour], MachineState)
@@ -74,7 +79,7 @@ háttérben a -> s -> (a,s)
 -- s -> (a,s) függvényeket a state függvénnyel lehet becsomagolni
 pushS, insertTicketS :: State MachineState LightColour
 pushS = state push
-insertTicketS = undefined
+insertTicketS = state insertTicket
 
 -- Így pistikét kicsit szebben lehet definiálni
 pistikeS :: State MachineState [LightColour]
@@ -83,7 +88,7 @@ pistikeS = do             --        |
   l2 <- pushS             --        |
   l3 <- insertTicketS     --        |
   l4 <- pushS             --        |
-  return [l1, l2, l3, l4] -- <------/ A típus diktálja az utolkó kifejezés típusát
+  return [l1, l2, l3, l4] -- <------/ A típus diktálja az utolsó kifejezés típusát
 
 -- vagy bindokkal
 pistikeS' :: State MachineState [LightColour]
@@ -109,37 +114,84 @@ countYellow = do
 -- Gerike: Tol, Jegy, Tol, Tol
 -- Gerike esetén azt adjuk vissza, hányszor 'Piros' volt az átmenetek eredménye
 
+janika :: State MachineState ()
+janika = do
+  insertTicketS
+  insertTicketS
+  pushS
+  return ()
+
+gerike :: State MachineState Int
+gerike = do
+  c <- pushS
+  c2 <- insertTicketS
+  c3 <- pushS
+  c4 <- pushS
+  return $ length $ filter (== R) [c,c2,c3,c4]
+
 
 -- Komplikáltabb feladatok
 -- Implementáljunk egy 'get' műveletet, amely visszaadja az állapotot
 get' :: State s s
-get' = undefined
+get' = state $ \s -> (s , s)
 -- Implementáljunk egy 'put' műveletet, amely felülírja az állapotot
 put' :: s -> State s ()
-put' = undefined
+put' s = state $ const ((), s)
 
 -- Ezek után nem kell a 'state' függvénnyel szórakozni
 
 -- Példa get/putra: Definiáljuk a safeHead függvényt ami az állapotban lévő lista fejelemét leszedi - ha van neki.
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do {
+  s <- get;
+  case s of {
+    [] -> return Nothing;
+    (a : as) -> put' as >> return (Just a);
+  };
+}
 
 -- Példa get/putra 2: Definiáljuk a take függvényt a belső állapotra (esetleg pop-ot is lehet használni).
 takeK :: Int -> State [a] [a]
-takeK = undefined
+takeK i | i<= 0 = return []
+takeK i = do
+  p <- pop
+  case p of
+    Nothing -> return []
+    Just a -> takeK (i -1) >>= \s -> return $ a : s
 
 -- Definiáljuk az alábbi függvényeket!
 popLast :: State [a] (Maybe a) -- leszedi az utolsó elemet a listából - ha van.
-popLast = undefined
+popLast = get >>= \s -> case s of
+  [] -> return Nothing
+  [a] -> put [] >> return (Just a)
+  (a : xs) -> put xs >> popLast >>= \r -> get >>= \ ys -> put (a : ys) >> return r
+
 
 sumK :: Num a => Int -> State [a] a -- Kiszedi és összeadja az első K elemet a listából
-sumK = undefined
+sumK i | i<= 0 = return 0
+sumK i = do
+  p <- pop
+  case p of
+    Nothing -> return 0
+    Just a -> do
+      k <- sumK (i - 1)
+      return $ a + k
 
 labelList :: [a] -> State Int [(a, Int)] -- Minden elemet megcímkéz, a belső állapot a számláló
-labelList = undefined
+labelList [] = return [] 
+labelList (a : as) = do
+  i <- get
+  put (i + 1)
+  xs <- labelList as
+  return ((a , i) : xs)
 
 labelListBW :: [a] -> State Int [(a, Int)] -- Ugyanaz mint az előző csak, hátulról címkéz
-labelListBW = undefined
+labelListBW [] = return []
+labelListBW (a : as) = do
+  xs <- labelListBW as
+  i <- get
+  put (i + 1)
+  return  $ (a, i) : xs
 
 
 -- EXCEPT
@@ -149,12 +201,13 @@ labelListBW = undefined
 -- 0-val való osztás hiba
 -- Asszertációs hiba
 -- Üres lista hiba
-data CustomError
+data CustomError = DividingByZero | AssertationFault | EmptyList | Overflow | Underflow
   deriving (Eq, Show)
 
 -- Példa: biztonságos osztás
 safeDiv :: Integral a => a -> a -> Either CustomError a
-safeDiv = undefined
+safeDiv a 0 = Left $ DividingByZero
+safeDiv a b = Right $ a `div` b
 
 -- Az either-t is lehet monadikusan kezelni
 bindE :: Either e a -> (a -> Either e b) -> Either e b
@@ -163,7 +216,8 @@ bindE (Right a) f = f a
 
 -- Hibák dobása mellet el is kell tudni kapni őket:
 catchE :: Either e a -> (e -> Either e a) -> Either e a
-catchE = undefined
+catchE (Left e) f = f e
+catchE (Right a) _ = Right a
 
 -- Az Eithernek van kicsit általánosabb formája (részletesebben következő órán)
 -- Ez az Except Monád
@@ -176,21 +230,23 @@ catchE = undefined
 -- Példa throwError/catchErrorra:
 -- Dobjunk asszertációs hibát, ha a feltétel nem teljesül
 assert :: Bool -> Except CustomError ()
-assert = undefined
+assert False = throwError AssertationFault
+assert _ = return ()
 
 -- Biztonságos osztás
 safeDivE :: Integral a => a -> a -> Except CustomError a
-safeDivE = undefined
+safeDivE _ 0 = throwError DividingByZero
+safeDivE a b = return $ a `div` b
 
 -- Végezzük el a safeDiv műveletet, de ha kivételt dobnánk, adjunk vissza 0-t inkább
 safeDivF :: Integral a => a -> a -> Except CustomError a
-safeDivF = undefined
+safeDivF a b = catchError (safeDivF a b) $ const (return 0)
 
 -- Feladatok
 
 -- Hajtogassunk végig az osztás művelettel egy listán, ha 0-val kéne osztani dobjunk kivételt
 foldDiv :: Integral a => [a] -> Except CustomError a
-foldDiv = undefined
+foldDiv = foldr (\ a e -> e >>= (\ b -> a `safeDivE ` b)) (return 1)
 
 
 -- Szimulálni akarjuk a 32 bites számokat, 
@@ -201,19 +257,24 @@ foldDiv = undefined
 u32Max :: Integer
 u32Max = 2 ^ 32 - 1
 
-(+++) :: Integer -> Integer -> Except CustomError Integer 
+(+++) :: Integer -> Integer -> Except CustomError Integer
 (+++) a b = let s = a + b in
   if s > u32Max
-    then undefined {- Valami errort dobjunk itt -}
+    then throwError Overflow {- Valami errort dobjunk itt -}
     else return s
 
 -- Kivonás
 (-~-) :: Integer -> Integer -> Except CustomError Integer
-(-~-) = undefined
+(-~-) a b = if b > a 
+  then throwError Underflow
+  else return $ a - b
 
 -- Szorzás
 (***) :: Integer -> Integer -> Except CustomError Integer
-(***) = undefined
+(***) a b = let s = a * b in
+  if s > u32Max
+    then throwError Overflow
+    else return s
 
 -- Számoljuk ki két szám távolságának négyzetét:
 -- Vagyis végezzük el a 
@@ -221,4 +282,9 @@ u32Max = 2 ^ 32 - 1
 -- műveletet
 
 dist :: Integer -> Integer -> Integer -> Integer -> Except CustomError Integer
-dist x1 x2 y1 y2 = undefined
+dist x1 x2 y1 y2 = do
+  h <- x2 -~- x1
+  j <- y2 -~- y1
+  s <- h *** h
+  q <- j *** j
+  s +++ q
