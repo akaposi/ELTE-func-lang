@@ -216,4 +216,3 @@ safeDivF = undefined
 -- Hajtogassunk végig az osztás művelettel egy listán, ha 0-val kéne osztani dobjunk kivételt
 foldDiv :: Integral a => [a] -> Except CustomError a
 foldDiv = undefined
-
