@@ -87,11 +87,48 @@ o2 = runWriter (runExceptT orderMatters)
 
 -- Feladatok
 -- Szimuláljunk egy egyszerű bejelentkezési rendszert
--- a, Egy State monádban tároljuk el kik a felhasználók nevét ([String])
--- b, Egy Reader monádban tároljuk el a jelenlegi felhasználó nevét (String)
--- c, Egy Writer monádban írjuk ha egy felhasználó bejelentkezik ([String])
--- d, Egy Except monáddal kezeljük, ha nem létező felhasználó akar belépni
+
+-- type Logintype m a = (MonadError String m, MonadWriter [String] m,  MonadReader String m, MonadState [String] m) => m a 
+type Logintype m = 
+  ( MonadError String m     -- d, Egy Except monáddal kezeljük, ha nem létező felhasználó akar belépni
+  , MonadWriter [String] m  -- c, Egy Writer monádban írjuk ha egy felhasználó bejelentkezik ([String])
+  , MonadReader String m    -- b, Egy Reader monádban tároljuk el a jelenlegi felhasználó nevét (String)
+  , MonadState [String] m   -- a, Egy State monádban tároljuk el kik a felhasználók nevét ([String])
+  ) 
+-- Logintype m :: Contraint
+
+
 
 -- Definiáljuk a createNewUser függvényt, amely egy új felhasználót hozzáad a rendszerhez
+createNewUser :: (Logintype m) => String -> m ()
+createNewUser str = do
+  users <- get
+  if elem str users
+    then do
+      throwError "Ilyen felhasznalo mar letezik!"
+    else do
+      put (str:users)
+      tell ["A " ++ str ++ " nevu felhasznalot felvettuk a rendszerbe"]
+
+runCreateNewUser user curr_user db = runState (runWriterT (runReaderT (runExceptT (createNewUser user)) curr_user)) db
+
 -- Definiáljuk a login függvényt amely a jelenlegi felhasználó nevével megpróbál belépni
--- Definiáljuk a tryLoginAs függvényt, amely paraméterül kap egy felhasználónevet, azzal megpróbál belépni, és ha az sikertelen ezt kiírja a writerbe (ne hasaljon el)
+-- (MonadError String m, MonadWriter [String] m,  MonadReader String m, MonadState [String] m) => m ()
+login :: (Logintype m) => m ()
+login = do
+  current_user <- ask
+  users <- get
+  if elem current_user users
+    then do
+      tell ["A " ++ current_user ++ " nevu felhasznalo bejelentkezett a rendszerbe"]
+      -- local (const current_user) _
+    else do
+      throwError "Nincs ilyen felhasznalo"
+
+-- Definiáljuk a tryLoginAs függvényt, 
+-- amely paraméterül kap egy felhasználónevet,
+-- azzal megpróbál belépni, 
+-- és ha az sikertelen ezt kiírja a writerbe (ne hasaljon el)
+tryLoginAs :: (Logintype m) => String -> m ()
+tryLoginAs usr = do
+  local (const usr) login `catchError` (\e -> tell ["Nem sikerült a belépés", "Error:", e])
