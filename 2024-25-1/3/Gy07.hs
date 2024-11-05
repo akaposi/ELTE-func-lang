@@ -94,16 +94,16 @@ type Logintype m =
   , MonadWriter [String] m  -- c, Egy Writer monádban írjuk ha egy felhasználó bejelentkezik ([String])
   , MonadReader String m    -- b, Egy Reader monádban tároljuk el a jelenlegi felhasználó nevét (String)
   , MonadState [String] m   -- a, Egy State monádban tároljuk el kik a felhasználók nevét ([String])
-  ) 
--- Logintype m :: Contraint
-
+  )
+-- :k Logintype m
+-- Logintype m :: (* -> *) -> Contraint
 
 
 -- Definiáljuk a createNewUser függvényt, amely egy új felhasználót hozzáad a rendszerhez
 createNewUser :: (Logintype m) => String -> m ()
 createNewUser str = do
   users <- get
-  if elem str users
+  if str `elem` users
     then do
       throwError "Ilyen felhasznalo mar letezik!"
     else do
@@ -118,10 +118,9 @@ login :: (Logintype m) => m ()
 login = do
   current_user <- ask
   users <- get
-  if elem current_user users
+  if current_user `elem` users
     then do
       tell ["A " ++ current_user ++ " nevu felhasznalo bejelentkezett a rendszerbe"]
-      -- local (const current_user) _
     else do
       throwError "Nincs ilyen felhasznalo"
 
@@ -131,4 +130,19 @@ login = do
 -- és ha az sikertelen ezt kiírja a writerbe (ne hasaljon el)
 tryLoginAs :: (Logintype m) => String -> m ()
 tryLoginAs usr = do
-  local (const usr) login `catchError` (\e -> tell ["Nem sikerült a belépés", "Error:", e])
+  local (const usr) login `catchError` (\e -> tell ["Sikertelen belépés", "Error:", e])
+
+type SS a = StateT [String] (State [Int]) a
+
+-- lift ::  
+-- ∀ (t :: (Type -> Type) -> Type -> Type)
+--   (m :: Type -> Type) 
+--   a . 
+-- (MonadTrans t, Monad m) => m a -> t m a
+
+test :: SS ()
+test = do
+  t <- get
+  -- liftIO getLine
+  t' <- lift get
+  return ()

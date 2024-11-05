@@ -1,12 +1,34 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, QuantifiedConstraints, StandaloneDeriving #-}
-module Gy08_pre where
+{-# LANGUAGE ApplicativeDo, DeriveFoldable, DeriveFunctor, QuantifiedConstraints, StandaloneDeriving #-}
+module Main where
 
 import Prelude hiding (Maybe(..), Either(..))
+import Control.Monad.Except
+
+import Control.Applicative
+
 
 -- Definiáljuk egy függvényt, amely egy "mellékhatásos" függvényt végig mappol egy listán
 --                                          v az m mellékhatást összegyűjtjük
 mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
-mapMList = undefined
+mapMList f [] = return []
+mapMList f (x:xs) = do
+  x' <- f x
+  xs' <- mapMList f xs
+  return (x' : xs')
+
+-- fmap f xs :: [m b]
+-- de nekünk kell m [b]
+
+-- Példa :
+
+safeDiv :: Int -> Int -> Except String Int
+safeDiv n 0 = throwError "Hiba"
+safeDiv n m = return (n `div` m)
+
+-- mapMList (safeDiv 10) [0,1,2,3,4]
+
+-- ha azt akarjuk hogy csak ott faileljen ahol 0 van : fmap
+-- (runExcept . safeDiv 10) <$> [0..10]
 
 -- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
 data Single a = Single a deriving (Eq, Show, Functor, Foldable)
@@ -28,18 +50,27 @@ data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show, Functor, Foldabl
 data Prod f a b = FProd (f a) (f b) deriving (Eq, Show, Functor, Foldable)
 data FList f a = FNil | FCons (f a) (f (FList f a)) deriving (Functor, Foldable)
 
+-- Közösen
 -- Írjuk meg ezt a műveletet pár fenti típusra!
 mapMSingle :: Monad m => (a -> m b) -> Single a -> m (Single b)
-mapMSingle = undefined
+mapMSingle f (Single a) = do
+  a' <- f a
+  return (Single a')
 
 mapMTuple :: Monad m => (a -> m b) -> Tuple a -> m (Tuple b)
-mapMTuple = undefined
+mapMTuple f (Tuple a b) = do
+  a' <- f a
+  b' <- f b
+  return (Tuple a' b')
 
 mapMQuintuple :: Monad m => (a -> m b) -> Quintuple a -> m (Quintuple b)
 mapMQuintuple = undefined
 
 mapMMaybe :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
-mapMMaybe = undefined
+mapMMaybe f Nothing = return Nothing
+mapMMaybe f (Just x) = do
+  x' <- f x
+  return $ Just x'
 
 -- Ehhez a mellékhatásos mappoláshoz viszont a Monád megkötés sokat enged meg
 -- A monád fő művelete a (>>=) :: m a -> (a -> m b) -> m b
@@ -58,22 +89,49 @@ class Functor f => Applicative f where
   {-# MINIMAL pure, ((<*>) | liftA2) #-}
         -- Defined in ‘Control.Applicative’
 -}
+
+-- fmap  :                              (a ->   b) -> f a -> f b  
+-- (<*>) :                            f (a ->   b) -> f a -> f b
+-- (>>=) : m a -> (a -> m b) -> m b =   (a -> m b) -> m a -> m b
+
+-- Monad := Föggőség az előző művelettől, mind értékben, mind mellékhatásban
+-- Applicative := Függőség az előző művelet mellékhatásától
+
+
 -- A típusosztály koncepciója az fmap művelet általánosítása tetszőleges paraméterű függvényre, pl.:
 -- liftA2 :: (a -> b -> c) -> f a -> f b -> f c
 -- Ehhez viszont szükség van (egymástól független) mellékhatások kombinációjára
 -- liftA műveletek csak liftA3-ig vannak standard libraryben, viszont arbitrary liftA írtható a <*> segítségével
 -- pl.:
 liftA4 :: Applicative f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
-liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
+liftA4 func fa fb fc = (((func <$> fa) <*> fb) <*> fc)
 -- func :: a -> b -> c -> d
 -- func <$> fa :: f (b -> c -> d)
 -- func <$> fa <*> fb :: f (c -> d)
 -- func <$> fa <*> fb <*> fc :: f d
+
 -- Ezeket az ún app láncot fogjuk használni mapA írásnál is!
 -- Írjuk meg a mapM műveletet Applicative segítségével
 -- Az algoritmus ugyanaz mint a funktornál csak függvényalkalmazás helyett <*> és független értékek esetén pure
+
 mapA :: Applicative f => (a -> f b) -> List a -> f (List b)
-mapA = undefined
+mapA f Nil = pure Nil
+--mapA f (Cons a ls) = ((pure Cons) <*> f a) <*> (mapA f ls)
+mapA f (Cons a ls) = liftA2 Cons (f a) (mapA f ls)
+
+  -- Cons :: a -> List a -> List a
+  -- pure Cons :: f (b -> List b -> List b)
+  -- f a :: f b
+---- pure Cons <*> (f a)
+-- pure Cons (f a) :: f (List b -> List b)
+
+
+  -- (Cons <$> f a) :: f (List b -> List b)
+  -- Cons <$> f a <*> re :: f (List b)
+  -- Cons <*> (f a) ::
+
+
+
 
 -- Ez a mappolhatósági tulajdonság lesz az úgynevezett Traversable típusosztály
 {-
@@ -88,9 +146,16 @@ class (Functor t, Foldable t) => Traversable t where
         -- Defined in ‘Data.Traversable’
 -}
 
+-- Közösen
 instance Traversable Single where
+  traverse :: Applicative f => (a -> f b) -> Single a -> f (Single b)
+  traverse f (Single a) = (pure Single) <*> f a
+--         f (Single a) = Single            (f a)
+  traverse f (Single a) = Single <$> f a
 
 instance Traversable Tuple where
+  traverse :: Applicative f => (a -> f b) -> Tuple a -> f (Tuple b)
+  traverse f (Tuple a b) = (pure Tuple) <*> f a <*> f b
 
 instance Traversable Quintuple where
 
@@ -100,10 +165,15 @@ instance Traversable List where
 
   sequenceA :: Applicative f => List (f a) -> f (List a)
   sequenceA Nil = pure Nil
-  sequenceA (Cons x xs) = Cons <$> x <*> sequenceA xs
+  sequenceA (Cons x xs) = pure Cons <*> x <*> sequenceA xs
 
+-- Közösen
 instance Traversable Maybe where
+  traverse :: Applicative f => (a -> f b) -> Maybe a -> f (Maybe b)
+  traverse f Nothing = pure Nothing
+  traverse f (Just a) = pure Just <*> f a
 
+-- Közösen
 instance Traversable NonEmpty where
 
 instance Traversable NonEmpty2 where
@@ -119,6 +189,8 @@ instance Traversable (TriEither fixed1 fixed2) where
 instance Traversable (BiList fixed) where
 
 -- Magasabbrendű megkötések
+
+-- Ellenörzés idáig majd közösen
 instance Traversable f => Traversable (Apply f) where
 
 instance Traversable f => Traversable (Fix f) where
@@ -132,6 +204,38 @@ instance Traversable f => Traversable (Prod f fixed) where
 instance Traversable f => Traversable (FList f) where
 
 -- Kiegészítő tananyag: Applicative Do
+
+-- :t \m -> do { x <- m 'a'; y <- m 'b'; return (x || y) }
+f :: Applicative f => (Char -> f Bool) -> f Bool
+f m = do
+  x <- m 'a'
+  y <- m 'b'
+  return (x || y)
+
+-- (\x y -> x || y) <$> m 'a' <*> m 'b'
+
+
+-- Monad kell
+-- :t \m -> do { x <- m True; y <- m x; return (x || y) }
+f' :: Monad m => (Bool -> m Bool) -> m Bool
+f' m = do 
+  x <- m True
+  y <- m x
+  return (x || y)
+
+-- ghc Gy08.hs -o 08.out -ddump-ds > dump.txt
+
+main :: IO ()
+main = return ()
+
+-- Általánosan
+{-
+  ... = do
+    p1 <- E1
+    ...
+    pn <- En
+    return E
+-}
 
 -- Mágia, ignore me
 deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (Fix f a)
