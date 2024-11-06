@@ -4,7 +4,9 @@ module Gyak05 where
 
 import Control.Monad
 import Control.Monad.State
-import Control.Monad.Except
+import Control.Monad.Trans.Except
+
+--import Control.Monad.Except
 
 -- Mai óra: speficikus Monádok: State, Either
 -- Case study : Statemachine
@@ -259,11 +261,16 @@ labelListBW (x:xs) = do
 -- Asszertációs hiba
 -- Üres lista hiba
 data CustomError
+  = DivByZero
+  | Assertion
+  | EmptyList
+  | Overflow
+  | Underflow
   deriving (Eq, Show)
 
 -- Példa: biztonságos osztás
 safeDiv :: Integral a => a -> a -> Either CustomError a
-safeDiv a b = undefined
+safeDiv a b = if b == 0 then Left DivByZero else Right (a `div` b)
 
 -- Az either-t is lehet monadikusan kezelni
 bindE :: Either e a -> (a -> Either e b) -> Either e b
@@ -271,8 +278,9 @@ bindE (Left e) _ = Left e -- az f sosincs meghívva hiba esetén
 bindE (Right a) f = f a
 
 -- Hibák dobása mellet el is kell tudni kapni őket:
-catchE :: Either e a -> (e -> Either e a) -> Either e a
-catchE = undefined
+catchE' :: Either e a -> (e -> Either e a) -> Either e a
+catchE' (Left  e) f = f e
+catchE' (Right a) f = Right a
 
 -- Az Eithernek van kicsit általánosabb formája (részletesebben következő órán)
 -- Ez az Except Monád
@@ -282,18 +290,21 @@ catchE = undefined
 -- throwError :: e -> Except e a
 -- catchError :: Except e a -> (e -> Except e a) -> Except e a
 
+throwError' :: e -> Except e a
+throwError' e = except $ Left e
+
 -- Példa throwError/catchErrorra:
 -- Dobjunk asszertációs hibát, ha a feltétel nem teljesül
 assert :: Bool -> Except CustomError ()
-assert = undefined
+assert b = if b then except $ Right () else throwE Assertion
 
 -- Biztonságos osztás
 safeDivE :: Integral a => a -> a -> Except CustomError a
-safeDivE = undefined
+safeDivE a b = if b == 0 then (throwE DivByZero) else return (a `div` b)
 
 -- Végezzük el a safeDiv műveletet, de ha kivételt dobnánk, adjunk vissza 0-t inkább
 safeDivF :: Integral a => a -> a -> Except CustomError a
-safeDivF = undefined
+safeDivF a b = (safeDivE a b) `catchE` (\e -> return 0)
 
 -- Feladatok
 
@@ -313,16 +324,23 @@ u32Max = 2 ^ 32 - 1
 (+++) :: Integer -> Integer -> Except CustomError Integer 
 (+++) a b = let s = a + b in
   if s > u32Max
-    then undefined {- Valami errort dobjunk itt -}
+    then throwE Overflow {- Valami errort dobjunk itt -}
     else return s
 
 -- Kivonás
 (-~-) :: Integer -> Integer -> Except CustomError Integer
-(-~-) = undefined
+(-~-) a b = let s = a - b in
+  if s < 0
+    then throwE Underflow {- Valami errort dobjunk itt -}
+    else return s
+
 
 -- Szorzás
 (***) :: Integer -> Integer -> Except CustomError Integer
-(***) = undefined
+(***) a b = let s = a * b in
+  if s > u32Max
+    then throwE Overflow {- Valami errort dobjunk itt -}
+    else return s
 
 -- Számoljuk ki két szám távolságának négyzetét:
 -- Vagyis végezzük el a 
@@ -330,4 +348,10 @@ u32Max = 2 ^ 32 - 1
 -- műveletet
 
 dist :: Integer -> Integer -> Integer -> Integer -> Except CustomError Integer
-dist x1 x2 y1 y2 = undefined
+dist x1 y1 x2 y2 = do
+  dx <- x2 -~- x1
+  dy <- y2 -~- y1
+  dxs <- dx *** dx
+  dys <- dy *** dy
+  r <- dxs +++ dys
+  return r
