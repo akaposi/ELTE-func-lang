@@ -8,6 +8,21 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Except
+import Control.Monad
+import Control.Monad.State
+import Data.List
+
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn k xs = map tail $ groupBy (/=) (k:xs)
+
+
+splittingW :: [a] -> Writer [a] [a]
+splittingW [] = return []
+splittingW [x] = return [x]
+splittingW (x : y : xs) = do
+  tell [y]
+  xs' <- splittingW xs
+  return (x : xs')
 
 
 -- Cheatsheet:
@@ -46,7 +61,9 @@ data Env = MkEnv { isAdmin :: Bool, homeDir :: String } deriving (Eq, Show)
 -- Definiáljunk egy függvényt, amely kiírja a felhasználó home directoryját
 -- ha a felhasználó admin
 printHomeDirIfAdmin :: ReaderT Env (Writer [String]) ()
-printHomeDirIfAdmin = undefined
+printHomeDirIfAdmin = do
+  MkEnv isAdmin homeDir <- ask
+  when isAdmin $ tell [homeDir]
 
 -- Miért typecheckel a tell, ask stb
 -- :t ask
@@ -54,7 +71,9 @@ printHomeDirIfAdmin = undefined
 -- Ezekkel a típusosztályokkal is fel lehet írni a függvényt
 
 printHomeDirIfAdmin' :: (MonadReader Env m, MonadWriter [String] m) => m ()
-printHomeDirIfAdmin' = undefined
+printHomeDirIfAdmin' = do
+  MkEnv isAdmin homeDir <- ask
+  when isAdmin $ tell [homeDir]
 
 -- Vizsgán ennél a feladatnál mindenkinek a saját típusszignatúráját fel kell majd írnia
 -- Lehet mindkettőt használni
@@ -69,8 +88,11 @@ basicExecutables = ["/usr/bin/bash", "/usr/bin/ls", "/bin/sh"]
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
 -- Rakjuk be a felhasználó home directoryját a fájl rendszerbe ha még nincs benne
-addHomeIfNotIn :: type_signature_goes_here
-addHomeIfNotIn = undefined
+addHomeIfNotIn :: StateT FileSystem (Reader Env) ()
+addHomeIfNotIn = do
+  MkEnv _ dir <- ask
+  fs <- get
+  unless (elem dir fs) $ modify (dir :)
 
 
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
@@ -86,9 +108,14 @@ data FSError = FileExists | NotAnAdmin | BadPath deriving (Eq, Show)
 -- Legyen egy Env típusú olvasási környezetünk
 -- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem amin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
 -- Ha nem létezik rakjuk be a fájlrendszerbe
-tryAdd :: type_signature_goes_here
-tryAdd = undefined
-
+-- tryAdd :: StateT FileSystem (ExceptT FSError (Reader Env)) ()
+tryAdd :: (MonadState FileSystem m, MonadError FSError m, MonadReader Env m) => String -> m ()
+tryAdd file = do
+  MkEnv isAdmin _ <- ask
+  if isAdmin then do
+    fs <- get
+    if elem file fs then throwError FileExists else put (file : fs)
+  else throwError NotAnAdmin
 
 -- ExceptT-vel vigyázzunk!!!
 what :: (MonadError String m, MonadWriter [String] m) => m ()
