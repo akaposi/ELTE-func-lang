@@ -20,21 +20,37 @@ data Env = MkEnv {
 -- Definiáljuk az isSudoable függvényt, amely megnézi, hogy a jelen felhasználónak lehet-e admin engedélye.
 -- Akkor lehet engedálye, ha jelenleg root felhasználól vagyunk, vagy a sudoers listában benne van a felhasználó neve.
 isSudoable :: Reader Env Bool
-isSudoable = undefined
+isSudoable = do
+  MkEnv root username sudoers users pwd homeDir <- ask
+  return (root || elem username sudoers)
 
 -- Definiáljuk a getPassword függvény amely visszaadja a felhasználó jelszavát (ha van)
 getPassword :: Reader Env (Maybe String)
-getPassword = undefined
+getPassword = do
+  MkEnv root username sudoers users pwd homeDir <- ask
+  return (lookup username users)
 
 -- Definiáljuk a runAs függvényt amely megpróbál egy Readert egy felhasználónként lefuttatni.
 -- Az első paraméter a felhasználó név a második a jelszó. Ha nincs ilyen felhasználó vagy a jelszó nem helyes adjunk vissza nothingot
 runAs :: String -> String -> Reader Env a -> Reader Env (Maybe a)
-runAs = undefined
+runAs nam passwd r = do
+  MkEnv root username sudoers users pwd homeDir <- ask
+  case lookup nam users of
+    Just pass | pass == passwd -> do
+                  a <- local (\_ -> MkEnv root nam sudoers users pwd homeDir) r
+                  return (Just a)
+    _ -> return Nothing
 
 -- Definiáljuk az inHomeDir függvényt amely egy readert lefuttat úgy, hogy a munkadirectory a felhasználó homedirectoryja legyen
 inHomeDir :: Reader Env a -> Reader Env a
-inHomeDir = undefined
+inHomeDir r = do
+  MkEnv root username sudoers users pwd homeDir <- ask
+  local (\_ -> MkEnv root username sudoers users homeDir homeDir) r
 
+getPwd :: Reader Env String
+getPwd = do
+  MkEnv root username sudoers users pwd homeDir <- ask
+  return pwd
 -- Definiáljuk a defineUsers amely felhasználókat definiál az adott névvel és jelszókkal.
 -- Ha egy felhasználó már létezik és jelenleg adminok vagyunk, akkor a nem admin felhasználókat írjuk fölül, egyébként azokat ignoráljuk.
 defineUsers :: [(String, String)] -> Reader Env a -> Reader Env a
