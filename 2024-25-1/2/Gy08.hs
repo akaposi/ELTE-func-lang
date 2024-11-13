@@ -7,9 +7,10 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Bifunctor
+import Control.Monad.Cont
 
 -- Parser hibaüzenettel
-type Parser a = StateT String (Except String) a
+type Parser  = StateT String (Except String)
 
 runParser :: Parser a -> String -> Either String (a, String)
 runParser p s = runExcept (runStateT p s)
@@ -53,15 +54,19 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 
 -- Parseoljunk be legalább 1 számjegyet!
 atLeastOneDigit :: Parser [Int]
-atLeastOneDigit = undefined
+atLeastOneDigit = some digit
 
 -- Ennek segítségével tudunk már természetes számokat parseolni
 natural :: Parser Int
-natural = undefined
+natural = foldl (\acc i -> 10 * acc + i) 0 <$> atLeastOneDigit
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
-integer = undefined
+integer = do
+  m <- optional $ char '-'
+  case m of
+    Nothing -> natural
+    Just () -> (*) (-1) <$> natural
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
@@ -75,26 +80,40 @@ float = do
 -- Definiáljunk egy parsert ami két adott parser között parseol valami mást
 -- pl bewteen (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between = undefined
+between l m r = l *> m <* r
 
 
 -- Definiáljunk egy parsert ami valami elválasztó karakterrel elválasztott parsereket parseol (legalább 1-et)
 -- pl
--- runParser (sepBy1 anyChar (char ',')) "a,b,c,d" == Just ([a,b,c,d], "")
--- runParser (sepBy1 anyChar (char ',')) "a" == Just ([a], "")
--- runParser (sepBy1 anyChar (char ',')) "" == Nothing
+-- >>> runParser (sepBy1 anyChar (char ',')) "a,b,c,d"
+-- Right ("abcd","")
+
+-- >>> runParser (sepBy1 anyChar (char ',')) "a"
+-- Right ("a","")
+
+-- >>> (\s -> case s of (Left _) -> True; _ -> False) $ runParser (sepBy1 anyChar (char ',')) ""
+-- True
+
+-- >>> runParser (sepBy1 anyChar (char ',')) "1,"
+-- Right ("1",",")
+
+-- >>> runParser (sepBy1 digit (char ',')) ",1"
+-- Left "digit: Not a digit"
 
 sepBy1 :: Parser a -> Parser delim -> Parser {- nem üres -} [a]
-sepBy1 = undefined
+sepBy1 p delim = (some (p <* delim) >>= \k -> (k ++) . singleton <$> p) <|> singleton <$> p
 
 -- Ugyanaz mint a fenti, de nem követeli meg, hogy legalább 1 legyen
 sepBy :: Parser a -> Parser delim -> Parser [a]
-sepBy = undefined
+sepBy p delim = sepBy1 p delim <|> pure []
 
 -- Írjunk egy parsert ami egy listaliterált parseol számokkal benne!
 -- pl [1,2,30,40,-10]
 listOfNumbers :: Parser [Int]
-listOfNumbers = undefined
+listOfNumbers = between (char '[') (sepBy integer (char ',')) (char ']')
+
+-- >>> runParser listOfNumbers "[1,2,30,40,-10]"
+-- Right ([1,2,30,40,-10],"")
 
 -- Whitespace-k elhagyása
 ws :: Parser ()
@@ -123,7 +142,7 @@ string' str = tok $ string str
 
 -- Írjuk újra a listOfNumbers parsert úgy, hogy engedjen space-eket a számok előtt és után illetve a [ ] előtt és után!
 goodListofNumbers :: Parser [Int]
-goodListofNumbers = undefined
+goodListofNumbers = between (ws *> char '[') (sepBy (ws *> integer <* ws) (char ',')) (char ']' <* ws)
 
 -- Hajtogató parserek
 
@@ -132,16 +151,16 @@ goodListofNumbers = undefined
 -- Jobbra asszocialó kifejezést parseoljon.
 -- Sep által elválasztott kifejezéseket gyűjtsön össze, majd azokra a megfelelő sorrendbe alkalmazza a függvényt
 rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-rightAssoc = undefined
+rightAssoc f p sep = sepBy1 p sep >>= \ls -> pure $ foldr f (head ls) (drop 1 ls)
 
 -- Ugyanaz mint a rightAssoc csak balra
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-leftAssoc  = undefined
+leftAssoc  f p sep = sepBy1 p sep >>= \ls -> pure $ foldl f (head ls) (drop 1 ls)
 
 -- Nem kötelező HF
 -- Olyan parser amit nem lehet láncolni (pl == mert 1 == 2 == 3 == 4 se jobbra se balra nem asszociál tehát nincs értelmezve)
 nonAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-nonAssoc = undefined
+nonAssoc f p sep = undefined
 
 
 -- Kompetensebb verziói a fenti parsereknek
@@ -196,16 +215,19 @@ data Exp
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
 pAtom :: Parser Exp
-pAtom = undefined
+pAtom = FloatLit <$> (float <* ws) <|> IntLit <$> integer' <|> between (char' '(') pAdd (char' ')')
 
 pPow :: Parser Exp
-pPow = undefined
+pPow = rightAssoc (flip (:^)) pAtom (string' "**")
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = leftAssoc (:*) pPow (char' '*') 
 
 pAdd :: Parser Exp
-pAdd = undefined
+pAdd = leftAssoc (:+) pMul (char' '+')
+
+-- >>> runParser pAtom "(10 + 10 ** 5.0 * 7)"
+-- Right (IntLit 10 :+ ((IntLit 10 :^ FloatLit 5.0) :* IntLit 7),"")
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
@@ -240,10 +262,13 @@ pAdd = undefined
 -- Adjunk a nyelvhez lambda kifejezéseket
 
 keywords :: [String]
-keywords = undefined
+keywords = ["true", "false"]
 
 pNonKeyword :: Parser String
-pNonKeyword = undefined
+pNonKeyword = do
+  a <- some (satisfy isAlpha)
+  when (a `elem` keywords) (throwError "nonKeyword: Keyword was parsed")
+  pure a
 
 pKeyword :: String -> Parser ()
-pKeyword = undefined
+pKeyword str = if str `elem` keywords then string str else throwError "keyword: The given string is not a keyword!"
