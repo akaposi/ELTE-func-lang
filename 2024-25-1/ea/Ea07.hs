@@ -1,3 +1,5 @@
+-- Diviánszky Péter előadása
+
 {-
 I.   Lens use cases
 II.  How Lens works
