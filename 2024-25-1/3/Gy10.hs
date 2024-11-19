@@ -15,8 +15,13 @@ runParser :: Parser a -> String -> Either String (a, String)
 runParser p s = runExcept (runStateT p s)
 
 (<|>) :: MonadError e m => m a -> m a -> m a
-f <|> g = catchError f (const g)
+f <|> g = f `catchError` (const g)
+
 infixl 3 <|>
+
+-- infix : a ⊕ b 
+-- infixl : infix left assoc
+-- (a * b) * c 
 
 optional :: MonadError e m => m a -> m (Maybe a)
 optional f = Just <$> f <|> pure Nothing
@@ -25,7 +30,7 @@ many :: MonadError e m => m a -> m [a]
 many p = some p <|> pure []
 
 some :: MonadError e m => m a -> m [a]
-some p = (:) <$> p <*> many p
+some p = pure (:) <*> p <*> many p
 
 -- Primitívek
 
@@ -52,16 +57,32 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 -- Eredményes parserek: Olyan parserek amelyeknek van valami eredménye és fel is használjuk őket
 
 -- Parseoljunk be legalább 1 számjegyet!
+-- \d+
 atLeastOneDigit :: Parser [Int]
-atLeastOneDigit = undefined
+atLeastOneDigit = some digit
+
 
 -- Ennek segítségével tudunk már természetes számokat parseolni
+-- 0 , 1 , 2 , ... 1012312 
 natural :: Parser Int
-natural = undefined
+natural = do
+  ds <- atLeastOneDigit
+  return $ sum $ zipWith (*) ([ 10^i | i <- [0..] ]) (reverse ds)
+-- Vagy : let r = foldl (\acc curr -> acc * 10 + curr) 0 ds
+
+-- [0,0,1] = 1
+
+-- [1,2,3] => 123
+-- [100,10,1]
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
-integer = undefined
+integer = do
+  s <- optional $ char '-'
+  n <- natural
+  case s of
+    Nothing -> pure n
+    _       -> pure (-n)
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
@@ -69,14 +90,21 @@ float = do
     s <- (\s -> if null s then 1 else -1) <$> optional (char '-')
     i <- natural
     char '.'
-    r <- foldr1 (\a acc -> a + acc / 10) <$> some (fromIntegral <$> digit)
+    r' <- some (fromIntegral <$> digit)
+    let r  = (foldr1 (\a acc -> a + acc / 10) r') :: Double
     pure $ s * (r / 10 + fromIntegral i)
 
 -- Definiáljunk egy parsert ami két adott parser között parseol valami mást
 -- pl bewteen (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between = undefined
-
+{-
+between l a r = do
+  l
+  av <- a
+  r
+  return av
+-}
+between l a r = (l *> a) <* r
 
 -- Definiáljunk egy parsert ami valami elválasztó karakterrel elválasztott parsereket parseol (legalább 1-et)
 -- pl
@@ -85,16 +113,41 @@ between = undefined
 -- runParser (sepBy1 anyChar (char ',')) "" == Nothing
 
 sepBy1 :: Parser a -> Parser delim -> Parser {- nem üres -} [a]
-sepBy1 = undefined
+sepBy1 pa pdelim = do
+  a <- pa
+  as <- many (pdelim *> pa)
+  return $ a:as 
+
+-- sepBy1 pa pdelim = (:) <$> pa <*> many (pdelim *> pa)
+
+-- >> :: m a -> m b -> m b
+-- *> :: f a -> f b -> f b
 
 -- Ugyanaz mint a fenti, de nem követeli meg, hogy legalább 1 legyen
 sepBy :: Parser a -> Parser delim -> Parser [a]
-sepBy = undefined
+sepBy pa pdelim = do
+  a <- optional $ pa
+  as <- many (pdelim *> pa)
+  case a of
+    Nothing -> return []
+    Just a' -> return $ a':as 
+
 
 -- Írjunk egy parsert ami egy listaliterált parseol számokkal benne!
 -- pl [1,2,30,40,-10]
 listOfNumbers :: Parser [Int]
-listOfNumbers = undefined
+listOfNumbers = 
+  between 
+    (char '[') 
+    (sepBy integer (char ',')) 
+    (char ']')
+
+listOf :: Parser a -> Parser [a]
+listOf pa = 
+  between 
+    (char '[') 
+    (sepBy pa (char ',')) 
+    (char ']')
 
 -- Whitespace-k elhagyása
 ws :: Parser ()
@@ -103,6 +156,9 @@ ws = void $ many $ satisfy isSpace
 -- Tokenizálás: whitespace-ek elhagyása
 tok :: Parser a -> Parser a
 tok p = p <* ws -- Itt a <* kell mert a bal parser eredménye érdekes
+
+-- void :: f a -> f ()
+-- void fa = fa <$> const ()
 
 topLevel :: Parser a -> Parser a
 topLevel p = ws *> tok p <* eof
@@ -123,7 +179,14 @@ string' str = tok $ string str
 
 -- Írjuk újra a listOfNumbers parsert úgy, hogy engedjen space-eket a számok előtt és után illetve a [ ] előtt és után!
 goodListofNumbers :: Parser [Int]
-goodListofNumbers = undefined
+goodListofNumbers = do
+  ws
+  s <- between
+    (char '[') 
+    (sepBy (ws *> integer') (char ',')) 
+    (char ']')
+  ws
+  return s 
 
 -- Hajtogató parserek
 
@@ -132,7 +195,15 @@ goodListofNumbers = undefined
 -- Jobbra asszocialó kifejezést parseoljon.
 -- Sep által elválasztott kifejezéseket gyűjtsön össze, majd azokra a megfelelő sorrendbe alkalmazza a függvényt
 rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-rightAssoc = undefined
+rightAssoc f pa psep = (foldr1 f) <$> (sepBy1 pa psep)
+
+
+-- (a -> b) <$> Parser a = Parser b
+-- pa psep pa psep pa
+-- [pa, pa, pa]
+-- pa
+-- [pa]
+-- 
 
 -- Ugyanaz mint a rightAssoc csak balra
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
@@ -156,6 +227,8 @@ chainr1 v op = do
     )
     <|> pure val
 
+-- a + (b + (c + d))
+
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 chainl1 v op = v >>= parseLeft
   where
@@ -166,6 +239,12 @@ chainl1 v op = v >>= parseLeft
           parseLeft (opr val val2)
       )
         <|> pure val
+
+-- ((a + b) + c)
+
+-- Chainr1 example
+p :: Parser (Int -> Int -> Int)
+p = ((+) <$ char' '+')
 
 
 -- RDP Algoritmus => Kifejezésnyelv parseolása
