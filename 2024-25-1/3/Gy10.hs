@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Gy08 where
+module Gy10 where
 
 import Control.Monad.Except
 import Control.Monad.State
@@ -7,17 +7,21 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Bifunctor
-import Control.Monad.Cont
 
 -- Parser hibaüzenettel
-type Parser  = StateT String (Except String)
+type Parser a = StateT String (Except String) a
 
 runParser :: Parser a -> String -> Either String (a, String)
 runParser p s = runExcept (runStateT p s)
 
 (<|>) :: MonadError e m => m a -> m a -> m a
-f <|> g = catchError f (const g)
+f <|> g = f `catchError` (const g)
+
 infixl 3 <|>
+
+-- infix : a ⊕ b 
+-- infixl : infix left assoc
+-- (a * b) * c 
 
 optional :: MonadError e m => m a -> m (Maybe a)
 optional f = Just <$> f <|> pure Nothing
@@ -26,7 +30,7 @@ many :: MonadError e m => m a -> m [a]
 many p = some p <|> pure []
 
 some :: MonadError e m => m a -> m [a]
-some p = (:) <$> p <*> many p
+some p = pure (:) <*> p <*> many p
 
 -- Primitívek
 
@@ -53,20 +57,32 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 -- Eredményes parserek: Olyan parserek amelyeknek van valami eredménye és fel is használjuk őket
 
 -- Parseoljunk be legalább 1 számjegyet!
+-- \d+
 atLeastOneDigit :: Parser [Int]
 atLeastOneDigit = some digit
 
+
 -- Ennek segítségével tudunk már természetes számokat parseolni
+-- 0 , 1 , 2 , ... 1012312 
 natural :: Parser Int
-natural = foldl (\acc i -> 10 * acc + i) 0 <$> atLeastOneDigit
+natural = do
+  ds <- atLeastOneDigit
+  return $ sum $ zipWith (*) ([ 10^i | i <- [0..] ]) (reverse ds)
+-- Vagy : let r = foldl (\acc curr -> acc * 10 + curr) 0 ds
+
+-- [0,0,1] = 1
+
+-- [1,2,3] => 123
+-- [100,10,1]
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
 integer = do
-  m <- optional $ char '-'
-  case m of
-    Nothing -> natural
-    Just () -> (*) (-1) <$> natural
+  s <- optional $ char '-'
+  n <- natural
+  case s of
+    Nothing -> pure n
+    _       -> pure (-n)
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
@@ -74,46 +90,64 @@ float = do
     s <- (\s -> if null s then 1 else -1) <$> optional (char '-')
     i <- natural
     char '.'
-    r <- foldr1 (\a acc -> a + acc / 10) <$> some (fromIntegral <$> digit)
+    r' <- some (fromIntegral <$> digit)
+    let r  = (foldr1 (\a acc -> a + acc / 10) r') :: Double
     pure $ s * (r / 10 + fromIntegral i)
 
 -- Definiáljunk egy parsert ami két adott parser között parseol valami mást
 -- pl bewteen (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between l m r = l *> m <* r
-
+{-
+between l a r = do
+  l
+  av <- a
+  r
+  return av
+-}
+between l a r = (l *> a) <* r
 
 -- Definiáljunk egy parsert ami valami elválasztó karakterrel elválasztott parsereket parseol (legalább 1-et)
 -- pl
--- >>> runParser (sepBy1 anyChar (char ',')) "a,b,c,d"
--- Right ("abcd","")
-
--- >>> runParser (sepBy1 anyChar (char ',')) "a"
--- Right ("a","")
-
--- >>> (\s -> case s of (Left _) -> True; _ -> False) $ runParser (sepBy1 anyChar (char ',')) ""
--- True
-
--- >>> runParser (sepBy1 anyChar (char ',')) "1,"
--- Right ("1",",")
-
--- >>> runParser (sepBy1 digit (char ',')) ",1"
--- Left "digit: Not a digit"
+-- runParser (sepBy1 anyChar (char ',')) "a,b,c,d" == Just ([a,b,c,d], "")
+-- runParser (sepBy1 anyChar (char ',')) "a" == Just ([a], "")
+-- runParser (sepBy1 anyChar (char ',')) "" == Nothing
 
 sepBy1 :: Parser a -> Parser delim -> Parser {- nem üres -} [a]
-sepBy1 p delim = (some (p <* delim) >>= \k -> (k ++) . singleton <$> p) <|> singleton <$> p
+sepBy1 pa pdelim = do
+  a <- pa
+  as <- many (pdelim *> pa)
+  return $ a:as 
+
+-- sepBy1 pa pdelim = (:) <$> pa <*> many (pdelim *> pa)
+
+-- >> :: m a -> m b -> m b
+-- *> :: f a -> f b -> f b
 
 -- Ugyanaz mint a fenti, de nem követeli meg, hogy legalább 1 legyen
 sepBy :: Parser a -> Parser delim -> Parser [a]
-sepBy p delim = sepBy1 p delim <|> pure []
+sepBy pa pdelim = do
+  a <- optional $ pa
+  as <- many (pdelim *> pa)
+  case a of
+    Nothing -> return []
+    Just a' -> return $ a':as 
+
 
 -- Írjunk egy parsert ami egy listaliterált parseol számokkal benne!
 -- pl [1,2,30,40,-10]
 listOfNumbers :: Parser [Int]
-listOfNumbers = between (char '[') (sepBy integer (char ',')) (char ']')
+listOfNumbers = 
+  between 
+    (char '[') 
+    (sepBy integer (char ',')) 
+    (char ']')
 
--- >>> runParser listOfNumbers "[1,2,30,40,-10]"
--- Right ([1,2,30,40,-10],"")
+listOf :: Parser a -> Parser [a]
+listOf pa = 
+  between 
+    (char '[') 
+    (sepBy pa (char ',')) 
+    (char ']')
 
 -- Whitespace-k elhagyása
 ws :: Parser ()
@@ -122,6 +156,9 @@ ws = void $ many $ satisfy isSpace
 -- Tokenizálás: whitespace-ek elhagyása
 tok :: Parser a -> Parser a
 tok p = p <* ws -- Itt a <* kell mert a bal parser eredménye érdekes
+
+-- void :: f a -> f ()
+-- void fa = fa <$> const ()
 
 topLevel :: Parser a -> Parser a
 topLevel p = ws *> tok p <* eof
@@ -142,7 +179,14 @@ string' str = tok $ string str
 
 -- Írjuk újra a listOfNumbers parsert úgy, hogy engedjen space-eket a számok előtt és után illetve a [ ] előtt és után!
 goodListofNumbers :: Parser [Int]
-goodListofNumbers = between (ws *> char '[') (sepBy (ws *> integer <* ws) (char ',')) (char ']' <* ws)
+goodListofNumbers = do
+  ws
+  s <- between
+    (char '[') 
+    (sepBy (ws *> integer') (char ',')) 
+    (char ']')
+  ws
+  return s 
 
 -- Hajtogató parserek
 
@@ -151,16 +195,24 @@ goodListofNumbers = between (ws *> char '[') (sepBy (ws *> integer <* ws) (char 
 -- Jobbra asszocialó kifejezést parseoljon.
 -- Sep által elválasztott kifejezéseket gyűjtsön össze, majd azokra a megfelelő sorrendbe alkalmazza a függvényt
 rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-rightAssoc f p sep = sepBy1 p sep >>= \ls -> pure $ foldr f (head ls) (drop 1 ls)
+rightAssoc f pa psep = (foldr1 f) <$> (sepBy1 pa psep)
+
+
+-- (a -> b) <$> Parser a = Parser b
+-- pa psep pa psep pa
+-- [pa, pa, pa]
+-- pa
+-- [pa]
+-- 
 
 -- Ugyanaz mint a rightAssoc csak balra
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-leftAssoc  f p sep = sepBy1 p sep >>= \ls -> pure $ foldl f (head ls) (drop 1 ls)
+leftAssoc  = undefined
 
 -- Nem kötelező HF
 -- Olyan parser amit nem lehet láncolni (pl == mert 1 == 2 == 3 == 4 se jobbra se balra nem asszociál tehát nincs értelmezve)
 nonAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-nonAssoc f p sep = undefined
+nonAssoc = undefined
 
 
 -- Kompetensebb verziói a fenti parsereknek
@@ -175,6 +227,8 @@ chainr1 v op = do
     )
     <|> pure val
 
+-- a + (b + (c + d))
+
 chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
 chainl1 v op = v >>= parseLeft
   where
@@ -185,6 +239,12 @@ chainl1 v op = v >>= parseLeft
           parseLeft (opr val val2)
       )
         <|> pure val
+
+-- ((a + b) + c)
+
+-- Chainr1 example
+p :: Parser (Int -> Int -> Int)
+p = ((+) <$ char' '+')
 
 
 -- RDP Algoritmus => Kifejezésnyelv parseolása
@@ -215,19 +275,16 @@ data Exp
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
 pAtom :: Parser Exp
-pAtom = FloatLit <$> (float <* ws) <|> IntLit <$> integer' <|> between (char' '(') pAdd (char' ')')
+pAtom = undefined
 
 pPow :: Parser Exp
-pPow = rightAssoc (flip (:^)) pAtom (string' "**")
+pPow = undefined
 
 pMul :: Parser Exp
-pMul = leftAssoc (:*) pPow (char' '*') 
+pMul = undefined
 
 pAdd :: Parser Exp
-pAdd = leftAssoc (:+) pMul (char' '+')
-
--- >>> runParser pAtom "(10 + 10 ** 5.0 * 7)"
--- Right (IntLit 10 :+ ((IntLit 10 :^ FloatLit 5.0) :* IntLit 7),"")
+pAdd = undefined
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
@@ -262,13 +319,10 @@ pAdd = leftAssoc (:+) pMul (char' '+')
 -- Adjunk a nyelvhez lambda kifejezéseket
 
 keywords :: [String]
-keywords = ["true", "false"]
+keywords = undefined
 
 pNonKeyword :: Parser String
-pNonKeyword = do
-  a <- some (satisfy isAlpha)
-  when (a `elem` keywords) (throwError "nonKeyword: Keyword was parsed")
-  pure a
+pNonKeyword = undefined
 
 pKeyword :: String -> Parser ()
-pKeyword str = if str `elem` keywords then string str else throwError "keyword: The given string is not a keyword!"
+pKeyword = undefined
