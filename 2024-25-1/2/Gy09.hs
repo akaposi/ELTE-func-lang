@@ -44,7 +44,7 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 -- Definiáljunk egy parsert ami egy 'a' vagy egy 'b' karaktert parseol
 
 aorb :: Parser Char
-aorb = undefined
+aorb = char 'a' *> pure 'a' <|> char 'b' *> pure 'b'
 
 -- many :: Parser a -> Parser [a]
 -- 0 vagy többször lefuttatja a parsert
@@ -65,12 +65,17 @@ optional f = Just <$> f <|> pure Nothing
 -- replicateM :: Int -> Parser a -> Parser [a]
 -- n-szer lefuttat egy parsert
 replicateM' :: Integral i => i -> Parser a -> Parser [a]
-replicateM' = undefined
+replicateM' n  p | n < 0 = throwError "Can not parse negative number times!"
+replicateM' n p | n == 0 = pure []
+replicateM' n p = (:) <$> p <*> replicateM' (n-1) p
+
 
 -- asum :: [Parser a] -> Parser a
 -- Sorban megpróbálja az összes parsert lefuttatni
 asum' :: [Parser a] -> Parser a
-asum' = undefined
+asum' [] = throwError "Can not use empty List with this function!"
+asum' [x] = x
+asum' (x :  xs@(_ : _)) = x *> asum' xs
 
 -- Regex féle parserek
 {-
@@ -91,52 +96,52 @@ asum' = undefined
 
 -- alm(a|ák)
 p1 :: Parser ()
-p1 = undefined
+p1 = string "alm" *> char 'a' <|> string "ák"
 
 -- c(i+)ca
 p2 :: Parser ()
-p2 = undefined
+p2 = char 'c' *> some' (char 'i') *> string "ca"
 
 -- (c*)i?(c+)a{3}
 p3 :: Parser ()
-p3 = undefined
+p3 = void $ (many' (char 'c') *> optional (char 'i') *> (some' (char 'c')) *> replicateM' 3 (char 'a'))
 
 -- (alma|banana)?
 p4 :: Parser ()
-p4 = undefined
+p4 = void $ many' (string "alma" <|>  string "banana")
 
 -- [A-Z]{10}
 p5 :: Parser ()
-p5 = undefined
+p5 = void $ replicateM' 10 (satisfy (\x -> x >= min 'A' 'Z' && x <= max 'A' 'Z'))
 
 -- \d{2}
 p6 :: Parser ()
-p6 = undefined
+p6 = void $ replicateM' 2 (digitToInt <$> satisfy isDigit)
 
 -- \d+.*$
 p7 :: Parser ()
-p7 = undefined
+p7 = some' (digitToInt <$> satisfy isDigit) *> many' anyChar *> eof
 
 -- \d?alma.?banana
 p8 :: Parser ()
-p8 = undefined
+p8 = optional (digitToInt <$> satisfy isDigit) *> string "alma" *> optional anyChar *> string "banana"
 
 -- (ab)?ba+.*
 p9 :: Parser ()
-p9 = undefined
+p9 = void (optional (string "ab") *> char 'b' *> some' (char 'a') *> many' anyChar)
 
 -- \d{2,}-?$
 p10 :: Parser ()
-p10 = undefined
+p10 = digitToInt <$> satisfy isDigit *> string "{2,}" *> optional (char '-') *> eof
 
 -- [A-Z]*[1,2,3,9]?(A|Z)$
 p11 :: Parser ()
-p11 = undefined
+p11 = many' (satisfy (\x -> x >= min 'A' 'Z' && x <= max 'A' 'Z')) *> optional (satisfy (\x -> x `elem` ['1','2','3','9'])) *> (char 'A' <|> char 'Z') *> eof
 
 -- a+b*c?d{4}e{5,}
 p12 :: Parser ()
-p12 = undefined
+p12 = some' (char 'a') *> many' (char 'b') *> optional (char 'c') *> replicateM' 4 (char 'd') *> string "e{5,}"
 
 -- alm(a|ák)|banán(ok)?
 p13 :: Parser ()
-p13 = undefined
+p13 = (string "alm" *> (char 'a' <|> string "ák")) <|> (string "banán" *> void (optional (string "ok")))
