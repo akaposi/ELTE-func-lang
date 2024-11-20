@@ -11,6 +11,22 @@ import Control.Monad.Except
 import Control.Monad
 import Control.Monad.State
 import Data.List
+import Text.Read (readMaybe)
+
+calculator :: (MonadState [Int] m, MonadError String m, MonadIO m) => m ()
+calculator = do
+  line <- liftIO getLine
+  -- xs <- get
+  case readMaybe line of
+    Nothing -> do
+      xs <- get
+      case xs of
+        (a:b:_) -> do
+          liftIO $ print (a + b)
+        _ -> throwError "Ilyen nem lehet"
+    Just i -> modify (i:) -- put (i:xs)
+  calculator
+
 
 splitOn :: Eq a => a -> [a] -> [[a]]
 splitOn k xs = map tail $ groupBy (/=) (k:xs)
