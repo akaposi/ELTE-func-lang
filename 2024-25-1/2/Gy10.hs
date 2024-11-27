@@ -177,7 +177,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not"]
+keywords = ["true", "false", "not", "while", "if", "then", "do", "end"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -232,19 +232,23 @@ data Statement
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = sepBy statement (char' ';')
 
 statement :: Parser Statement
-statement = undefined
+statement = asum [
+      sIf,
+      sWhile,
+      sAssign
+    ] <|> throwError "statement: unable to parse any valid statements!"
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = If <$> (string' "if" *> pExp) <*> ( string' "then" *> program <* string' "end" )
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = While <$> ( string' "while" *> pExp) <*> ( string' "do" *> program <* string' "end")
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = Assign <$> pNonKeyword <*> (string' ":=" *> pExp)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -269,11 +273,113 @@ data InterpreterError
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp (IntLit i) env = pure $ VInt i           -- 1 2 ...
+evalExp (FloatLit d) env = pure $ VFloat d
+evalExp (BoolLit b ) env = pure $ VBool b
+evalExp (Var s  ) env = case lookup s env of
+  Just v  -> pure v
+  Nothing -> throwError $ ScopeError s
+evalExp ( LamLit s exp ) env = pure $ VLam s env exp
+evalExp ( (IntLit i) :+ (IntLit j)  ) env = pure $ VInt (i + j)
+evalExp ( (FloatLit i) :+ (FloatLit j)  ) env = pure $ VFloat (i + j)
+evalExp ( (FloatLit f) :+ (IntLit j)  ) env = pure $ VFloat (f + fromIntegral j)
+evalExp ( (IntLit f) :+ (FloatLit j)  ) env = pure $ VFloat (fromIntegral f + j)
+evalExp k@( (Var s) :+ r  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp ((IntLit i) :+ r) env
+  (Just (VFloat f)) -> evalExp ((FloatLit f) :+ r) env
+  _ -> throwError $ TypeError  $ "Left handside of addition is not a valid type in exp: " ++ show k
+evalExp k@( l :+ (Var s)  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp (l :+ (IntLit i)) env
+  (Just (VFloat f)) -> evalExp (l :+ (FloatLit f)) env
+  _ -> throwError $ TypeError  $ "Right handside of addition is not a valid type in exp: " ++ show k
+evalExp k@( _ :+ _  ) env = throwError $ TypeError  $ "Invalid tpe in expression: " ++ show k
+evalExp ( (IntLit i) :* (IntLit j)  ) env = pure $ VInt (i * j)
+evalExp ( (FloatLit i) :* (FloatLit j)  ) env = pure $ VFloat (i * j)
+evalExp ( (FloatLit f) :* (IntLit j)  ) env = pure $ VFloat (f * fromIntegral j)
+evalExp ( (IntLit f) :* (FloatLit j)  ) env = pure $ VFloat (fromIntegral f * j)
+evalExp k@( (Var s) :* r  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp ((IntLit i) :* r) env
+  (Just (VFloat f)) -> evalExp ((FloatLit f) :* r) env
+  _ -> throwError $ TypeError  $ "Left handside of multiplication is not a valid type in exp: " ++ show k
+evalExp k@( l :* (Var s)  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp (l :* (IntLit i)) env
+  (Just (VFloat f)) -> evalExp (l :* (FloatLit f)) env
+  _ -> throwError $ TypeError  $ "Right handside of multiplication is not a valid type in exp: " ++ show k
+evalExp k@( _ :* _  ) env = throwError $ TypeError  $ "Invalid type in expression: " ++ show k
+
+evalExp ( (IntLit i) :- (IntLit j)  ) env = pure $ VInt (i - j)
+evalExp ( (FloatLit i) :- (FloatLit j)  ) env = pure $ VFloat (i - j)
+evalExp ( (FloatLit f) :- (IntLit j)  ) env = pure $ VFloat (f - fromIntegral j)
+evalExp ( (IntLit f) :- (FloatLit j)  ) env = pure $ VFloat (fromIntegral f - j)
+evalExp k@( (Var s) :- r  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp ((IntLit i) :- r) env
+  (Just (VFloat f)) -> evalExp ((FloatLit f) :- r) env
+  _ -> throwError $ TypeError  $ "Left handside of substraction is not a valid type in exp: " ++ show k
+evalExp k@( l :- (Var s)  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp (l :- (IntLit i)) env
+  (Just (VFloat f)) -> evalExp (l :- (FloatLit f)) env
+  _ -> throwError $ TypeError  $ "Right handside of substraction is not a valid type in exp: " ++ show k
+evalExp k@( _ :- _  ) env = throwError $ TypeError  $ "Invalid type in expression: " ++ show k
+evalExp ( (IntLit i) :/ (IntLit j)  ) env = pure $ VInt (i `div` j)
+evalExp ( (FloatLit i) :/ (FloatLit j)  ) env = pure $ VFloat (i / j)
+evalExp ( (FloatLit f) :/ (IntLit j)  ) env = pure $ VFloat (f / fromIntegral j)
+evalExp ( (IntLit f) :/ (FloatLit j)  ) env = pure $ VFloat (fromIntegral f / j)
+evalExp k@( (Var s) :/ r  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp ((IntLit i) :/ r) env
+  (Just (VFloat f)) -> evalExp ((FloatLit f) :/ r) env
+  _ -> throwError $ TypeError  $ "Left handside of division is not a valid type in exp: " ++ show k
+evalExp k@( l :/ (Var s)  ) env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VInt i)) -> evalExp (l :/ (IntLit i)) env
+  (Just (VFloat f)) -> evalExp (l :/ (FloatLit f)) env
+  _ -> throwError $ TypeError  $ "Right handside of division is not a valid type in exp: " ++ show k
+evalExp k@( _ :/ _  ) env = throwError $ TypeError  $ "Invalid type in expression: " ++ show k
+evalExp ( (IntLit i) :== (IntLit j) ) env = pure $ VBool $ i == j
+evalExp ( (FloatLit f) :== (FloatLit g) ) env = pure $ VBool $ f == g
+evalExp ( (BoolLit b) :== (BoolLit c) ) env = pure $ VBool $ b == c
+evalExp ( (Var a) :== (Var c) ) env = case lookup a env of
+  Nothing -> throwError $ ScopeError a
+  (Just l) -> case lookup c env of
+    Nothing -> throwError $ ScopeError c
+    (Just r) -> VBool <$> vTypeEq l r where
+          vTypeEq :: MonadError InterpreterError m => Val -> Val -> m Bool
+          vTypeEq (VBool a) (VBool b) = pure $ a == b
+          vTypeEq (VFloat f) (VFloat g) = pure $ f == g
+          vTypeEq (VInt f) (VInt g) = pure $ f == g
+          vTypeEq (VLam _ _ _) _ = throwError $ TypeError "Lambdas can not be made equal!"
+          vTypeEq _ (VLam {}) = throwError $ TypeError "Lambdas can not be made equal!"
+          vTypeEq _ _ = throwError $ TypeError "The two sides of the equality does not have the same type!" 
+evalExp ( (LamLit a b) :$ r  ) env = evalExp r env >>= \r -> evalExp b ((a , r) :env)
+evalExp k@(Var s :$ r)           env = case lookup s env of
+  Nothing -> throwError $ ScopeError s
+  (Just (VLam s nenv exp)) -> evalExp r env >>= \r -> evalExp exp ((s, r) : nenv)
+  _ -> throwError $ TypeError $ "Variable is not a lambad in expression: " ++ show k
+evalExp k@( _ :$ _  ) env = throwError $ TypeError $ "On the left hand side of function application there must be a lambda!\nIn expression: " ++ show k
+evalExp ( Not (BoolLit b) ) env = pure $ VBool $ not b
+evalExp k@( Not (Var s) ) env = case lookup s env of
+  (Just (VBool b)) -> pure $ VBool $ not b
+  Nothing -> throwError $ ScopeError s
+  _ -> throwError $ TypeError $ "Varibale is not a bool in expression: " ++ show k
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement (Assign s exp) = do
+  st <- get
+  case lookup s st of
+    Nothing -> do
+      val <- evalExp exp st
+      put ((s, val) : st)
+    (Just _) -> do
+      _
+evalStatement (If exp b) = undefined
+evalStatement (While exp b) = undefined
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
