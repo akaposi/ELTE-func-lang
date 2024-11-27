@@ -76,5 +76,4 @@ shopping = do
 
 {- >>> runState shopping Machine.init 
 (3,Machine (4150,[(Tea,250,0),(Latte,325,8),(Moccha,350,0),(Cappuccino,300,20),(HotChocolatte,275,15)]))
-== (3, Machine (4150, [(Latte, 325, 8), (HotChocolatte, 275, 15), (Cappuccino, 300, 20)]))
 -}

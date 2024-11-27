@@ -51,6 +51,7 @@ digit = digitToInt <$> satisfy isDigit <|> throwError "digit: Not a digit"
 string :: String -> Parser ()
 string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ [c] ++ " in " ++ str)) str
 
+{-
 braces :: Parser ()
 braces = do
   c <- braces'
@@ -68,7 +69,25 @@ braces = do
             i <- char '(' *> pure 1 <|> char ')' *> pure (-1) <|> (fmap (drop 1) get >>= put) *> pure 0
             r <- braces'
             pure $ r + i
-        
+-}
+
+braces :: Parser ()
+braces = do
+    c <- szamolas 0  
+    if c == 0 then
+        pure ()      
+    else
+        throwError "BRACES MISSMATCH"  
+
+
+szamolas :: Int -> Parser Int
+szamolas db
+    | db < 0 = throwError "BRACES MISSMATCH"  
+    | otherwise = (char '(' *> szamolas (db + 1))  
+                  <|> (char ')' *> szamolas (db - 1))  
+				  <|> (anyChar *> szamolas db)
+                  <|> eof *> pure db 
+
 -- >>> (runParser braces "()") == Right ((),"")
 -- True
 -- >>> (runParser braces "abcd(abcd)abcd") == Right ((),"")
@@ -76,7 +95,7 @@ braces = do
 -- >>> (runParser braces $ replicate 100 '(' ++ replicate 100 ')') == Right ((),"")
 -- True
 -- >>> (runParser braces $ replicate 100 '(' ++ replicate 100 ')' ++ ")(") == Right ((),"")
--- True
+-- False
 -- >>> (runParser braces $ replicate 100 '(' ++ replicate 100 ')' ++ ")") == Left "BRACES MISSMATCH"
--- True
+-- False
 
