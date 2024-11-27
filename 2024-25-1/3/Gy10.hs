@@ -7,6 +7,7 @@ import Control.Monad
 import Data.Char
 import Data.List
 import Data.Bifunctor
+import Control.Applicative (asum)
 
 -- Parser hibaüzenettel
 type Parser a = StateT String (Except String) a
@@ -171,6 +172,10 @@ natural' = tok natural
 integer' :: Parser Int
 integer' = tok integer
 
+float' :: Parser Double
+float' = tok float
+
+
 char' :: Char -> Parser ()
 char' c = tok $ char c
 
@@ -207,12 +212,18 @@ rightAssoc f pa psep = (foldr1 f) <$> (sepBy1 pa psep)
 
 -- Ugyanaz mint a rightAssoc csak balra
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-leftAssoc  = undefined
+leftAssoc f pa psep = foldl1 f <$> sepBy1 pa psep
 
 -- Nem kötelező HF
 -- Olyan parser amit nem lehet láncolni (pl == mert 1 == 2 == 3 == 4 se jobbra se balra nem asszociál tehát nincs értelmezve)
 nonAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-nonAssoc = undefined
+nonAssoc f pa psep = do
+  exps <- sepBy1 pa psep
+  case exps of
+    [e] -> pure e
+    [e1, e2] -> pure (f e1 e2)
+    _ -> throwError "nonAssoc: too many or too few associations"
+
 
 
 -- Kompetensebb verziói a fenti parsereknek
@@ -257,6 +268,11 @@ data Exp
   | Exp :+ Exp -- összeadás
   | Exp :* Exp -- szorzás
   | Exp :^ Exp -- hatványozás
+  | Exp :% Exp
+  | Exp :- Exp
+  | Exp :/ Exp
+  | Factorial Exp
+  | Neg Exp
   deriving (Eq, Show)
 
 -- Recursive Descent Parsing algoritmus
@@ -265,26 +281,62 @@ data Exp
 +--------------------+--------------------+--------------------+
 | Operátor neve      | Kötési Irány       | Kötési Erősség     |
 +--------------------+--------------------+--------------------+
+| !                  | Postfix            | 20                 |
++--------------------+--------------------+--------------------+
+| -                  | Prefix             | 19                 |
++--------------------+--------------------+--------------------+
 | ^                  | Jobbra             | 16                 |
 +--------------------+--------------------+--------------------+
 | *                  | Balra              | 14                 |
++--------------------+--------------------+--------------------+
+| %                  | Jobbra             | 13                 |
++--------------------+--------------------+--------------------+
+| /                  | Jobbra             | 13                 |
++--------------------+--------------------+--------------------+
+| -                  | Jobbra             | 13                 |
 +--------------------+--------------------+--------------------+
 | +                  | Balra              | 12                 |
 +--------------------+--------------------+--------------------+
 -}
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
+pIntLit :: Parser Exp
+pIntLit = do
+  i <- integer'
+  return $ IntLit i
+
+pFloatLit :: Parser Exp
+pFloatLit = (FloatLit) <$> float' 
+
+pVarLit :: Parser Exp
+pVarLit = Var <$> some (satisfy isLetter) <* ws
+
 pAtom :: Parser Exp
-pAtom = undefined
+pAtom = asum 
+  [ pFloatLit 
+  , pVarLit 
+  , pIntLit
+  , between (char' '(') pAdd (char' ')')]
+
+pFactorial :: Parser Exp
+pFactorial = (Factorial <$> pAtom <* char' '!') <|> pAtom
+
+pNeg :: Parser Exp
+pNeg = (Neg <$> (char' '~' *> pNeg)) <|> pFactorial
+
 
 pPow :: Parser Exp
-pPow = undefined
+pPow = rightAssoc (:^) (pNeg) (char '^')
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = leftAssoc (:*) (pPow) (char' '*')
+
+pPercent :: Parser Exp
+pPercent = chainr1 pMul ((:%) <$ (char' '%') <|> (:-) <$ (char' '-') <|> (:/) <$ (char' '/'))
 
 pAdd :: Parser Exp
-pAdd = undefined
+pAdd = leftAssoc (:+) (pPercent) (char' '+')
+
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
