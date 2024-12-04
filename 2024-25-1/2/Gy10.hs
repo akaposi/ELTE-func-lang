@@ -150,6 +150,7 @@ data Exp
   | Exp :* Exp           -- e1 * e2
   | Exp :- Exp           -- e1 - e2
   | Exp :/ Exp           -- e1 / e2
+  | Exp :&& Exp          -- e1 && e2
   | Exp :== Exp          -- e1 == e2
   | Exp :$ Exp           -- e1 $ e2
   | Not Exp              -- not e
@@ -170,6 +171,8 @@ data Exp
 | -                  | Balra              | 12                 |
 +--------------------+--------------------+--------------------+
 | ==                 | Nincs              | 10                 |
++--------------------+--------------------+--------------------+
+| &&                 | Jobbra             | 9                  |
 +--------------------+--------------------+--------------------+
 | $                  | Jobbra             | 8                  |
 +--------------------+--------------------+--------------------+
@@ -216,8 +219,11 @@ pMinus = chainl1 pAdd ((:-) <$ char' '-')
 pEq :: Parser Exp
 pEq = nonAssoc (:==) pMinus (string' "==")
 
+pAnd :: Parser Exp
+pAnd = chainr1 pEq ((:&&) <$ string "&&" )
+
 pDollar :: Parser Exp
-pDollar = chainr1 pEq ((:$) <$ char' '$')
+pDollar = chainr1 pAnd ((:$) <$ char' '$')
 
 pExp :: Parser Exp -- táblázat legalja
 pExp = pDollar
@@ -227,6 +233,7 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
+  deriving (Show)
 
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
@@ -242,13 +249,45 @@ statement = asum [
     ] <|> throwError "statement: unable to parse any valid statements!"
 
 sIf :: Parser Statement
-sIf = If <$> (string' "if" *> pExp) <*> ( string' "then" *> program <* string' "end" )
+sIf = do
+  pKeyword "if"
+  e <- pExp
+  pKeyword "then"
+  p <- program
+  pKeyword "end"
+  return (If e p)
 
 sWhile :: Parser Statement
-sWhile = While <$> ( string' "while" *> pExp) <*> ( string' "do" *> program <* string' "end")
+sWhile =  do
+  pKeyword "while"
+  e <- pExp
+  pKeyword "do"
+  p <- program
+  pKeyword "end"
+  return (While e p)
+
+{-
+pKeyword "while" 
+>>= _ -> pExp 
+>>= \e -> pKeyword "do" 
+>>= \_ -> p <- program
+>>= \p -> pKeyword "end"
+>>= \_ -> pure (While e p)
+
+-}
+
+{-
+pKeyword "While" *> (While <$> (pExp <* pKeyword "do") <*> (program <* pKeyword "end"))
+-}
 
 sAssign :: Parser Statement
 sAssign = Assign <$> pNonKeyword <*> (string' ":=" *> pExp)
+
+{-
+>>> runProgram "y := 1; x := (lam k -> k); while not (y == 3) do x := (lam k -> x $ k * k); y := y + 1;  end; z := x $ 2"
+Right ((),[("z",VInt 16),("y",VInt 3),("x",VLam "k" [("y",VInt 2),("x",VLam "k" [("x",VLam "k" [("y",VInt 1)] (Var "k")),("y",VInt 1)] (Var "x" :$ (Var "k" :* Var "k")))] (Var "x" :$ (Var "k" :* Var "k")))])
+-}
+
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -262,6 +301,7 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
+  deriving (Show)
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
@@ -269,6 +309,8 @@ data InterpreterError
   = TypeError String -- típushiba üzenettel
   | ScopeError String -- variable not in scope üzenettel
   | DivByZeroError String -- 0-val való osztás hibaüzenettel
+  | CompiledError String
+   deriving (Show)
 
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
@@ -341,32 +383,27 @@ evalExp k@( l :/ (Var s)  ) env = case lookup s env of
   (Just (VFloat f)) -> evalExp (l :/ (FloatLit f)) env
   _ -> throwError $ TypeError  $ "Right handside of division is not a valid type in exp: " ++ show k
 evalExp k@( _ :/ _  ) env = throwError $ TypeError  $ "Invalid type in expression: " ++ show k
-evalExp ( (IntLit i) :== (IntLit j) ) env = pure $ VBool $ i == j
-evalExp ( (FloatLit f) :== (FloatLit g) ) env = pure $ VBool $ f == g
-evalExp ( (BoolLit b) :== (BoolLit c) ) env = pure $ VBool $ b == c
-evalExp ( (Var a) :== (Var c) ) env = case lookup a env of
-  Nothing -> throwError $ ScopeError a
-  (Just l) -> case lookup c env of
-    Nothing -> throwError $ ScopeError c
-    (Just r) -> VBool <$> vTypeEq l r where
-          vTypeEq :: MonadError InterpreterError m => Val -> Val -> m Bool
-          vTypeEq (VBool a) (VBool b) = pure $ a == b
-          vTypeEq (VFloat f) (VFloat g) = pure $ f == g
-          vTypeEq (VInt f) (VInt g) = pure $ f == g
-          vTypeEq (VLam _ _ _) _ = throwError $ TypeError "Lambdas can not be made equal!"
-          vTypeEq _ (VLam {}) = throwError $ TypeError "Lambdas can not be made equal!"
-          vTypeEq _ _ = throwError $ TypeError "The two sides of the equality does not have the same type!" 
-evalExp ( (LamLit a b) :$ r  ) env = evalExp r env >>= \r -> evalExp b ((a , r) :env)
+evalExp k@( a :== b) env = do
+  va <- evalExp a env
+  vb <- evalExp b env
+  let eq a b = pure $ VBool $ a == b
+  case (va, vb) of
+    (VBool a, VBool b) -> eq a b
+    (VFloat a, VFloat b) -> eq a b
+    (VInt a, VInt b) -> eq a b
+    _ ->  throwError $ TypeError  $ "Invalid type in expression (The types are not the same): " ++ show k
+
+evalExp ( (LamLit a b) :$ r  ) env = evalExp r env >>= \r -> evalExp b ((a , r) : env) 
 evalExp k@(Var s :$ r)           env = case lookup s env of
   Nothing -> throwError $ ScopeError s
   (Just (VLam s nenv exp)) -> evalExp r env >>= \r -> evalExp exp ((s, r) : nenv)
   _ -> throwError $ TypeError $ "Variable is not a lambad in expression: " ++ show k
 evalExp k@( _ :$ _  ) env = throwError $ TypeError $ "On the left hand side of function application there must be a lambda!\nIn expression: " ++ show k
-evalExp ( Not (BoolLit b) ) env = pure $ VBool $ not b
-evalExp k@( Not (Var s) ) env = case lookup s env of
-  (Just (VBool b)) -> pure $ VBool $ not b
-  Nothing -> throwError $ ScopeError s
-  _ -> throwError $ TypeError $ "Varibale is not a bool in expression: " ++ show k
+evalExp k@( Not exp ) env = do
+  m <- evalExp exp env
+  case m of
+    (VBool i) -> pure $ VBool $ not i
+    _ -> throwError $ TypeError  $ "Invalid type in expression (The type is not bool): " ++ show k
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
@@ -376,13 +413,50 @@ evalStatement (Assign s exp) = do
     Nothing -> do
       val <- evalExp exp st
       put ((s, val) : st)
-    (Just _) -> do
-      _
-evalStatement (If exp b) = undefined
-evalStatement (While exp b) = undefined
+    (Just (VInt _)) -> do
+      v <- evalExp exp st
+      case v of
+        i@(VInt _) -> put ((s, i) : filter (\(h, _) -> h /= s) st)
+        _ -> throwError $ TypeError "The assigned value's type does not match!"
+    (Just (VFloat _)) -> do
+      v <- evalExp exp st
+      case v of
+        i@(VFloat _) -> put ((s, i) : filter (\(h, _) -> h /= s) st)
+        _ -> throwError $ TypeError "The assigned value's type does not match!"
+    (Just (VBool _)) -> do
+      v <- evalExp exp st
+      case v of
+        i@(VBool _) -> put ((s, i) : filter (\(h, _) -> h /= s) st)
+        _ -> throwError $ TypeError "The assigned value's type does not match!"
+    (Just (VLam _ _ _)) -> do
+      v <- evalExp exp st
+      case v of
+        i@(VLam _ _ _) -> put ((s, i) : filter (\(h, _) -> h /= s) st)
+        _ -> throwError $ TypeError "The assigned value's type does not match!"
+evalStatement (If exp b) = do
+  st <- get
+  val <- evalExp exp st
+  case val of
+    (VBool boo) -> if boo then evalProgram b else pure ()
+    _ -> throwError $ TypeError $ "The expression: (" ++ show exp ++ ") is not a bool in the If statement!"
+evalStatement w@(While exp b) = do
+  st <- get
+  val <- evalExp exp st
+  case val of
+    (VBool boo) -> do
+      if boo then do
+        evalProgram b
+        evalStatement w
+      else pure ()
+    _ -> throwError $ TypeError $ "The expression: (" ++ show exp ++ ") is not a bool in the While statement!"
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
+
+runProgram :: String -> Either InterpreterError ((), Env)
+runProgram p = case parseProgram p of
+  Right xs -> runStateT ((evalProgram xs) :: StateT Env (Either InterpreterError) ()) [];
+  Left xs -> Left $ CompiledError xs
 
 -- Egészítsük ki a nyelvet egy print állítással (hint: MonadIO megkötés)
 -- Egészítsük ki a nyelvet más típusokkal (tuple, either stb)
