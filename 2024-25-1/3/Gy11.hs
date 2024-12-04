@@ -145,7 +145,7 @@ data Exp
   | FloatLit Double      -- 1.0 2.11 ...
   | BoolLit Bool         -- true false
   | Var String           -- x y ...
-  | LamLit String Exp    -- \x -> e
+  | LamLit String Exp    -- lam x -> e
   | Exp :+ Exp           -- e1 + e2
   | Exp :* Exp           -- e1 * e2
   | Exp :- Exp           -- e1 - e2
@@ -177,7 +177,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not"]
+keywords = ["true", "false", "not", "lam", "if", "then", "end", "while", "do"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -186,6 +186,8 @@ pNonKeyword = do
 
 pKeyword :: String -> Parser ()
 pKeyword = string'
+
+-- asum = foldl empty (<|>)  
 
 pAtom :: Parser Exp
 pAtom = asum [
@@ -224,27 +226,43 @@ pExp = pDollar
 
 -- Állítások: értékadás, elágazások, ciklusok
 data Statement
-  = If Exp [Statement]        -- if e then p end
-  | While Exp [Statement]     -- while e do p end
+  = If Exp Program        -- if e then p end
+  | While Exp Program     -- while e do p end
   | Assign String Exp         -- v := e
-
+  deriving (Show, Eq)
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = some statement
 
 statement :: Parser Statement
-statement = undefined
+statement = (sIf <|> sWhile <|> sAssign) <* char' ';'
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = do
+  pKeyword "if"
+  e <- pExp
+  pKeyword "then"
+  p <- program
+  pKeyword "end"
+  return $ If e p
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = do
+  pKeyword "while"
+  e <- pExp
+  pKeyword "do"
+  p <- program
+  pKeyword "end"
+  return $ While e p
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = do
+  v <- pNonKeyword
+  string' ":="
+  e <- pExp
+  return $ Assign v e
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -258,6 +276,7 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
+  deriving (Show, Eq)
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
@@ -265,18 +284,113 @@ data InterpreterError
   = TypeError String -- típushiba üzenettel
   | ScopeError String -- variable not in scope üzenettel
   | DivByZeroError String -- 0-val való osztás hibaüzenettel
+  deriving (Show, Eq)
 
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
-evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp :: (MonadError InterpreterError m) => Exp -> Env -> m Val
+evalExp e env = case e of
+  IntLit i  -> return $ VInt i 
+  FloatLit d -> return $ VFloat d
+  BoolLit b -> return $ VBool b
+  Var s -> case s `lookup` env of
+    Just e' -> return e'
+    Nothing -> throwError (ScopeError $ "No variable" ++ s)
+  LamLit s e -> undefined   
+  e1 :+  e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt v1' , VInt v2') -> return $ VInt (v1' + v2')
+      (VFloat v1', VInt v2') -> return $ VFloat (v1' + fromIntegral (v2'))
+      (VInt v1', VFloat v2') -> return $ VFloat (fromIntegral (v1') + (v2'))
+      (VFloat v1', VFloat v2') -> return $ VFloat (v1' + v2')
+      (_ , _) -> throwError $ TypeError ""
+  e1 :*  e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt v1' , VInt v2') -> return $ VInt (v1' * v2')
+      (VFloat v1', VFloat v2') -> return $ VFloat (v1' * v2')
+      (_ , _) -> throwError $ TypeError ""
+  e1 :-  e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt v1' , VInt v2') -> return $ VInt (v1' - v2')
+      (VFloat v1', VFloat v2') -> return $ VFloat (v1' - v2')
+      (_ , _) -> throwError $ TypeError ""
+  e1 :/  e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt v1' , VInt v2') -> return $ VInt (v1' `div` v2')
+      (VFloat v1', VFloat v2') -> return $ VFloat (v1' / v2')
+      (_ , _) -> throwError $ TypeError ""
+  e1 :== e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt v1' , VInt v2') -> return $ VBool (v1' == v2')
+      (VFloat v1', VFloat v2') -> return $ VBool (v1' == v2')
+      (VBool v1', VBool v2') -> return $ VBool (v1' == v2')
+      (_ , _) -> throwError $ TypeError ""
+  e1 :$ e2 -> undefined
+  Not e -> do
+    e' <- evalExp e env
+    case e' of
+      (VBool v1') -> return $ VBool (not v1')
+      (_) -> throwError $ TypeError ""
+
+testEvalExp :: String -> Either InterpreterError Val
+testEvalExp s = case runParser pExp s of
+  Left _ ->  throwError (TypeError "Couldnt parse whole string")
+  Right (e, _) -> runExcept (evalExp e [])
+
+type Program = [Statement]
+
+updateEnv :: Env -> String -> Val -> Env
+updateEnv [] s v = [(s,v)]
+updateEnv ((s', v'):xs) s v
+  | s == s' = (s, v) : xs
+  | otherwise = (s', v') : updateEnv xs s v
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement = \case
+  While e ss -> do
+    env <- get
+    e' <- evalExp e env
+    case e' of
+      (VBool True) -> do
+        evalProgram ss
+        evalStatement (While e ss)
+      (VBool False) -> return ()
+      (_) -> throwError $ TypeError "Condition has to be of type Bool"
+  If e ss -> do
+    env <- get
+    e' <- evalExp e env
+    case e' of
+      (VBool True) -> evalProgram ss
+      (VBool False) -> return ()
+      (_) -> throwError $ TypeError "Condition has to be of type Bool"
+  Assign n e -> do
+    env <- get
+    e' <- evalExp e env
+    modify (\env' -> updateEnv env' n e')
 
-evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
+evalProgram :: (MonadError InterpreterError m, MonadState Env m) => Program -> m ()
 evalProgram = mapM_ evalStatement
+
+runEval :: [Statement] -> (Either InterpreterError (), Env)
+runEval s = runState (runExceptT (((evalProgram s)))) []
+
+runProgram :: String -> (Either String Env)
+runProgram s = case parseProgram s of
+  Left e -> throwError ("Couldnt parse whole string | " ++ e)
+  Right ss -> case (runEval ss) of
+    (Left e, env) -> Left (show e)
+    (Right (), env) -> Right env
 
 -- Egészítsük ki a nyelvet egy print állítással (hint: MonadIO megkötés)
 -- Egészítsük ki a nyelvet más típusokkal (tuple, either stb)
