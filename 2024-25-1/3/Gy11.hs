@@ -152,6 +152,7 @@ data Exp
   | Exp :/ Exp           -- e1 / e2
   | Exp :== Exp          -- e1 == e2
   | Exp :$ Exp           -- e1 $ e2
+  | Exp :|- Exp
   | Not Exp              -- not e
   deriving (Eq, Show)
 
@@ -160,6 +161,8 @@ data Exp
 | Operátor neve      | Kötési irány       | Kötési erősség     |
 +--------------------+--------------------+--------------------+
 | not                | Prefix             | 20                 |
++--------------------+--------------------+--------------------+
+| |-                 | Balra              | 19                 |
 +--------------------+--------------------+--------------------+
 | *                  | Jobbra             | 18                 |
 +--------------------+--------------------+--------------------+
@@ -203,8 +206,11 @@ pAtom = asum [
 pNot :: Parser Exp
 pNot = (Not <$> (pKeyword "not" *> pNot)) <|> pAtom
 
+pTurnstile :: Parser Exp
+pTurnstile = chainl1 pNot ((:|-) <$ string' "|-")
+
 pMul :: Parser Exp
-pMul = chainr1 pNot ((:*) <$ char' '*')
+pMul = chainr1 pTurnstile ((:*) <$ char' '*')
 
 pDiv :: Parser Exp
 pDiv = chainl1 pMul ((:/) <$ char' '/')
@@ -280,6 +286,13 @@ data Val
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
+updateEnv :: Env -> String -> Val -> Env
+updateEnv [] s v = [(s,v)]
+updateEnv ((s', v'):xs) s v
+  | s == s' = (s, v) : xs
+  | otherwise = (s', v') : updateEnv xs s v
+
+
 data InterpreterError
   = TypeError String -- típushiba üzenettel
   | ScopeError String -- variable not in scope üzenettel
@@ -296,7 +309,7 @@ evalExp e env = case e of
   Var s -> case s `lookup` env of
     Just e' -> return e'
     Nothing -> throwError (ScopeError $ "No variable" ++ s)
-  LamLit s e -> undefined   
+  LamLit s e -> return $ VLam s env e   
   e1 :+  e2 -> do
     v1 <- evalExp e1 env
     v2 <- evalExp e2 env
@@ -305,28 +318,28 @@ evalExp e env = case e of
       (VFloat v1', VInt v2') -> return $ VFloat (v1' + fromIntegral (v2'))
       (VInt v1', VFloat v2') -> return $ VFloat (fromIntegral (v1') + (v2'))
       (VFloat v1', VFloat v2') -> return $ VFloat (v1' + v2')
-      (_ , _) -> throwError $ TypeError ""
+      (a , b ) -> return b -- throwError $ TypeError "Arguments to plus have to be of same type"
   e1 :*  e2 -> do
     v1 <- evalExp e1 env
     v2 <- evalExp e2 env
     case (v1, v2) of
       (VInt v1' , VInt v2') -> return $ VInt (v1' * v2')
       (VFloat v1', VFloat v2') -> return $ VFloat (v1' * v2')
-      (_ , _) -> throwError $ TypeError ""
+      (_ , _) -> throwError $ TypeError "Arguments to times have to be of same type"
   e1 :-  e2 -> do
     v1 <- evalExp e1 env
     v2 <- evalExp e2 env
     case (v1, v2) of
       (VInt v1' , VInt v2') -> return $ VInt (v1' - v2')
       (VFloat v1', VFloat v2') -> return $ VFloat (v1' - v2')
-      (_ , _) -> throwError $ TypeError ""
+      (_ , _) -> throwError $ TypeError "Arguments to minus have to be of same type"
   e1 :/  e2 -> do
     v1 <- evalExp e1 env
     v2 <- evalExp e2 env
     case (v1, v2) of
       (VInt v1' , VInt v2') -> return $ VInt (v1' `div` v2')
       (VFloat v1', VFloat v2') -> return $ VFloat (v1' / v2')
-      (_ , _) -> throwError $ TypeError ""
+      (_ , _) -> throwError $ TypeError "Arguments to division have to be of same type"
   e1 :== e2 -> do
     v1 <- evalExp e1 env
     v2 <- evalExp e2 env
@@ -334,26 +347,33 @@ evalExp e env = case e of
       (VInt v1' , VInt v2') -> return $ VBool (v1' == v2')
       (VFloat v1', VFloat v2') -> return $ VBool (v1' == v2')
       (VBool v1', VBool v2') -> return $ VBool (v1' == v2')
-      (_ , _) -> throwError $ TypeError ""
-  e1 :$ e2 -> undefined
+      (_ , _) -> throwError $ TypeError "Arguments to equal have to be of same type"
+  e1 :$ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VLam n env' e , s) -> evalExp e (updateEnv env' n s)
+      (a             , s) -> throwError $ TypeError "First argument to app should be of a function type"
+        -- (\n -> e) s => e[n := s]
+  e1 :|- e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VBool True , v) -> return v
+      (VBool False, _) -> return $ VBool True
+      (v , _) -> return v
   Not e -> do
     e' <- evalExp e env
     case e' of
       (VBool v1') -> return $ VBool (not v1')
-      (_) -> throwError $ TypeError ""
+      (_) -> throwError $ TypeError "Argument to Not has to be of type bool "
 
 testEvalExp :: String -> Either InterpreterError Val
-testEvalExp s = case runParser pExp s of
+testEvalExp s = case runParser (topLevel pExp) s of
   Left _ ->  throwError (TypeError "Couldnt parse whole string")
   Right (e, _) -> runExcept (evalExp e [])
 
 type Program = [Statement]
-
-updateEnv :: Env -> String -> Val -> Env
-updateEnv [] s v = [(s,v)]
-updateEnv ((s', v'):xs) s v
-  | s == s' = (s, v) : xs
-  | otherwise = (s', v') : updateEnv xs s v
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
@@ -391,6 +411,26 @@ runProgram s = case parseProgram s of
   Right ss -> case (runEval ss) of
     (Left e, env) -> Left (show e)
     (Right (), env) -> Right env
+
+app a b = "(" ++ a ++ " $ " ++ b ++ ")"
+
+y = "(lam f -> (lam x -> f $ x $ x) $ (lam x -> f $ x $ x))"
+
+z = "(lam f -> ((lam h -> (f $ (lam v -> ((h $ h) $ v)))) $ (lam x -> (f $ (lam c -> ((x $ x) $ c))))))"
+-- Ω = lam n -> n $ n
+-- Y = Ω Ω
+
+-- factor fixponttal
+
+factF f = \n -> if n == 0 then 1 else n * (f (n - 1))
+fact = fix factF
+
+-- 
+factF' = "(lam g -> (lam n -> (((n == 0) |- 1) |- ( (n + (g $ (n - 1)))))))"
+
+factL' = app y factF' -- only works if our lang is lazy
+
+fact' = app z factF'
 
 -- Egészítsük ki a nyelvet egy print állítással (hint: MonadIO megkötés)
 -- Egészítsük ki a nyelvet más típusokkal (tuple, either stb)
