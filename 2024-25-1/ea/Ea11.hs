@@ -1,0 +1,1 @@
+-- Hruska Csaba előadása, https://github.com/csabahruska
