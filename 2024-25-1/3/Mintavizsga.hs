@@ -17,7 +17,8 @@ import Data.Char
 import Data.Foldable
 import GHC.Stack
 import Debug.Trace
-import GhcPlugins (semi)
+import Data.Either (isLeft)
+-- import GhcPlugins (semi)
 
 {-# ANN module "HLint: ignore Evaluate" #-}
 {-# ANN module "HLint: ignore Use ++" #-}
@@ -45,15 +46,27 @@ deriving instance (Show a, forall a. (Show a) => Show (f a)) => Show (Infinitree
 
 instance (Functor f) => Functor (Infinitree f) where
   fmap :: Functor f => (a -> b) -> Infinitree f a -> Infinitree f b
-  fmap = undefined
+  fmap f x = case x of
+    (Leaf a)    -> Leaf $ f a 
+    (Node finf) -> Node $ fmap (fmap f) finf
 
 instance Foldable f => Foldable (Infinitree f) where
   foldr :: (a -> b -> b) -> b -> Infinitree f a -> b
-  foldr = undefined
+  foldr f b x = case x of
+    (Leaf a)    -> f a b
+    (Node finf) -> foldr (flip (foldr f)) b finf
 
 instance (Traversable f) => Traversable (Infinitree f) where
-  sequenceA :: (Foldable f, Functor f, Applicative f1) => Infinitree f (f1 a) -> f1 (Infinitree f a)
-  sequenceA = undefined
+  sequenceA :: (Traversable f, Applicative f1) => Infinitree f (f1 a) -> f1 (Infinitree f a)
+  sequenceA (Leaf a) = Leaf <$> a
+  sequenceA (Node finf) = Node <$> traverse sequenceA finf -- sequenceA (fmap sequenceA finf)
+
+  traverse :: (Traversable f, Applicative f1) => (a -> f1 b) -> Infinitree f a -> f1 (Infinitree f b)
+  traverse f (Leaf a) = Leaf <$> f a
+  traverse f (Node finf) = Node <$> traverse (traverse f) finf
+  
+a :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
+a = (.) . (.)
 
 inf1 :: Infinitree [] Int
 inf1 = Node [Leaf 1, Node [Leaf 2, Leaf 3], Leaf 4, Node [Leaf 5, Leaf 6, Leaf 7]]
@@ -69,27 +82,27 @@ inf4 = Node [Leaf True, inf4]
 -- deriving semmilyen formában nem használható.
 
 
--- testFunctor :: [Bool]
--- testFunctor = [
---     fmap (+1) inf1 == Node [Leaf 2, Node [Leaf 3, Leaf 4], Leaf 5, Node [Leaf 6, Leaf 7, Leaf 8]],
---     fmap not inf3 == inf3,
---     fmap (\x -> replicate x x) inf1 == Node [Leaf [1], Node [Leaf [2,2], Leaf [3,3,3]], Leaf [4,4,4,4], Node [Leaf [5,5,5,5,5], Leaf [6,6,6,6,6,6], Leaf [7,7,7,7,7,7,7]]],
---     ('a' <$ inf1) == Node [Leaf 'a', Node [Leaf 'a', Leaf 'a'], Leaf 'a', Node [Leaf 'a', Leaf 'a', Leaf 'a']]
---     ]
+testFunctor :: [Bool]
+testFunctor = [
+    fmap (+1) inf1 == Node [Leaf 2, Node [Leaf 3, Leaf 4], Leaf 5, Node [Leaf 6, Leaf 7, Leaf 8]],
+    fmap not inf3 == inf3,
+    fmap (\x -> replicate x x) inf1 == Node [Leaf [1], Node [Leaf [2,2], Leaf [3,3,3]], Leaf [4,4,4,4], Node [Leaf [5,5,5,5,5], Leaf [6,6,6,6,6,6], Leaf [7,7,7,7,7,7,7]]],
+    ('a' <$ inf1) == Node [Leaf 'a', Node [Leaf 'a', Leaf 'a'], Leaf 'a', Node [Leaf 'a', Leaf 'a', Leaf 'a']]
+    ]
 
--- testFoldable :: [Bool]
--- testFoldable = [
---     sum inf1 == 28,
---     and inf3,
---     not (or inf3),
---     or inf4
---     ]
+testFoldable :: [Bool]
+testFoldable = [
+    sum inf1 == 28,
+    and inf3,
+    not (or inf3),
+    or inf4
+    ]
 
--- testTraversable :: [Bool]
--- testTraversable = [
---     traverse (\x -> if x >= 1 then Just (x + 1) else Nothing) inf1 == Just (fmap (+1) inf1),
---     traverse (\x -> if x > 1 then Just (x + 1) else Nothing) inf1 == Nothing
---     ]
+testTraversable :: [Bool]
+testTraversable = [
+    traverse (\x -> if x >= 1 then Just (x + 1) else Nothing) inf1 == Just (fmap (+1) inf1),
+    traverse (\x -> if x > 1 then Just (x + 1) else Nothing) inf1 == Nothing
+    ]
 
 -- Definiáljuk a semiFlattener függvényt, amely kilapított formában visszaad egy fát.
 -- Ha bejárás közben egy ágon fel vagy le mennénk,
@@ -98,7 +111,8 @@ inf4 = Node [Leaf True, inf4]
 data Dir = Down | Up deriving (Eq, Show, Ord, Enum)
 
 semiFlattener :: Infinitree [] a -> [Either Dir a]
-semiFlattener = undefined
+semiFlattener (Node ls) = [Left Down] ++ (join $ map semiFlattener ls) ++ [Left Up]
+semiFlattener (Leaf a) = [Right a]
 
 
 testSemiFlattener :: [Bool]
@@ -115,7 +129,26 @@ testSemiFlattener = [
 -- tehát minden Left Down-hoz egy Left Up is tartozik utána)! (3 pont)
 
 semiUnflattener :: [Either Dir a] -> Infinitree [] a
-semiUnflattener = undefined
+semiUnflattener xs = head $ evalState go xs
+  where
+    go :: State [Either Dir a] [Infinitree [] a]
+    go = do
+      xs <- get
+      case xs of
+        (Left Down : xs) -> do
+          put xs
+          res <- go
+          res' <- go
+          pure $ Node res : res'
+        (Left Up : xs) -> do
+          put xs
+          pure []
+        (Right a : xs) -> do
+          put xs
+          xs' <- go
+          return (Leaf a : xs')
+        _ -> pure []
+
 
 testSemiUnflattener :: [Bool]
 testSemiUnflattener = [
@@ -124,6 +157,82 @@ testSemiUnflattener = [
     semiUnflattener [Right 1] == Leaf 1
     ]
 
+
+-- Monad trafós feladat
+
+{-
+Legyen egy [String] típusú írási környezete (ezek lesznek az elérési logok)
+Legyen egy Maybe String típusú olvasási környezete (ez lesz a jelenlegi felhasználó kártyaszáma, ha van éppen felhasználó)
+Legyen egy [(String, Int)] típusú állapotváltozási környezete (ez lesz a bankkártyákhoz asszociált pénznem)
+Legyen egy ATMError típusú hibakezelési környezet (ez lesz a működési hibák)
+Az ATMError típusnak két konstruktora legyen: NotEnoughFunds és NoUser. A NotEnoughFunds konstruktornak legyen egy String paramétere, ami a kártyaszámot jelzi. A típusra generáljuk Eq és Show instance-ot deriving segítségével!
+-}
+
+data ATMError 
+  = NotEnoughFunds String
+  | NoUser
+  deriving (Show, Eq)
+
+--type ATM m = (MonadWriter [String] m, MonadReader (Maybe String) m, MonadState [(String, Int)] m, MonadError ATMError m)
+
+type ATM a = StateT [(String, Int)] (ReaderT (Maybe String) (WriterT [String] (Except ATMError))) a
+
+-- runAtm :: (ATM m) => m a -> [(String, Int)] -> (Maybe String) -> Either ATMError ((a, [(String, Int)]), [String])
+runAtm :: StateT [(String, Int)] (ReaderT (Maybe String) (WriterT [String] (Except ATMError))) a -> [(String, Int)] -> (Maybe String) -> Either ATMError ((a, [(String, Int)]), [String])
+runAtm atmMonad initialState initialUser = runExcept $ runWriterT $ runReaderT (runStateT atmMonad initialState) initialUser
+
+-- Util
+
+updateEnv' :: [(String, Int)] -> String -> Int -> [(String, Int)]
+updateEnv' [] s v = [(s,v)]
+updateEnv' ((s', v'):xs) s v
+  | s == s' = (s, v) : xs
+  | otherwise = (s', v') : updateEnv' xs s v
+
+loginAs :: String -> ATM a -> ATM a 
+loginAs s m = do
+  tell [s ++ " belépett"]
+  local (const (Just s)) m
+
+withdrawOrDeposit :: Int -> ATM Int
+withdrawOrDeposit i = do
+  u <- ask
+  case u of
+    Just u' -> do
+      env <- get
+      case lookup u' env of
+        (Just v) -> 
+          if (v + i) < 0 
+          then throwError $ NotEnoughFunds u' 
+          else do
+            put (updateEnv' env u' (v + i)) 
+            tell [u' ++ " feltöltött " ++ show i ++ "-et"]
+            return (v + i)
+        Nothing -> 
+          if i < 0 
+          then throwError $ NotEnoughFunds u'
+          else do
+            put (updateEnv' env u' i)
+            tell [u' ++ " feltöltött " ++ show i ++ "-et"]
+            return i
+    Nothing -> throwError NoUser
+
+-- Tesztek
+
+askATM :: ATM String
+askATM = do
+  s <- ask
+  case s of
+    Just s' -> return s'
+    Nothing -> return "Nothing"
+
+test1 = runAtm (loginAs "0000" askATM) [] Nothing == Right (("0000", []), ["0000 belépett"])
+test2 = runAtm (loginAs "1100" (askATM >>= \n -> read n <$ put [(n, 9999)])) [] Nothing == Right ((1100, [("1100", 9999)]), ["1100 belépett"])
+--test3 = (runAtm (loginAs "1110" (throwError NoUser)) [] Nothing :: ( Either ATMError ((), [(String, Int)]), [String])) == Left NoUser
+test4 = runAtm (withdrawOrDeposit 100) [] Nothing == Left NoUser
+test5 = runAtm (loginAs "0000" $ withdrawOrDeposit 1000) [] Nothing == Right ((1000, [("0000", 1000)]), ["0000 belépett", "0000 feltöltött 1000-et"])
+test6 = isLeft $ runAtm (loginAs "0000" $ withdrawOrDeposit (-1000)) [] Nothing
+test7 = runAtm (loginAs "1000" $ withdrawOrDeposit 1000 >> withdrawOrDeposit (-1000)) [("0101", 1234)] Nothing == Right ((0, [("0101", 1234), ("1000", 0)]), ["1000 belépett", "1000 feltöltött 1000-et", "1000 feltöltött -1000-et"])
 
 -- Utils
 
@@ -292,6 +401,10 @@ chainl1 v op = v >>= parseLeft
       )
         <|> pure val
 
+{-
+Adjuk a szintaxishoz a `IsLocked :: Exp -> Exp` és `Fallback :: Exp -> Exp -> Exp` kifejezéseket, illetve a `ReadWriteLock :: String -> Statement`, `WriteLock :: String -> Statement` és `Unlock :: String -> Statement` állításokat! 
+-}
+
 -- Kifejezésnyelv
 data Exp
   = IntLit Int           -- 1 2 ...
@@ -307,6 +420,9 @@ data Exp
   | Exp :$ Exp           -- e1 $ e2
   | Not Exp              -- not e
   | Sign Exp             -- sign e
+  --- Feladathoz:
+  | IsLocked Exp
+  | Fallback Exp Exp
   deriving (Eq, Show)
 
 instance Num Exp where
@@ -337,17 +453,32 @@ instance Fractional Exp where
 +--------------------+--------------------+--------------------+
 | ==                 | Nincs              | 10                 |
 +--------------------+--------------------+--------------------+
+| locked             | Prefix             | 9                  | -- NEW
++--------------------+--------------------+--------------------+
 | $                  | Jobbra             | 8                  |
++--------------------+--------------------+--------------------+
+| ?                  | Ballra             | 5                  | -- NEW
 +--------------------+--------------------+--------------------+
 
 -}
 
+{-
+Az IsLocked egy locked nevű prefix operátor 9-es kötési erősséggel. A locked kulcsszót adjuk hozzá a kulcsszavak listájához.
+A Fallback egy ? nevű balra kötő operátor 5-ös kötési erősséggel.
+-}
+
 keywords :: [String]
-keywords = ["true", "false", "not", "sign", "if", "then", "do", "for", "lam", "end"]
+keywords = 
+  [ "locked"
+  , "rwlock"
+  , "wlock"
+  , "unlock"
+  , "true"
+  , "false", "not", "sign", "if", "then", "do", "for", "lam", "end"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
-  res <- tok $ some (satisfy isLetter)
+  res <- (tok $ some (satisfy isLetter))
   res <$ (guard (res `notElem` keywords) <|> throwError "pNonKeyword: parsed a keyword")
 
 pKeyword :: String -> Parser ()
@@ -382,24 +513,39 @@ pMinus = chainl1 pAdd ((:-) <$ char' '-')
 pEq :: Parser Exp
 pEq = nonAssoc (:==) pMinus (string' "==")
 
+pLocked :: Parser Exp
+pLocked = (IsLocked <$> (pKeyword "locked" *> pLocked)) <|> pEq
+
 pDollar :: Parser Exp
-pDollar = chainr1 pEq ((:$) <$ char' '$')
+pDollar = chainr1 pLocked ((:$) <$ char' '$')
+
+pQuestion :: Parser Exp
+pQuestion = chainl1 pDollar (Fallback <$ char' '?')
 
 pExp :: Parser Exp -- táblázat legalja
-pExp = pDollar
+pExp = pQuestion
 
 -- Állítások: értékadás, elágazások, ciklusok
 data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
-  deriving Show
+  -- Feladathoz :
+  | ReadWriteLock String
+  | WriteLock String 
+  | Unlock String
+  deriving (Show, Eq)
+
+{-
+A ReadWriteLock állítás kezdődjön egy rwlock kulcsszóval, majd egy változónévvel. Az rwlock kulcsszót adjuk hozzá a kulcsszavak listájához.
+A WriteLock és Unlock szintaxisa megegyezik a ReadWriteLock-éval, csak wlock és unlock kulcsszavakat használva (ezeket is adjuk hozzá a kulcsszavak listájához).
+-}
 
 program :: Parser [Statement]
 program = sepBy statement (char' ';')
 
 statement :: Parser Statement
-statement = asum [sIf, sWhile, sAssign]
+statement = asum [sIf, sWhile, sAssign, sReadWriteLock, sWriteLock, sUnlock]
 
 sIf :: Parser Statement
 sIf = If <$> (pKeyword "if" *> pExp) <*> (pKeyword "then" *> program <* pKeyword "end")
@@ -410,10 +556,61 @@ sWhile = While <$> (pKeyword "while" *> pExp) <*> (pKeyword "do" *> program <* p
 sAssign :: Parser Statement
 sAssign = Assign <$> pNonKeyword <*> (pKeyword ":=" *> pExp)
 
+-- NEW
+
+sReadWriteLock :: Parser Statement
+sReadWriteLock = do
+  pKeyword "rwlock"
+  v <- pNonKeyword
+  return $ ReadWriteLock v 
+
+sWriteLock :: Parser Statement
+sWriteLock = do
+  pKeyword "wlock"
+  v <- pNonKeyword
+  return $ WriteLock v 
+
+sUnlock :: Parser Statement
+sUnlock = do
+  pKeyword "unlock"
+  v <- pNonKeyword
+  return $ Unlock v 
+
+-- applicative-osan
+
+sUnlock' :: Parser Statement
+sUnlock' = Unlock <$> (pKeyword "unlock" *> pNonKeyword)
+
+
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
   Left e -> Left e
   Right (x,_) -> Right x
+
+--Tesztek, egyes tesztek rosszak voltak
+
+testp1 = runParser pExp "locked a" == Right (IsLocked (Var "a"), "")
+testp2 = runParser pExp "not (locked a)" == Right (Not (IsLocked (Var "a")), "")
+testp3 = runParser pExp "locked not a" == Right (IsLocked (Not (Var "a")),"")
+testp4 = runParser pExp "locked (1 + x)" == Right (IsLocked ( (IntLit 1) :+ (Var "x")), "")
+testp5 = runParser pExp "a ? 1" == Right (Fallback (Var "a") (IntLit 1), "")
+testp6 = runParser pExp "a ? 1 ? b" == Right (Fallback (Fallback (Var "a") (IntLit 1)) (Var "b"), "")
+testp9 = runParser program "wlock x; rwlock x; unlock x" == Right ([WriteLock "x",ReadWriteLock "x",Unlock "x"], "")
+testp10 = isLeft (runParser statement "wlock 1")
+testp11 = asum (runParser statement <$> ["locked := 1", "unlock := 1", "rwlock := 1", "wlock := 1"]) == Left ""
+
+{-
+Egészítsük ki a nyelvet egy LockType típussal aminek három nullaparaméteres konstruktora van, ezek a Write, ReadWrite és None (a konstruktorok lehetnek tetszőleges sorrendben és lehet tetszőleges típusosztályokat implementálni rá). deriving segítségével implementáljuk Eq instance-ot erre a típusra!
+
+Változtassuk meg az Env típusszinonímát arra, hogy [(String, (LockType, Val))]. A fordítási hibákat az updateEnv és evalExp függvényekben javítsuk ki (per pillanat a LockType paramétert elég ignorálni).
+-}
+
+data LockType 
+  = Write
+  | ReadWrite
+  | None
+  deriving (Eq, Show)
+
 
 -- Interpreter
 -- Kiértékelt értékek típusa:
@@ -422,19 +619,35 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
-  deriving Show
+  deriving (Show, Eq)
 
-type Env = [(String, Val)] -- a jelenlegi környezet
+type Env = [(String, (LockType, Val))] -- NEW, lock-os köznyezet
 
 data InterpreterError
   = TypeError { message :: String } -- típushiba üzenettel
   | ScopeError { message :: String } -- variable not in scope üzenettel
   | DivByZeroError { message :: String } -- 0-val való osztás hibaüzenettel
+  | LockError { message :: String }
   deriving Show
+
 
 -- Értékeljünk ki egy kifejezést!
 evalExp :: (HasCallStack, MonadError InterpreterError m) => Exp -> Env -> m Val
 evalExp exp env = case exp of
+  IsLocked l -> do 
+    case l of
+      (Var v) -> case lookup v env of
+        (Just (l , e)) -> return $ VBool $ l == ReadWrite || l == Write
+        Nothing -> throwError $ ScopeError "Argument to locked is out of scope"
+      _     -> throwError $ LockError "Argument to locked has to be a variable" 
+  Fallback a b -> do
+    case a of
+      (Var v) -> case lookup v env of
+        (Just (l , e)) -> if l == ReadWrite
+          then evalExp b env
+          else evalExp a env
+        Nothing -> throwError $ ScopeError "First argument to ? is out of scope"
+      _     -> throwError $ LockError "First argument to ? has to be a variable" 
   IntLit i -> return (VInt i)
   FloatLit f -> return (VFloat f)
   BoolLit b -> return (VBool b)
@@ -447,7 +660,9 @@ evalExp exp env = case exp of
     VFloat f -> return (VFloat $ signum f)
     _       -> throwError (TypeError $ "Type error in the operand of sign\nSTACK TRACE:\n" ++ stackTrace)
   Var str -> case lookup str env of
-    Just v -> return v
+    Just (l , v) -> if l == ReadWrite 
+      then throwError $ LockError $ "Variable " ++ str ++ " is locked"
+      else return v
     Nothing -> throwError (ScopeError $ "Variable not in scope: " ++ str ++ "\nSTACK TRACE:\n" ++ stackTrace)
   e1 :+ e2 -> do
     v1 <- evalExp e1 env
@@ -491,11 +706,11 @@ evalExp exp env = case exp of
     v1 <- evalExp e1 env
     v2 <- evalExp e2 env
     case v1 of
-      (VLam s env' e) -> evalExp e ((s, v2) : env')
+      (VLam s env' e) -> evalExp e ((s, (None, v2)) : env')
       _ -> throwError (TypeError $ "Type error in the operands of function application\nSTACK TRACE:\n" ++ stackTrace)
 
 
-updateEnv :: Env -> String -> Val -> Env
+updateEnv :: Env -> String -> (LockType, Val) -> Env
 updateEnv [] s v = [(s,v)]
 updateEnv ((s', v'):xs) s v
   | s == s' = (s, v) : xs
@@ -511,10 +726,29 @@ inBlockScope f = do
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (HasCallStack, MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
 evalStatement st = case st of
+  ReadWriteLock s -> do
+    env <- get
+    case lookup s env of
+      Nothing -> throwError (ScopeError $ "Scope error in the operand to rwlock. " ++ s ++ " is not in scope.\nSTACK TRACE:\n" ++ stackTrace)
+      Just (l, v') -> put $ updateEnv env s (ReadWrite, v')
+  WriteLock s -> do
+    env <- get
+    case lookup s env of
+            Nothing -> throwError (ScopeError $ "Scope error in the operand to wlock. " ++ s ++ " is not in scope.\nSTACK TRACE:\n" ++ stackTrace)
+            Just (l, v') -> put $ updateEnv env s (Write, v')
+  Unlock s -> do
+    env <- get
+    case lookup s env of
+        Nothing -> throwError (ScopeError $ "Scope error in the operand to unlock. " ++ s ++ " is not in scope.\nSTACK TRACE:\n" ++ stackTrace)
+        Just (l, v') -> put $ updateEnv env s (None, v')
   Assign x e -> do
     env <- get
     v <- evalExp e env
-    put (updateEnv env x v)
+    case lookup x env of
+      Nothing -> put (updateEnv env x (None, v))
+      Just (l , s') -> if l == Write || l == ReadWrite
+        then throwError (LockError $ "Lock error : " ++ x ++ " is locked in :\nSTACK TRACE:\n" ++ stackTrace)
+        else put (updateEnv env x (None, v))
   If e sts -> do
     env <- get
     v1 <- evalExp e env
@@ -550,3 +784,13 @@ p2 = concat [
   ] ++ "end;",
   "x := func $ 10"
             ]
+
+teste1 = run "x := 1" == [("x",(None,VInt 1))]
+teste2 = run "x := 1; wlock x" == [("x",(Write,VInt 1))] 
+teste3 = run "x := 1; wlock x; x := 2"
+teste4 = run "x := 1; wlock x; y := x" == [("x",(Write,VInt 1)),("y",(None,VInt 1))]
+teste5 = (snd $ snd $ run "x := 1; rwlock x; y := x" !! 1)
+teste6 = run "x := 1; rwlock x; y := locked x" == [("x",(ReadWrite,VInt 1)),("y",(None,VBool True))]
+teste7 = run "x := 1; rwlock x; unlock x" == [("x",(None,VInt 1))]
+teste8 = run "x := true; rwlock x; while (locked x) do unlock x end" == [("x",(None,VBool True))]
+teste9 = run "x := 1; wlock x; y := x ? 2; rwlock y; unlock x; x := y ? 3" == [("x",(None,VInt 3)),("y",(ReadWrite,VInt 1))]

@@ -371,10 +371,14 @@ pAdd = leftAssoc (:+) (pPercent) (char' '+')
 -- Adjunk a nyelvhez lambda kifejezéseket
 
 keywords :: [String]
-keywords = undefined
+keywords = ["true", "false", "lam"]
 
 pNonKeyword :: Parser String
-pNonKeyword = undefined
+pNonKeyword = do
+  varname <- tok $ some (satisfy isLetter)
+  if varname `elem` keywords then
+    throwError "pNonKeyword: Parsed a keyword"
+  else pure varname
 
 pKeyword :: String -> Parser ()
-pKeyword = undefined
+pKeyword = string'
