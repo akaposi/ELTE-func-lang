@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
-module Gy01 where
+module Gy01_pre where
 
 {-
 
@@ -45,7 +45,6 @@ Pragmák:
 
 -}
 
--- !
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
 xor x y = undefined
@@ -67,7 +66,6 @@ twelve = x + x
 twelve' :: Int
 twelve' = let x = 6 in x + x
 
--- !
 -- Polimorfizmus: A függvény tetszőleges típusokra működik
 id' :: a -> a
 id' x = x
@@ -139,7 +137,6 @@ f14 = undefined
 -- Listák emlékeztető
 -- Listának két konstruktora van: [] és (:)
 
--- !
 -- Definiáljuk a map függvényt listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
