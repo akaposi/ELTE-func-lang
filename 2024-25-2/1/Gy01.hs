@@ -12,7 +12,7 @@ Tematika:
   - Az összes 36 pontból 13-at kell összeszedni, akkor lehet menni vizsgázni
   - A 13 ponton túl a KisZH és a Házik nem kötelezőek
   - Vizsgaidőszakban vizsga az egész féléves tananyagból
-  - Előadás: IDŐPONT IDE
+  - Előadás: Kedd 16:00
   - Gyakorlatról max 3-szor lehet hiányozni
 
 - A tárgyon tetszőleges IDE és szoftver használható (VSCode, Emacs, Neovim stb) beleértve a Haskell Language Servert
@@ -45,7 +45,17 @@ Pragmák:
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+xor True False = True
+xor False True = True
+xor _ _ = False -- Wildcard / Joker
+
+xor' :: Bool -> Bool -> Bool
+xor' x y = x /= y
+
+xor'' :: Bool -> Bool -> Bool
+xor'' x y = case x of
+  True -> not y
+  False -> y
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -68,9 +78,14 @@ twelve' = let x = 6 in x + x
 id' :: a -> a
 id' x = x
 
+maxOf3 :: Ord a => a -> a -> a -> a
+maxOf3 x y z = max x (max y z)
+
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (_, (b, (c, _))) = (b, c)
+-- f1 (a, (b, (c, d))) = (b, c)
+--f1 p = (fst (snd p) ,fst (snd (snd p)))
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -78,13 +93,13 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 f a = f a
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 f g a = f (g a)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 f b a = f a b
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
@@ -100,7 +115,7 @@ f6 = undefined
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\a -> let (b, _) = f a in b, undefined)
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
 f8 = undefined
@@ -113,13 +128,15 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 (Left a) = Right a
+f9 (Right b) = Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
 f10 = undefined
 
 f11 :: (a -> c, b -> c) -> (Either a b -> c)
-f11 = undefined
+f11 (ac, bc) (Left a) = ac a
+f11 (ac, bc) (Right b) = bc b
 
 -- Bónusz
 
@@ -138,7 +155,7 @@ f14 = undefined
 -- Definiáljuk a map függvényt listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
-map' = undefined
+map' f xs = foldr (\x rec -> f x : rec) [] xs
 
 -- Daták és osztályok
 -- Ismert típusosztályok: Eq, Ord, Show
@@ -158,11 +175,11 @@ class Show a where
 
 -- Egyszerű data, nincs típusparamétere
 -- Legyen két konstruktora, RGB aminek három szám paramétere van és HSL aminek szintén három szám paramétere van
-data Colour
+data Colour = RGB Int Int Int | HSL Int Int Int
 
 -- Mik a lista konstruktorai és azok paraméterei?
 -- GHCi meg tudja mondani
-data List a -- = ???
+data List a = Nil | Cons a (List a) -- = ???
 
 -- Bináris fa
 -- Ilyen nincs beépítve nekünk kell kitalálni
@@ -172,7 +189,9 @@ data Tree a
 -- Írjunk ezekre a datákra instance-okat!
 instance Eq Colour where
   (==) :: Colour -> Colour -> Bool -- régebbi GHC-ben nem lehetett ezt kiírni InstanceSigs nélkül
-  (==) = undefined
+  RGB r g b == RGB r' g' b' = r == r' && g == g' && b == b'
+  HSL h s l == HSL h' s' l' = h == h' && s == s' && l == l'
+  _ == _ = False
 
 instance Show Colour where
   show :: Colour -> String
