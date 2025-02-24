@@ -20,22 +20,24 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 
 -- Próbáljunk meg olyan függvényeket írni, ami a fent említett típusoknak a típusparaméterét megváltoztatja
 -- Pl.: Single a -> Single b vagy List a -> List b
--- Mivel a fenti típusok mind valamilyen szintent tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
+-- Mivel a fenti típusok mind valamilyen szinten tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a1 a2) = Tuple (f a1) (f a2)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a1 a2 a3 a4 a5) = Quintuple (f a1) (f a2) (f a3) (f a4) (f a5)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f Nothing = Nothing
+mapMaybe f (Just a) = Just (f a)
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f Nil = Nil
+mapList f (Cons x xs) = Cons (f x) (mapList f xs)
 
 -- Ezt a mappolhatósági tulajdonságot le tudjuk írni a magasabbrendú polimorfizmus segítségével
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmus típusfüggvényekre alkalmazzuk):
@@ -86,7 +88,8 @@ instance Functor List where
 
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
@@ -96,15 +99,18 @@ instance Functor NonEmpty2 where
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left e) = Left e
+  fmap f (Right a) = Right (f a)
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
-  fmap = undefined
+  fmap f (BiTuple e a) = BiTuple e (f a)
 
 instance Functor (TriEither fixed1 fixed2) where
   fmap :: (a -> b) -> TriEither fixed1 fixed2 a -> TriEither fixed1 fixed2 b
-  fmap = undefined
+  fmap f (LeftT f1) = LeftT f1
+  fmap f (MiddleT f2) = MiddleT f2
+  fmap f (RightT f3) = RightT (f f3)
 
 instance Functor (BiList fixed) where
   fmap :: (a -> b) -> BiList fixed a -> BiList fixed b
@@ -132,7 +138,7 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap f (Lift fa) = Lift (fmap f fa)
 
 -- f az vmi funktor
 -- g : a -> b
@@ -155,7 +161,7 @@ instance (Functor f, Functor g) => Functor (Product f g) where
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga) -- fga :: f (g a)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
