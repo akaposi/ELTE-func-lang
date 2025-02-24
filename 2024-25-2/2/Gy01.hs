@@ -127,7 +127,7 @@ f6 f (a , b) = f a b
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 f = (\a -> fst (f a), \a -> snd (f a)) 
+f7 f = (\a -> fst (f a), \a -> snd (f a))
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
 f8 (f, g) = (\a -> (f a , g a))
@@ -147,7 +147,10 @@ data NEV a b c ...
   = C1 ...
   | C2 ...
   | C3 ...
+  | Ci Int Int -- példa
 
+:t Ci
+-- Ci :: Int -> Int -> NEV a b c ...
 
 Lehet még :
 
@@ -167,6 +170,13 @@ Ilyenkor f1 nek a típusa :
 
 -}
 
+-- Ezeket akkor is megtudom írni ha sima MkPair a b
+data Pair a b = MkPair {fst' :: a , snd' :: b}
+-- MkPair :: a -> b -> Pair a b
+-- fst' :: Pair a b -> a
+-- snd' :: Pair a b -> b
+
+
 f9 :: Either a b -> Either b a
 f9 (Left a) = Right a
 f9 (Right b) = Left b
@@ -179,12 +189,12 @@ f10 f = (\a -> f (Left a) , seg1)
 -- Left :: a -> Either a b
 -- Right :: b -> Either a b
 
--- |---> Either a b ------|
+-- |----> Either a b -----|
 -- |                      |
 -- | Left                 | f
 -- |                      V
 -- a ---------------------> c
---          f . Left
+--         f . Left
 
 -- f . Left :: a -> c
 -- (f . Left , f . Right) ::(a -> c, b -> c) 
