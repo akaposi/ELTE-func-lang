@@ -3,9 +3,6 @@
 
 import Prelude hiding (and)
 
--- Ismétlés, parametrikus ADTk (, , Either, ->), case, let kötések, Eq, Show, Ord
--- Eq, Show, Ord folytatás, Magasabbrendű polimorfizmus, Functor, Magasabbrendű megkötések
-
 data Nat = Zero | Suc Nat
 
 instance Show Nat where
@@ -175,9 +172,5 @@ type InfTREE = forall a . ((NAT -> a) -> a) -> a -> a
 -- HF: konstr, fold
 
 -- induktiv tipusok (veges melysegu fak) Church kodolasa
-
--- koinduktiv tipusok potencialisan vegtelen melysegu fak, ezek is Church kodolhatok
-
--- tipusok exp rig
 
 -- kov. ora 6 perccel rovidebb
