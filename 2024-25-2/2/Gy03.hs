@@ -142,6 +142,9 @@ class Foldable t where
 -- product = foldr (*) 1
 -- toList = foldr (:) []
 
+-- foldMap f [a,b,c,d...] = f a <> f b <> f c <> f d <> ... <> mempty
+
+
 instance Foldable Single where
   foldr :: (a -> b -> b) -> b -> Single a -> b
   foldr = foldrSingle
@@ -184,7 +187,10 @@ instance Foldable Tree where
   foldr f b (Leaf a) = f a b
   foldr f b (Node l a r) = foldr f (f a (foldr f b r)) l
 
-
+--                        V
+  foldMap :: Monoid m => (a -> m) -> Tree a -> m
+  foldMap f (Leaf a) = f a
+  foldMap f (Node l a r) = foldMap f l <> f a <> foldMap f r
 
 instance Foldable (Either fixed) where
 
@@ -216,6 +222,24 @@ instance Foldable f => Foldable (Prod f fixed) where
 instance Foldable f => Foldable (FList f) where
 
 
+
+data T a
+    = C1
+    | C2 Int a
+    | C3 a a
+    | C4 a (T a)
+    deriving Functor
+
+-- Írjunk Foldable instance-t a következő T típusra
+
+instance Foldable T where
+    foldr :: (a -> b -> b) -> b -> T a -> b
+    foldr f b C1 = b
+    foldr f b (C2 int a) = f a b
+    foldr f b (C3 a1 a2) = f a1 (f a2 b)
+    foldr f b (C4 a ta) = f a (foldr f b ta)
+
+
 {-
 
 Félcsoport: Olyan H halmaz, amely rendelkezik egy <> asszociatív művelettel
@@ -225,23 +249,27 @@ https://en.wikipedia.org/wiki/Magma_(algebra)#/media/File:Magma_to_group4.svg
 
 Írjunk Semigroup instance-ot az alábbi típusokra!
 
+Asszociativ: a <> (b <> c) = (a <> b) <> c
+
 -}
 
 
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (&&) -- (||)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = (+)
+  (<>) = (+) -- (*)
+
 
 data Endo a = MkEndo (a -> a)
 
 instance Semigroup (Endo a) where
+  -- (a -> a) -> (a -> a) -> a -> a
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  MkEndo f <> MkEndo g = MkEndo (\a -> f (g a))
 
 
 {-
@@ -270,15 +298,18 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = True
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
-
+  mempty = 0
+{-
+f . id = f -> \x -> f (id x) = f -> \x -> f x = f [QED]
+id . f = f -> \x -> id (f x) = f -> \x -> f x = f [QED]
+-}
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id
 
 
 -- A foldr művelet alternatívája: foldMap
@@ -299,7 +330,7 @@ data Tree2 a = Leaf2 | Node2 (Tree2 a) a (Tree2 a) deriving (Eq, Show)
 data RoseTree a = RoseLeaf a | RoseNode [RoseTree a] deriving (Eq, Show)
 data Tree3 a = Leaf3 a | Node3 (Tree3 a) (Tree3 a) deriving (Eq, Show)
 data SkipList a = Skip (SkipList a) | SCons a (SkipList a) | SNill deriving (Eq, Show)
-data CrazyType a = C1 a a | C2 a Int | C3 (CrazyType a) deriving (Eq, Show)
+-- data CrazyType a = C1 a a | C2 a Int | C3 (CrazyType a) deriving (Eq, Show)
 data Either3 a b c = Left3 a | Middle3 b | Right3 c deriving (Eq, Show)
 data Triplet a b c = Triplet a b c deriving (Eq, Show)
 data SplitTree a b = SplitTree (Tree a) a b (Tree b) deriving (Eq, Show)
