@@ -1,5 +1,5 @@
 {-# LANGUAGE InstanceSigs, QuantifiedConstraints, StandaloneDeriving #-}
-module Gy03_pre where
+module Gy03 where
 
 import Prelude hiding (Maybe(..), Either(..))
 

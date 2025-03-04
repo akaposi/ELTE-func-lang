@@ -147,17 +147,19 @@ data Compose f g a = Compose (f (g a)) deriving (Eq, Show)
 
 instance (Functor f, Functor g) => Functor (Sum f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Sum f g a -> Sum f g b
-  fmap = undefined
+  fmap f (SumLeft fa) = SumLeft (fmap f fa)
+  fmap f (SumRight ga) = SumRight (fmap f ga)
+
 
 instance (Functor f, Functor g) => Functor (Product f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Product f g a -> Product f g b
-  fmap = undefined
+  fmap f (Product fa ga) = Product (fmap f fa) (fmap f ga)
 
 -- Nehéz
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
@@ -166,7 +168,7 @@ instance Functor (Fun q) where
   -- fmap :: (a -> b) -> (q -> a) -> (q -> b)
   -- Hint: mi a (.) típusa?
   fmap :: (a -> b) -> Fun q a -> Fun q b
-  fmap = undefined
+  fmap ab (Fun qa) = Fun (ab . qa)
 
 -- Egyéb érdekesség:
 data UselessF f a = Mk1 (f Int) a
