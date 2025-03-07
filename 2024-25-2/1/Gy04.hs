@@ -24,7 +24,24 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+magicFunction a = case incrementIfEven a of
+  Just x -> case combineThrees (*) a x of
+    Just y -> case incrementIfEven y of
+      Just z -> incrementIfEven (z * 13)
+      Nothing -> Nothing
+    Nothing -> Nothing
+  Nothing -> Nothing
+
+helper :: Maybe a -> (a -> Maybe b) -> Maybe b
+helper Nothing f = Nothing
+helper (Just a) f = f a
+
+magicFunction' :: Integral a => a -> Maybe a
+magicFunction' a =
+  incrementIfEven a `helper`
+  (\x -> combineThrees (*) a x `helper`
+  (\y -> incrementIfEven y `helper`
+  (\z -> incrementIfEven (z * 13))))
 
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
@@ -48,7 +65,8 @@ class Functor m => Monad m where
 -- TODO : Miért
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM a =
+  incrementIfEven a >>= \x -> combineThrees (*) a x >>= \y -> incrementIfEven y
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -61,8 +79,11 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
-
+magicFunctionDo a = do
+  x <- incrementIfEven a
+  y <- combineThrees (*) a x
+  z <- incrementIfEven y
+  incrementIfEven (13 * z)
 
 -- Monád példa: IO monád
 -- "IO a" egy olyan "a" típusú értéket jelent, amelyhez valami I/O műveletet kell elvégezni, pl konzolról olvasás
@@ -73,6 +94,13 @@ putStrLn :: String -> IO ()
 readLn :: Read a => IO a
 print :: Show a => a -> IO ()
 -}
+
+f1 :: IO ()
+f1 = getLine >>= \line -> putStrLn line
+
+f2 :: IO ()
+f2 = readLn >>= \valami -> print (valami + 1)
+
 -- Az ilyen ()-ba (ún unitba) visszatérő műveleteknél hasznos a >> művelet
 -- m1 >> m2 = m1 >>= \_ -> m2
 --                    ^ eredmény irreleváns, csak fusson le
@@ -87,22 +115,34 @@ readAndConcat :: IO ()
 readAndConcat = undefined
 
 readAndConcat' :: IO ()
-readAndConcat' = undefined
+readAndConcat' = do
+  l1 <- getLine
+  l2 <- getLine
+  let l = l1 ++ l2
+  putStrLn l
 
 readAndSq :: IO ()
-readAndSq = undefined
+readAndSq = do
+  x <- readLn
+  print (x * x)
 
 readAndSq' :: IO ()
-readAndSq' = undefined
+readAndSq' = readLn >>= \szam -> print (szam * szam)
 
 printAll :: Show a => [a] -> IO ()
-printAll = undefined
+printAll [] = return ()
+printAll (x : xs) = print x >> printAll xs -- print x >>= \_ -> printAll xs
 
 printAll' :: Show a => [a] -> IO ()
 printAll' = undefined
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd [] = return []
+readAndAdd (x : xs) = do
+  l <- readLn
+  maradék <- readAndAdd xs
+  return ((x + l) : maradék)
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd' = undefined
+readAndAdd' [] = return []
+readAndAdd' (x : xs) = readLn >>= \l -> readAndAdd xs >>= \maradék -> return ((x + l) : maradék)
