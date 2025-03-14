@@ -193,11 +193,7 @@ foldDiv :: Integral a => [a] -> Except CustomError a
 foldDiv = undefined
 
 
-<<<<<<< HEAD
 -- Szimulálni akarjuk a 32 bites számokat,
-=======
--- Szimulálni akarjuk a 32 bites számokat, 
->>>>>>> origin/master
 -- vagyis tudni szeretnénk ha túlcsordulnánk összeadás/szorzás/kivánosnál
 -- akkor egy hibával térnénk vissza
 -- Vegyük fel a túlcsordulásra és alulcsordulásra hibákat

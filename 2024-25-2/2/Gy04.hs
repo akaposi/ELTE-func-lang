@@ -2,6 +2,7 @@
 {-# OPTIONS_GHC -Wno-noncanonical-monad-instances #-}
 module Gy04_pre where
 import Control.Monad
+import Data.Maybe
 
 -- Probléma:
 -- Tfh van sok, például Maybe a-ba képző függvényünk:
@@ -129,37 +130,82 @@ printAll (x : xs) = print x >> printAll xs
 
 printAll' :: Show a => [a] -> IO ()
 printAll' [] = return ()
-printAll' (x : xs) = do
+printAll' (x:xs) = do
   print x
   printAll' xs
 
+
+-- Innen megyünk
+
+-- Hogyan írjuk át
+-- Mi a típusa a readLn-nek
+-- readLn :: Read a => IO a
+-- i+_ miatt ⇒ Read a => IO Int ⇒ IO Int
+-- (>>=) : Monad m => m a -> (a -> m b) -> m b
+-- (IO Int) -> (Int -> IO b) -> IO b
+
+-- return :: a -> m a
+-- [1,2,3] 4 5 6 == [5, 7, 9]
+
+
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd []     = return [] 
+readAndAdd (x:xs) = 
+  readLn >>= \i ->
+  ((readAndAdd xs) {- :: IO [a] -}) >>= \xs' ->
+  return $ (i+x):xs'
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd' = undefined
+readAndAdd' []     = return [] 
+readAndAdd' (x:xs) = do
+  i <- readLn
+  xs' <- readAndAdd xs
+  return $ i+x : xs'
+
+-- Fonya : mia típusa a VDA (Véges determinisztikus autómatáknak) 
+-- átmenetfüggvényének
+
+-- δ : Q × Σ -> Q
+-- fordítsuk meg a nyilat
+-- δ' : Q × Σ <- Q = Q -> Q × Σ
+-- VDA : Egy állapotba elnyel egy karater és átmegy egy másikba
+-- State monad : Egy állapotból előállít egy "karaktert" és átmegy egy másikba
 
 -- Monád példa: Állapotváltozás monád (State monád)
 --                          v rekord szintaxis, ekvivalens azzal hogy State (s -> (s,a))
 newtype State s a = State { runState :: s -> (a, s) } deriving Functor
+
+{-
+type Point = (Int, Int)
+-}
+
+-- Mi a newtype
+newtype M a = MkM a
+
+-- runState : State s a -> (s -> (a, s))
+
 -- Ezzel nem foglalkozunk még
 instance Applicative (State s) where
   pure = return
   (<*>) = ap
+
+
+
 -- "State s a" egy s típusú állapot változását (ez az s -> s rész) és egy "a" eredményt reprezentál
 -- Példa:
 incrementAndEven :: State Int Bool --     v állapotváltozás eredménye, az eredeti állapot megnövelve 1-el
 incrementAndEven = State $ \i -> (even i, i + 1)
 --                                ^ eredmény: az állapot páros e
 
+-- Írjuk meg
 -- Primitív állapotváltozások
 -- Eredményül visszaadja a jelenlegi állapotot
 get :: State s s
-get = State $ \s -> (s,s)
+get = State $ \s -> (s , s)
 
 -- Felülírja a jelenlegi állapotot
 put :: s -> State s ()
-put s = State $ const ((), s)
+put s = State $ \_ -> (() , s)
 
 -- runState :: State s a -> s -> (a,s)
 -- lefuttat egy állapotváltozást egy adott kezdeti állapotra
@@ -171,7 +217,7 @@ instance Monad (State s) where
   return a = State $ \s -> (a,s)
 
   (>>=) :: State s a -> (a -> State s b) -> State s b
-  (State f) >>= g = State $ \s -> let (a, s') = f s in runState (g a) s'
+  (>>=) (State f) g = State $ \s -> let (a, s') = f s in runState (g a) s'
 
 -- Néha a modify-t is primitívnek szokták mondani
 modify :: (s -> s) -> State s ()
@@ -180,10 +226,16 @@ modify f = State $ \s -> ((), f s)
 -- Minden állapotválotzást megírható >>=, return, get és put segítségével
 -- Írjuk meg bindal/do notációval az incrementAndEven állapotváltozást
 incrementAndEvenBind :: State Int Bool
-incrementAndEvenBind = undefined
+incrementAndEvenBind = 
+  get >>= \i ->
+  put (i+1) >>= \() ->
+  return $ even i
 
 incrementAndEvenDo :: State Int Bool
-incrementAndEvenDo = undefined
+incrementAndEvenDo = do
+  i <- get
+  () <- put (i+1)
+  return $ even i
 
 -- runState-el lehet tesztelni, pl runState incrementAndEvenBind 3 == (False, 4)
 
@@ -194,27 +246,85 @@ incrementAndEvenDo = undefined
 -- d, összeadj az állapotbeli lista összes elemét és kiűríti azt (csak a primitív kombinátorokat és az a,-t használd)
 
 behead :: State [a] (Maybe a)
-behead = undefined
+behead = do
+  xs <- get
+  case xs of
+    [] -> return Nothing
+    (x:xs') -> do
+      put xs'
+      return $ Just x
+  --return $ listToMaybe xs
 
 takeFromSt :: Integral i => i -> State [a] [a]
-takeFromSt = undefined
+takeFromSt num = 
+  get >>= \xs -> 
+  (put (drop (fromIntegral num) xs)) >>= \i ->
+  return $ take (fromIntegral num) xs 
 
 takeWhileFromSt :: (a -> Bool) -> State [a] [a]
 takeWhileFromSt = undefined
 
+summing' = do
+  xs <- get
+  s <- summing
+  put xs
+  return s
+
 summing :: Num a => State [a] a
-summing = undefined
+summing = do
+  xs <- get
+  case xs of
+    []     -> return 0
+    (x:xs) -> do
+      put xs
+      s <- summing
+      return (x + s) 
 
 -- Definiáljuk egy fa preorder, postorder és inorder címkézését állapotváltozásokkal
 -- Az állapotban a legutoljára kiadott indexet tárolja
 
-data Tree a = Leaf a | Node (Tree a) (Tree a) deriving (Eq, Show)
+data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show)
 
 preorder :: Tree a -> Tree (a, Int)
-preorder = undefined
+preorder t = fst $ runState (preorder' t) 1
+  where
+    preorder' :: Tree a -> State Int (Tree (a, Int))
+    preorder' (Leaf a) = do
+      n <- get
+      modify (+1)
+      return (Leaf (a, n))
+    preorder' (Node l a r) = do
+
+      l' <- preorder' l
+      
+      
+      r' <- preorder' r
+
+      n <- get
+      modify (+1)
+      return (Node l' (a, n) r')  
+
+testTree = Node (Node (Leaf 4) (2) (Leaf 5)) (1) (Node (Leaf 6) (3) (Leaf 7))
+
+{-
+  Node 
+    (Node 
+      (Leaf (4,2)) 
+      (2,1) 
+      (Leaf (5,3))) 
+    (1,0) 
+    (Node 
+      (Leaf (6,5)) 
+      (3,4) 
+      (Leaf (7,6)))
+-}
 
 postorder :: Tree a -> Tree (a, Int)
 postorder = undefined
 
 inorder :: Tree a -> Tree (a, Int)
 inorder = undefined
+
+-- Super HF
+levelorder :: Tree a -> Tree (a , Int)
+levelorder = undefined

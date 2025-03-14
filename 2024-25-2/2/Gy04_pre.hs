@@ -102,33 +102,64 @@ printAll = undefined
 printAll' :: Show a => [a] -> IO ()
 printAll' = undefined
 
+-- Innen megyünk
+
+-- Hogyan írjuk át
+-- Mi a típusa a readLn-nek
+-- readLn :: Read a => IO a
+-- i+_ miatt ⇒ Read a => IO Int ⇒ IO Int
+-- (>>=) : Monad m => m a -> (a -> m b) -> m b
+-- (IO Int) -> (Int -> IO b) -> IO b
+
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd = undefined
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd' = undefined
 
+
+-- Fonya : mia típusa a VDA (Véges determinisztikus autómatáknak) 
+-- átmenetfüggvényének
+
+-- δ : Q × Σ -> Q
+-- fordítsuk meg a nyilat
+-- δ' : Q × Σ <- Q = Q -> Q × Σ
+-- VDA : Egy állapotba elnyel egy karater és átmegy egy másikba
+-- State monad : Egy állapotból előállít egy "karaktert" és átmegy egy másikba
+
+
+
 -- Monád példa: Állapotváltozás monád (State monád)
 --                          v rekord szintaxis, ekvivalens azzal hogy State (s -> (s,a))
 newtype State s a = State { runState :: s -> (a, s) } deriving Functor
+
+-- Mi a newtype
+-- newtype M a b = MkM a b | MkM' b a
+
+-- runState : State s a -> s -> (a, s)
+
 -- Ezzel nem foglalkozunk még
 instance Applicative (State s) where
   pure = return
   (<*>) = ap
+
+
+
 -- "State s a" egy s típusú állapot változását (ez az s -> s rész) és egy "a" eredményt reprezentál
 -- Példa:
 incrementAndEven :: State Int Bool --     v állapotváltozás eredménye, az eredeti állapot megnövelve 1-el
 incrementAndEven = State $ \i -> (even i, i + 1)
 --                                ^ eredmény: az állapot páros e
 
+-- Írjuk meg
 -- Primitív állapotváltozások
 -- Eredményül visszaadja a jelenlegi állapotot
 get :: State s s
-get = State $ \s -> (s,s)
+get = undefined
 
 -- Felülírja a jelenlegi állapotot
 put :: s -> State s ()
-put s = State $ const ((), s)
+put s = undefined
 
 -- runState :: State s a -> s -> (a,s)
 -- lefuttat egy állapotváltozást egy adott kezdeti állapotra
@@ -187,3 +218,7 @@ postorder = undefined
 
 inorder :: Tree a -> Tree (a, Int)
 inorder = undefined
+
+-- Super HF
+levelorder :: Tree a -> Tree (a , Int)
+levelorder = undefined
