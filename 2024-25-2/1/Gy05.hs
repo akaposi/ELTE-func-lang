@@ -23,19 +23,22 @@ import Control.Monad.Except
 --, hogy ha egy Jegyet bele rakunk, zölden világít és a Nyitva állapotra váltunk
 
 -- Definiáljuk az állapotok típusát
-data MachineState
+data MachineState = Open | Closed
   deriving (Eq, Show)
 
 -- Definiáljuk a fények típusát
-data LightColour
+data LightColour = Red | Green | Yellow
   deriving (Eq, Show)
 
 
 -- Definiáljuk az átmenetek függvényeit
 -- A függvények egy kezdeti állapotból egy végállapotba és egy világító fénybe képeznek
 push, insertTicket :: MachineState -> (LightColour, MachineState)
-push = undefined
-insertTicket = undefined
+push Open = (Green, Closed)
+push Closed = (Red, Closed)
+
+insertTicket Open = (Yellow, Open)
+insertTicket Closed = (Green, Open)
 
 -- Ennek a segítségével például le tudjuk modellezni, hogy Pistike 2x próbál jegy nélkül bemenni
 pistike :: MachineState -> ([LightColour], MachineState)
@@ -74,7 +77,7 @@ háttérben a -> s -> (a,s)
 -- s -> (a,s) függvényeket a state függvénnyel lehet becsomagolni
 pushS, insertTicketS :: State MachineState LightColour
 pushS = state push
-insertTicketS = undefined
+insertTicketS = state insertTicket
 
 -- Így pistikét kicsit szebben lehet definiálni
 pistikeS :: State MachineState [LightColour]
@@ -94,14 +97,22 @@ pistikeS' =
   pushS >>= \l4 ->
   return [l1,l2,l3,l4]
 
+simon :: State MachineState [LightColour]
+simon = do
+  l1 <- pushS
+  l2 <- insertTicketS
+  l3 <- insertTicketS
+  l4 <- pushS
+  return [l1,l2,l3,l4]
+
 -- Nem kell feltétlenül [LightColour]-ba visszatérni
 countYellow :: State MachineState Int
 countYellow = do
   l1 <- insertTicketS
   l2 <- insertTicketS
   l3 <- insertTicketS
-  -- return $ length $ filter (== Yellow) [l1, l2, l3]
-  return 0
+  return $ length $ filter (== Yellow) [l1, l2, l3]
+  -- return 0
 
 -- Feladatok
 -- Definiáljuk az alábbi átmenetek sorrendjét bindokkal és do-notációval
@@ -109,24 +120,77 @@ countYellow = do
 -- Gerike: Tol, Jegy, Tol, Tol
 -- Gerike esetén azt adjuk vissza, hányszor 'Piros' volt az átmenetek eredménye
 
+janika :: State MachineState [LightColour]
+janika = sequenceA [insertTicketS, insertTicketS, pushS]
+  -- do
+  -- l1 <- insertTicketS
+  -- l2 <- insertTicketS
+  -- l3 <- pushS
+  -- return [l1,l2,l3]
+
+gerike :: State MachineState Int
+gerike = do
+  l1 <- pushS
+  l2 <- insertTicketS
+  l3 <- pushS
+  l4 <- pushS
+  return $ length $ filter (== Red) [l1, l2, l3, l4]
 
 -- Komplikáltabb feladatok
 -- Implementáljunk egy 'get' műveletet, amely visszaadja az állapotot
+-- State s a = s -> (s,a)
+--         s = s -> (s,s)
+--             ^     ^
 get' :: State s s
-get' = undefined
+get' = state (\s -> (s, s))
+
 -- Implementáljunk egy 'put' műveletet, amely felülírja az állapotot
+--           v     v
+--           s -> (s, ())
 put' :: s -> State s ()
-put' = undefined
+put' s = state (\_ -> ((), s))
+
+pushSGetPut :: State MachineState LightColour
+pushSGetPut = do
+  st <- get
+  case st of
+    Closed -> return Red
+    Open   -> do
+      put Closed
+      return Green
 
 -- Ezek után nem kell a 'state' függvénnyel szórakozni
 
 -- Példa get/putra: Definiáljuk a safeHead függvényt ami az állapotban lévő lista fejelemét leszedi - ha van neki.
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do
+  list <- get
+  case list of
+    [] -> return Nothing
+    (x : xs) -> do
+      put xs
+      return (Just x)
 
 -- Példa get/putra 2: Definiáljuk a take függvényt a belső állapotra (esetleg pop-ot is lehet használni).
 takeK :: Int -> State [a] [a]
-takeK = undefined
+takeK 0 = return []
+takeK n = do
+  list <- get
+  case list of
+    [] -> return []
+    (x : xs) -> do
+      put xs
+      xs' <- takeK (n - 1)
+      return (x : xs')
+-- takeK 0 = return []
+-- takeK k = do
+--   hd <- pop
+--   case hd of
+--     Just x -> do
+--       ls <- takeK (k - 1)
+--       return (x : ls)
+--     Nothing -> return []
+
 
 -- Definiáljuk az alábbi függvényeket!
 popLast :: State [a] (Maybe a) -- leszedi az utolsó elemet a listából - ha van.
@@ -149,13 +213,15 @@ labelListBW = undefined
 -- 0-val való osztás hiba
 -- Asszertációs hiba
 -- Üres lista hiba
-data CustomError
+data CustomError = DivBy0Error | AssertError | EmptyListError
   deriving (Eq, Show)
 
 -- Példa: biztonságos osztás
 safeDiv :: Integral a => a -> a -> Either CustomError a
-safeDiv = undefined
+safeDiv n 0 = Left DivBy0Error
+safeDiv n k = Right (div n k)
 
+-- newtype Except e a = Except { runExcept :: Either e a }
 -- Az either-t is lehet monadikusan kezelni
 bindE :: Either e a -> (a -> Either e b) -> Either e b
 bindE (Left e) _ = Left e -- az f sosincs meghívva hiba esetén
@@ -163,7 +229,8 @@ bindE (Right a) f = f a
 
 -- Hibák dobása mellet el is kell tudni kapni őket:
 catchE :: Either e a -> (e -> Either e a) -> Either e a
-catchE = undefined
+catchE (Left e) f = f e
+catchE (Right a) _ = Right a
 
 -- Az Eithernek van kicsit általánosabb formája (részletesebben következő órán)
 -- Ez az Except Monád
@@ -176,7 +243,8 @@ catchE = undefined
 -- Példa throwError/catchErrorra:
 -- Dobjunk asszertációs hibát, ha a feltétel nem teljesül
 assert :: Bool -> Except CustomError ()
-assert = undefined
+assert b = do
+  if b then throwError AssertError else return ()
 
 -- Biztonságos osztás
 safeDivE :: Integral a => a -> a -> Except CustomError a
