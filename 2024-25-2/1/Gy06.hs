@@ -4,6 +4,12 @@ import Control.Monad.Writer
 import Control.Monad.Except
 import Control.Monad.IO.Class
 
+
+-- STATE    : s -> (s,a)
+-- WRITER   : (s,a)
+-- READER   : s -> a
+-- IDENTITY : a
+
 -- A State monád állapot változást reprezentált
 -- Vegyünk két új Monádot:
 
@@ -40,13 +46,32 @@ canWriteHere path = do
   MkEnv homeDir adm <- ask
   return (adm || path == homeDir)
 
--- Írjuk meg az ask-ot
 
-ask' :: Reader r r
-ask' = undefined
+isAdminR :: Reader Env Bool -- megvizsgálja, hogy a felhasználó admin-e
+isAdminR = do
+  MkEnv homeDir isAdmin <- ask
+  return isAdmin
+
+homeDirR :: Reader Env String -- visszaadja a felhasználó home directoryját
+homeDirR = do
+  MkEnv homeDir _ <- ask
+  return homeDir
+
+areWePistike :: Reader Env Bool -- megnezni, hogy a home directory egyenlo-e "/home/pistike"-vel
+areWePistike = do
+  MkEnv homeDir _  <- ask
+  return (homeDir == "/home/pistike")
+
+
+
 
 -- local :: (r -> r) -> Reader r a -> Reader r a
 -- Lokális megváltoztatja a környezetet a második paraméterben
+
+runInHomePistike :: Reader Env a -> Reader Env a
+runInHomePistike r = do
+  a <- local (\(MkEnv _ admin ) -> MkEnv "/home/pistike" admin) r
+  return a
 
 -- sudo : Kérdezzük le hogy admin-e a felhasználó,
 -- ha igen akkor állítsuk át az Envet : (MkEnv "/root" True)-ra
@@ -58,8 +83,6 @@ sudo doas = do
     else return ()
 -- Írjuk meg a local-t
 
-local' :: (r -> r) -> Reader r a -> Reader r a
-local' f ra = reader $ \r -> runReader ra (f r)
 
 -- Feladatok
 
@@ -67,11 +90,15 @@ local' f ra = reader $ \r -> runReader ra (f r)
 -- amely az egyes listaelemek indexével is összekombinálja az elemeket.
 -- Az olvasási környezetben tároljuk a jelenlegi indexet
 mapWithIndex :: Integral i => (i -> a -> b) -> [a] -> [b]
-mapWithIndex f xs = undefined
+mapWithIndex f xs = runReader (mwiReader f xs) 0
 
 -- Segéd függvény
 mwiReader :: Integral i => (i -> a -> b) -> [a] -> Reader i [b]
-mwiReader = undefined
+mwiReader f [] = return []
+mwiReader f (x : xs) = do
+  i <- ask
+  xs' <- local (+1) $ mwiReader f xs
+  return (f i x : xs')
 
 -- Pl.: (mapWithIndex (\i a -> (i+1) * a) $ take 10 [1,1..]) == [1..10]
 
@@ -79,8 +106,31 @@ data Tree a= Leaf a | Node (Tree a) (Tree a)
 
 -- Számoljuk meg egy fa magasságát Reader-el
 
+{-
+
+          a
+       /    \
+i= 1  [b]      e
+     /  \
+    c    [d]
+
+
+-}
+
+
+--                               v a mélység
 heightReader :: Tree a -> Reader Int Int
-heightReader = undefined
+heightReader (Leaf _ ) = ask >>= \i -> return (i + 1)
+heightReader (Node l r) = do
+  l' <- local (+1) $ heightReader l
+  r' <- local (+1) $ heightReader r
+  return (max l' r')
+
+
+--                         V akkumulalni az eredményt
+reverseR :: [a] -> Reader [a] [a]
+reverseR [] = ask
+reverseR (x : xs) = local (x:) $ reverseR xs
 
 -- e = Leaf ()
 -- runReader (heightReader (Node (Node e (Node e e)) e)) 0 == 3
@@ -124,3 +174,21 @@ calculation2 = do
 --silence w = pass $ do
 --  a <- w
 --  return (a, const [])
+copyToWriter :: [a] -> Writer [a] () -- minden elemet kiir az irasi kornyezetbe
+copyToWriter = tell
+
+copyToWriterNTimes :: [(a, Int)] -> Writer [a] () -- minden elemet kiir az irasi kornyezetbe annyiszor amennyi a mellete levo szam
+copyToWriterNTimes [] = return []
+copyToWriterNTimes ((x, i) : xs) = tell (replicate i x) >> copyToWriterNTimes xs
+-- tell (concatMap (flip uncurry replicate) xs)
+-- copyToWriterNTimes ((x, 0) : xs) = copyToWriterNTimes xs
+-- copyToWriterNTimes ((x, i) : xs) = do
+--   tell [x]
+--   copyToWriterNTimes ((x, i - 1) : xs)
+
+
+noduplicates :: Writer [a] () -> Writer [a] [a]
+noduplicates w = do
+  (_, r) <- listen w
+  return r
+-- visszaadja az elso parameterben kiirt uzeneteket
