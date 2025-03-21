@@ -187,7 +187,7 @@ copyToWriterNTimes ((x, i) : xs) = tell (replicate i x) >> copyToWriterNTimes xs
 --   copyToWriterNTimes ((x, i - 1) : xs)
 
 
-noduplicates :: Writer [a] () -> Writer [a] [a]
+noduplicates :: Eq a => Writer [a] () -> Writer [a] [a]
 noduplicates w = do
   (_, r) <- listen w
   return r
