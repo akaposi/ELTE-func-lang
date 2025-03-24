@@ -74,7 +74,13 @@ háttérben a -> s -> (a,s)
 -- s -> (a,s) függvényeket a state függvénnyel lehet becsomagolni
 pushS, insertTicketS :: State MachineState LightColour
 pushS = state push
-insertTicketS = undefined
+insertTicketS =   
+  state 
+-- \case ... == \a -> case a of -> ...
+  (\case
+    Open   -> (Yellow, Open)
+    Closed -> (Green, Open)
+  )
 
 -- Így pistikét kicsit szebben lehet definiálni
 pistikeS :: State MachineState [LightColour]
@@ -113,33 +119,82 @@ countYellow = do
 -- Komplikáltabb feladatok
 -- Implementáljunk egy 'get' műveletet, amely visszaadja az állapotot
 get' :: State s s
-get' = undefined
+get' = state (\s -> (s, s))
 -- Implementáljunk egy 'put' műveletet, amely felülírja az állapotot
 put' :: s -> State s ()
-put' = undefined
+put' = state (\s' -> ((), s))
 
 -- Ezek után nem kell a 'state' függvénnyel szórakozni
 
 -- Példa get/putra: Definiáljuk a safeHead függvényt ami az állapotban lévő lista fejelemét leszedi - ha van neki.
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do
+  ls <- get'
+  case ls of
+    []       -> return Nothing 
+    (x : xs) -> do
+      put xs
+      return $ Just x
+-- Ez is okés, de ilyenkor nem változtattuk meg az underlying állapotot
 
 -- Példa get/putra 2: Definiáljuk a take függvényt a belső állapotra (esetleg pop-ot is lehet használni).
 takeK :: Int -> State [a] [a]
-takeK = undefined
+takeK 0 = return []
+takeK n = do
+  xs <- takeK (n-1)
+  x <- pop'
+  case x of
+    Nothing -> return xs
+    Just x  -> return (x:xs)
+
+-- Riba Dani ötlete, működik végtelen listálra is
+withOutLast :: [a] -> ([a], Maybe a)
+withOutLast [] = ([], Nothing)
+withOutLast [x] = ([], Just x)
+withOutLast (x:xs) = let (xs', m) = withOutLast xs in (x : xs', m)
+
 
 -- Definiáljuk az alábbi függvényeket!
 popLast :: State [a] (Maybe a) -- leszedi az utolsó elemet a listából - ha van.
-popLast = undefined
+popLast = do
+  ls <- get'
+  case ls of
+    -- Ha nincs elem akkor Nothing
+    [] -> return Nothing
+    -- Ha az utolsó elemnél járunk levesszük, visszadjuk és az állapotot is átállítjuk üresre
+    [x] -> do
+      put' []
+      return $ Just x
+    -- Ha még nem a lista végén járunk akkor azt mondjuk hogy az állapot legyen xs
+    -- És szedjük le annak a végét
+    -- Majd mikor a popLast' rec hívás visszatért, tudjuk hogy a belső állapot biztos []-lesz,
+    -- szóval vissza kell bele pakolni a levett x-et
+    (x:xs) -> do
+      put' xs
+      m <- popLast
+      modify ((:) x )
+      return m
 
 sumK :: Num a => Int -> State [a] a -- Kiszedi és összeadja az első K elemet a listából
-sumK = undefined
+sumK n = do
+  ls <- takeK n
+  return $ sum ls
 
 labelList :: [a] -> State Int [(a, Int)] -- Minden elemet megcímkéz, a belső állapot a számláló
-labelList = undefined
+labelList [] = return []
+labelList (x:xs) = do
+  i <- get'
+  modify'' (+1)
+  ls <- labelList xs
+  return $ (x, i) : ls
 
 labelListBW :: [a] -> State Int [(a, Int)] -- Ugyanaz mint az előző csak, hátulról címkéz
-labelListBW = undefined
+labelListBW [] = return []
+labelListBW (x:xs) = do
+  ls <- labelListBW xs
+  i <- get'
+  modify'' (+1)
+  return $ (x, i) : ls
 
 
 -- EXCEPT
@@ -150,20 +205,34 @@ labelListBW = undefined
 -- Asszertációs hiba
 -- Üres lista hiba
 data CustomError
+  = DivByZeroError
+  | EmptyListError
+  | AssertError
   deriving (Eq, Show)
 
 -- Példa: biztonságos osztás
 safeDiv :: Integral a => a -> a -> Either CustomError a
-safeDiv = undefined
+safeDiv a b = if b == 0 then Left DivByZeroError else Right (a `div` b)
 
 -- Az either-t is lehet monadikusan kezelni
+-- (>>=) = bind
 bindE :: Either e a -> (a -> Either e b) -> Either e b
 bindE (Left e) _ = Left e -- az f sosincs meghívva hiba esetén
 bindE (Right a) f = f a
 
 -- Hibák dobása mellet el is kell tudni kapni őket:
 catchE :: Either e a -> (e -> Either e a) -> Either e a
-catchE = undefined
+catchE (Left e) hiba       = hiba e 
+catchE szam@(Right a) hiba = Right a 
+
+-- 
+-- try {
+--    szam
+-- } catch e {
+--    hiba
+-- }
+
+--  
 
 -- Az Eithernek van kicsit általánosabb formája (részletesebben következő órán)
 -- Ez az Except Monád
@@ -176,24 +245,37 @@ catchE = undefined
 -- Példa throwError/catchErrorra:
 -- Dobjunk asszertációs hibát, ha a feltétel nem teljesül
 assert :: Bool -> Except CustomError ()
-assert = undefined
+assert True  = return ()
+assert False = throwError AssertError
+
 
 -- Biztonságos osztás
 safeDivE :: Integral a => a -> a -> Except CustomError a
-safeDivE = undefined
+safeDivE a b = 
+  if b == 0 
+    then throwError DivByZeroError 
+    else return (a `div` b)
 
 -- Végezzük el a safeDiv műveletet, de ha kivételt dobnánk, adjunk vissza 0-t inkább
 safeDivF :: Integral a => a -> a -> Except CustomError a
-safeDivF = undefined
+safeDivF a b = 
+    (safeDivE a b) 
+    `catchError`
+    (\e -> case e of 
+      DivByZeroError -> return 0
+      _              -> throwError e)
 
 -- Feladatok
 
 -- Hajtogassunk végig az osztás művelettel egy listán, ha 0-val kéne osztani dobjunk kivételt
 foldDiv :: Integral a => [a] -> Except CustomError a
-foldDiv = undefined
+foldDiv [] = throwError EmptyListError
+foldDiv (x:[]) = return x
+foldDiv (0:xs) = throwError DivByZeroError
+foldDiv (x:y:xs) = foldDiv ((y `div` x):xs)
 
 
--- Szimulálni akarjuk a 32 bites számokat,
+-- Szimulálni akarjuk a unsigned 32 bites számokat,
 -- vagyis tudni szeretnénk ha túlcsordulnánk összeadás/szorzás/kivánosnál
 -- akkor egy hibával térnénk vissza
 -- Vegyük fel a túlcsordulásra és alulcsordulásra hibákat
@@ -201,19 +283,28 @@ foldDiv = undefined
 u32Max :: Integer
 u32Max = 2 ^ 32 - 1
 
+u32Min :: Integer
+u32Min = - 2 ^ 32
+
 (+++) :: Integer -> Integer -> Except CustomError Integer
 (+++) a b = let s = a + b in
   if s > u32Max
-    then undefined {- Valami errort dobjunk itt -}
+    then throwE Overflow
     else return s
-
+ 
 -- Kivonás
 (-~-) :: Integer -> Integer -> Except CustomError Integer
-(-~-) = undefined
-
+(-~-) = let s = a - b in
+  if s < 0
+    then throwE Underflow {- Valami errort dobjunk itt -}
+    else return s
+ 
 -- Szorzás
 (***) :: Integer -> Integer -> Except CustomError Integer
-(***) = undefined
+(***) = let s = a * b in
+  if s > u32Max
+    then throwE Overflow {- Valami errort dobjunk itt -}
+    else return s
 
 -- Számoljuk ki két szám távolságának négyzetét:
 -- Vagyis végezzük el a
@@ -221,4 +312,10 @@ u32Max = 2 ^ 32 - 1
 -- műveletet
 
 dist :: Integer -> Integer -> Integer -> Integer -> Except CustomError Integer
-dist x1 x2 y1 y2 = undefined
+dist x1 x2 y1 y2 = do
+  dx  <- (x2  -~- x1)
+  dy  <- (y2  -~- y1)
+  dxs <- (dx  *** dx)
+  dys <- (dy  *** dy)
+  r   <- dxs +++ dys
+  return r

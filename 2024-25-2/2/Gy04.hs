@@ -262,7 +262,10 @@ takeFromSt num =
   return $ take (fromIntegral num) xs 
 
 takeWhileFromSt :: (a -> Bool) -> State [a] [a]
-takeWhileFromSt = undefined
+takeWhileFromSt f = do
+  s <- get
+  --put $ dropWhile f s
+  return $ takeWhile f s
 
 summing' = do
   xs <- get
@@ -294,14 +297,11 @@ preorder t = fst $ runState (preorder' t) 1
       modify (+1)
       return (Leaf (a, n))
     preorder' (Node l a r) = do
-
-      l' <- preorder' l
-      
-      
-      r' <- preorder' r
-
       n <- get
       modify (+1)
+      l' <- preorder' l      
+      r' <- preorder' r
+
       return (Node l' (a, n) r')  
 
 testTree = Node (Node (Leaf 4) (2) (Leaf 5)) (1) (Node (Leaf 6) (3) (Leaf 7))
@@ -320,10 +320,36 @@ testTree = Node (Node (Leaf 4) (2) (Leaf 5)) (1) (Node (Leaf 6) (3) (Leaf 7))
 -}
 
 postorder :: Tree a -> Tree (a, Int)
-postorder = undefined
+postorder t = fst $ runState (postorder' t) 1
+  where
+    postorder' :: Tree a -> State Int (Tree (a, Int))
+    postorder' (Leaf a) = do
+      n <- get
+      modify (+1)
+      return (Leaf (a, n))
+    postorder' (Node l a r) = do
+
+      l' <- postorder' l
+      r' <- postorder' r
+      n <- get
+      modify (+1)
+      return (Node l' (a, n) r')
 
 inorder :: Tree a -> Tree (a, Int)
-inorder = undefined
+inorder t = fst $ runState (inorder' t) 1
+  where
+    inorder' :: Tree a -> State Int (Tree (a, Int))
+    inorder' (Leaf a) = do
+      n <- get
+      modify (+1)
+      return (Leaf (a, n))
+    inorder' (Node l a r) = do
+
+      l' <- inorder' l
+      n <- get
+      modify (+1)
+      r' <- inorder' r
+      return (Node l' (a, n) r')
 
 -- Super HF
 levelorder :: Tree a -> Tree (a , Int)
