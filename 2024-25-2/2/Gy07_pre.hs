@@ -37,6 +37,7 @@ Mindenhol az eredményt egy tetszőleges monádba csomagoljuk, így tudjuk neste
 A standard libraryben lévő primitív műveletek a nestelt monádokat is megtalálják
 -}
 
+data Env = MkEnv { homeDir :: String, isAdmin :: Bool }
 
 --                         v itt azért nem WriterT van, mert több mellékhatást nem akarunk belerakni
 adminCheck :: ReaderT Env (Writer [String]) Bool
