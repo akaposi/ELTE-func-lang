@@ -8,7 +8,9 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Except
-
+import Control.Monad
+import Control.Monad.State
+import Data.List
 
 -- Cheatsheet:
 {-
@@ -45,8 +47,13 @@ data Env = MkEnv { isAdmin :: Bool, homeDir :: String } deriving (Eq, Show)
 
 -- Definiáljunk egy függvényt, amely kiírja a felhasználó home directoryját
 -- ha a felhasználó admin
-printHomeDirIfAdmin :: ReaderT Env (Writer [String]) ()
-printHomeDirIfAdmin = undefined
+
+type FileSystemT a = ReaderT Env (Writer [String]) a
+
+printHomeDirIfAdmin :: FileSystemT ()
+printHomeDirIfAdmin = do
+  MkEnv isAdmin homeDir <- ask
+  when isAdmin $ tell [homeDir]
 
 -- Miért typecheckel a tell, ask stb
 -- :t ask
@@ -69,22 +76,40 @@ basicExecutables = ["/usr/bin/bash", "/usr/bin/ls", "/bin/sh"]
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
 -- Rakjuk be a felhasználó home directoryját a fájl rendszerbe ha még nincs benne
-addHomeIfNotIn :: type_signature_goes_here
-addHomeIfNotIn = undefined
+--addHomeIfNotIn :: StateT FileSystem (Reader Env) ()
+
+type MonadFilesystem m = (MonadReader Env m, MonadState FileSystem m)
+
+addHomeIfNotIn :: (MonadFilesystem m) => m ()
+addHomeIfNotIn = do
+  MkEnv isAdmin homeDir <- ask
+  x <- get
+  when (homeDir `notElem` x) $ put (homeDir : x)
 
 
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy [String] típusú írási környezetünk
 -- Töröljük ki a duplikált fájlokat a fájlrendszerből és azokat írjuk ki az írási környezetbe
-undupe :: type_signature_goes_here
-undupe = undefined
-
+undupe :: StateT FileSystem (Writer [String]) ()
+undupe = do
+  x <- get
+  case x of
+    [] -> return ()
+    (x : xs) | x `elem` xs -> do -- O(n^2)
+                tell [x]
+                put (filter (/= x) xs)
+                undupe
+                modify (x:)
+    (x : xs) -> do
+      put xs
+      undupe
+      modify (x:)
 
 data FSError = FileExists | NotAnAdmin | BadPath deriving (Eq, Show)
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy FSError típusú hibakezelési környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
--- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem amin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
+-- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem admin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
 -- Ha nem létezik rakjuk be a fájlrendszerbe
 tryAdd :: type_signature_goes_here
 tryAdd = undefined
@@ -127,13 +152,20 @@ getAndPrint' = do
 -- [String] típusú írási környezet
 -- IO környezet
 -- Vizsgán általában csak 4 lesz az 5-ből
-
--- Olvassunk be konzolrol egy a konzolról egy stringet
--- ha valid útvonal (/-ekkel elváálasztott nem üres stringek) akkor adjuk hozzá a fájlrendszerhez
+type MonadDávid m = (MonadReader Env m, MonadError FSError m, MonadState FileSystem m, MonadWriter [String] m, MonadIO m)
+type SimonT a = ReaderT Env (ExceptT FSError (StateT FileSystem (WriterT [String] IO))) a
+-- Olvassunk be a konzolról egy stringet
+-- ha valid útvonal (/-ekkel elválasztott nem üres stringek) akkor adjuk hozzá a fájlrendszerhez
 -- ha nem az dobjunk BadPath hibát
-f1 :: type_signature_goes_here
-f1 = undefined
+f1 :: MonadDávid m => m ()
+f1 = do
+  line <- liftIO getLine
+  let x = splitOn '/' line
+  if any null x then throwError BadPath else modify (line:)
 
+-- runExceptT (runStateT (runReaderT (runWriterT f1) (MkEnv True "/home/pistike")) basicExecutables)
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn a = map tail . groupBy (/=) . (a:)
 
 -- Futtassuk le az f1-et
 -- Ha hibát dob írjuk ki az írási környezetbe, hogy nem sikerült, majd próbáljuk az f1-et újra
