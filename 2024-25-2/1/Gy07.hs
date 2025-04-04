@@ -8,7 +8,8 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Except
-
+import Data.Char
+import Control.Monad.State
 
 -- Cheatsheet:
 {-
@@ -152,3 +153,41 @@ f3 = undefined
 -- Egyéb érdekes transzformerek
 -- Megszakítási környezet: ContT transzformer
 -- Akkumulációs környezet: AccumT transzformer
+
+data Tok = Plus | Minus | Mul | Lit Int | Print deriving Show
+
+readTok :: IO Tok
+readTok = getLine >>= \l -> case l of
+  "+" -> return Plus
+  "-" -> return Minus
+  "*" -> return Mul
+  "PRINT" -> return Print
+  _ | all isNumber l -> Lit <$> readIO l
+  _ -> readTok
+
+type TrafoT a = ExceptT String (StateT [Int] IO) a
+
+foreverCalc :: TrafoT ()
+foreverCalc = do
+  tok <- liftIO readTok
+  case tok of
+    Print -> do
+      x <- get
+      liftIO (print x)
+    Lit n -> modify (n:)
+    Plus -> do
+      x <- get
+      case x of
+        (a:b:xs) -> put (a + b:xs)
+        _ -> throwError "almafa"
+    Mul -> do
+      x <- get
+      case x of
+        (a:b:xs) -> put (a * b:xs)
+        _ -> throwError "almafa"
+    Minus -> do
+      x <- get
+      case x of
+        (a:b:xs) -> put (a - b:xs)
+        _ -> throwError "almafa"
+  foreverCalc
