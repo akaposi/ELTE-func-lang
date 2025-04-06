@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveFoldable, DeriveFunctor, QuantifiedConstraints, StandaloneDeriving #-}
+{-# LANGUAGE ApplicativeDo, DeriveFoldable, DeriveFunctor, QuantifiedConstraints, StandaloneDeriving #-}
 module Gy08_pre where
 
 import Prelude hiding (Maybe(..), Either(..))
@@ -7,6 +7,8 @@ import Prelude hiding (Maybe(..), Either(..))
 --                                          v az m mellékhatást összegyűjtjük
 mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
 mapMList = undefined
+
+-- mapMList (putStrLn . show) [1..10]
 
 -- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
 data Single a = Single a deriving (Eq, Show, Functor, Foldable)
@@ -132,6 +134,43 @@ instance Traversable f => Traversable (Prod f fixed) where
 instance Traversable f => Traversable (FList f) where
 
 -- Kiegészítő tananyag: Applicative Do
+
+mapA' :: Applicative f => (a -> f b) -> List a -> f (List b)
+mapA' = undefined
+
+
+-- :t \m -> do { x <- m 'a'; y <- m 'b'; return (x || y) }
+testApp :: Applicative f => (Char -> f Bool) -> f Bool
+testApp m = do
+  x <- m 'a'
+  y <- m 'b'
+  return (x || y)
+-- (\x y -> x || y) <$> m 'a' <*> m 'b'
+
+
+-- Monad kell
+-- :t \m -> do { x <- m True; y <- m x; return (x || y) }
+testMonad :: Monad m => (Bool -> m Bool) -> m Bool
+testMonad m = do 
+  x <- m True
+-- \-----\
+--       V    
+  y <- m x
+  return (x || y)
+
+-- ghc Gy08.hs -o 08.out -ddump-ds > dump.txt
+
+main :: IO ()
+main = return ()
+
+-- Általánosan
+{-
+  ... = do
+    p1 <- E1
+    ...
+    pn <- En
+    return (E p1 p2 ...)
+-}
 
 -- Mágia, ignore me
 deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (Fix f a)
