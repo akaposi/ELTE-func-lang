@@ -79,7 +79,7 @@ mwiReader f []     = return []
 mwiReader f (x:xs) = do
   i <- ask
   xs' <- local (\z -> z + 1) (mwiReader f xs)
-  return (f i x : xs') 
+  return (f i x : xs')
 
 
 -- Pl.: (mapWithIndex (\i a -> (i+1) * a) $ take 10 [1,1..]) == [1..10]
@@ -159,6 +159,12 @@ silence w = pass $ do
   return $ (a, mempty)
 
 -}
+
+
+-- pass m is an action that executes the action m, which returns a value and a function, and returns the value, applying the function to the output.
+-- Ha adunk neki egy olyan Writer-t aminek a végeredménye egy érték és egy függvény
+-- akkor alkalmazza a függvényt a saját "log"-jára és visszaadja az értéket
+
 --                                v alkalmazza a függvényt a saját kiírandó szövegeire
 --pass :: Monoid w => Writer w (a, w -> w) -> Writer w a
 --pass (WriterT w (a, f)) = WriterT (f w) a
