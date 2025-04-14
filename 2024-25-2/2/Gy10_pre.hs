@@ -15,7 +15,7 @@ runParser :: Parser a -> String -> Either String (a, String)
 runParser p s = runExcept (runStateT p s)
 
 (<|>) :: MonadError e m => m a -> m a -> m a
-f <|> g = catchError f (const g)
+f <|> g = f `catchError` (\e -> g)
 infixl 3 <|>
 
 optional :: MonadError e m => m a -> m (Maybe a)
@@ -28,14 +28,24 @@ some :: MonadError e m => m a -> m [a]
 some p = (:) <$> p <*> many p
 
 -- Primitívek
-
+-- \s -> case s of ...
+-- \case
 satisfy :: (Char -> Bool) -> Parser Char
 satisfy p = get >>= \case
-  (c:cs) | p c -> c <$ put cs
+  (c:cs) | p c -> c <$ put cs -- do {put cs; return c;}
   _            -> throwError "satisfy: condition not met or string empty"
 
 eof :: Parser ()
 eof = get >>= (<|> throwError "eof: String not empty") . guard . null
+
+{-
+eof = do
+  cs <- get
+  guard (null cs) <|> throwError "eof: String not empty"
+
+--  (if (null cs) then pure () else empty) <|> throwError "eof: String not empty"
+
+-}
 
 char :: Char -> Parser ()
 char c = void $ satisfy (== c) <|> throwError ("char: not equal to " ++ [c])
@@ -52,16 +62,32 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 -- Eredményes parserek: Olyan parserek amelyeknek van valami eredménye és fel is használjuk őket
 
 -- Parseoljunk be legalább 1 számjegyet!
+-- \d+
 atLeastOneDigit :: Parser [Int]
-atLeastOneDigit = undefined
+atLeastOneDigit = some digit
 
 -- Ennek segítségével tudunk már természetes számokat parseolni
+-- \d+
+{-
+"1141"
+(n, [1,1,4,1]) -> 1141
+
+-}
+
 natural :: Parser Int
-natural = undefined
+natural = do
+  is <- some digit
+  return $ snd $ foldr (\i (n, m) -> (n+1, m + (10 ^ n * i))) (0 , 0) is
+-- return foldl (\acc curr -> acc * 10 + curr) 0 is
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
-integer = undefined
+integer = do
+  s <- optional $ char '-'
+  n <- natural
+  case s of
+    Nothing -> return n
+    _       -> return $ (-n)
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
