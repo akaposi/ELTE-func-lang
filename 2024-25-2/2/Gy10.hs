@@ -245,11 +245,16 @@ chainl1 v op = v >>= parseLeft
 data Exp
   = IntLit Int -- integer literál pl 1, 2
   | FloatLit Double -- lebegőpontos szám literál, pl 1.0 vagy 2.3
+  | BoolLit Bool
   | Var String -- változónév
   | Exp :+ Exp -- összeadás
   | Exp :* Exp -- szorzás
   | Exp :^ Exp -- hatványozás
+  | Exp :# Exp
+  | Exp :/ Exp
   | Exp :- Exp
+  | Fact Exp
+  | Neg Exp
   deriving (Eq, Show)
 
 -- Recursive Descent Parsing algoritmus
@@ -274,13 +279,12 @@ pVar = tok $ some (satisfy (isAlpha))
 
 pAtom :: Parser Exp
 pAtom =
+  (BoolLit True <$ pKeyword "true") <|>
+  (BoolLit False <$ pKeyword "false") <|>
   (FloatLit <$> float) <|>
   (Var <$> pVar) <|> 
   (IntLit <$> integer')  
   <|> between (char' '(') pAdd (char' ')')
-
-pPow :: Parser Exp
-pPow = rightAssoc (:^) (pAtom) (char' ('^'))
 
 {-
 pTimesDelim :: Parser (Exp -> Exp -> Exp)
@@ -297,14 +301,29 @@ pMul = chainl1 pHash
   )
 -}
 
-pMul :: Parser Exp
-pMul = leftAssoc (:*) (pPow) (char' ('*'))
+pNeg :: Parser Exp
+pNeg = (Neg <$> (char' '~' *> pNeg)) <|> pAtom
 
-pMin :: Parser Exp
-pMin = rightAssoc (:-) (pMul) (char' ('-'))
+pPow :: Parser Exp
+pPow = rightAssoc (:^) (pNeg) (char' ('^'))
+
+pHash :: Parser Exp
+pHash = undefined -- pPow
+
+pMul :: Parser Exp
+pMul = leftAssoc (:*) (pHash) (char' ('*'))
+
+pMinDiv :: Parser Exp
+pMinDiv = chainr1 pMul ((:-) <$ char' ('-') <|> (:/) <$ char' ('/'))
 
 pAdd :: Parser Exp
-pAdd = leftAssoc (:+) (pMin) (char' ('+'))
+pAdd = leftAssoc (:+) (pMinDiv) (char' ('+'))
+
+pFactorial :: Parser Exp
+pFactorial = (Fact <$> pAdd <* (char' '!')) <|> pAtom
+
+pExp :: Parser Exp
+pExp = topLevel pFactorial
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
@@ -325,11 +344,21 @@ pAdd = leftAssoc (:+) (pMin) (char' ('+'))
 +--------------------+--------------------+--------------------+
 | Operátor neve      | Kötési irány       | Kötési erősség     |
 +--------------------+--------------------+--------------------+
+| ~                  | Prefix             | 17                 |
++--------------------+--------------------+--------------------+
+| ^                  | Jobbra             | 16                 |
++--------------------+--------------------+--------------------+
 | #                  | Balra              | 15                 |
++--------------------+--------------------+--------------------+
+| *                  | Balra              | 14                 |
 +--------------------+--------------------+--------------------+
 | /                  | Jobbra             | 13                 |
 +--------------------+--------------------+--------------------+
 | -                  | Jobbra             | 13                 |
++--------------------+--------------------+--------------------+
+| +                  | Balra              | 12                 |
++--------------------+--------------------+--------------------+
+| !                  | Postfix            | 11                 |
 +--------------------+--------------------+--------------------+
 -}
 
@@ -338,11 +367,16 @@ pAdd = leftAssoc (:+) (pMin) (char' ('+'))
 -- Adjunk a nyelvhez láncolható perfix not operátort és nem-láncolható postfix ! operátort
 -- Adjunk a nyelvhez lambda kifejezéseket
 
+
 keywords :: [String]
-keywords = undefined
+keywords = ["true", "false", "not"]
 
 pNonKeyword :: Parser String
-pNonKeyword = undefined
+pNonKeyword = do
+  res <- tok $ some (satisfy isLetter)
+  res <$ (guard (res `notElem` keywords) <|> throwError "pNonKeyword: parsed a keyword")
 
 pKeyword :: String -> Parser ()
-pKeyword = undefined
+pKeyword = string'
+
+-- Mostmár visszamenűleg tudunk true és false-t parszolni az pAtom-ban

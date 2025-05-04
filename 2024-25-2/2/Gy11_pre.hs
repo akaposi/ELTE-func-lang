@@ -271,7 +271,7 @@ data InterpreterError
   
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
-evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
+evalExp :: MonadError InterpreterError m => Exp -> {- Env -> -} m Val
 evalExp = undefined
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
