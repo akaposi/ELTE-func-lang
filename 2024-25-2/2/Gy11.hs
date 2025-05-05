@@ -177,7 +177,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not"]
+keywords = ["true", "false", "not", "if", "then","else","while", "do","end"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -193,7 +193,9 @@ pAtom = asum [
   IntLit <$> integer',
   BoolLit True <$ pKeyword "true",
   BoolLit False <$ pKeyword "false",
-  LamLit <$> (pKeyword "lam" *> pNonKeyword) <*> (string' "->" *> pExp),
+  LamLit <$> 
+  (pKeyword "lam" *> pNonKeyword) <*> 
+  (string' "->" *> pExp),
   Var <$> pNonKeyword,
   between (char' '(') pExp (char' ')')
              ] <|> throwError "pAtom: no literal, var or bracketed matches"
@@ -233,19 +235,42 @@ data Statement
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = some statement
 
 statement :: Parser Statement
-statement = undefined
+statement = do
+  stm <- (asum [sIf, sWhile, sAssign])
+  char' ';'
+  return stm
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = do
+  pKeyword "if"
+  e <- pExp
+  pKeyword "then"
+  p <- program
+  pKeyword "end"
+  return $ If e p 
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = do
+  pKeyword "while"
+  e <- pExp
+  pKeyword "do"
+  p <- program
+  pKeyword "end"
+  return $ While e p
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = 
+  Assign <$> (pNonKeyword) <*> (string' ":=" *> pExp)  
+  {-
+    do
+  n <- pNonKeyword
+  string' ":="
+  e <- pExp
+  return $ Assign n e
+  -}
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -261,6 +286,8 @@ data Val
   | VLam String Env Exp   -- lam kiértékelt alakban
   deriving (Show, Eq)
 
+-- v := (lam x -> x)
+-- Map
 type Env = [(String, Val)] -- a jelenlegi környezet
 
 data InterpreterError
@@ -272,7 +299,27 @@ data InterpreterError
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp e env = case e of
+  (IntLit i) -> return $ VInt i
+  (FloatLit d) -> return $ VFloat d
+  (BoolLit b) -> return $ VBool b
+  (Var n) -> case (n `lookup` env ) of
+    (Just v) -> return v
+    Nothing -> throwError $ ScopeError ""
+  (e1 :+ e2) -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i , VInt j) -> return $ VInt $ i + j
+    {- Hasonlóan a többit
+  | Exp :* Exp           -- e1 * e2
+  | Exp :- Exp           -- e1 - e2
+  | Exp :/ Exp           -- e1 / e2
+  | Exp :== Exp          -- e1 == e2
+  | Not Exp              -- not e
+  | LamLit String Exp    -- \x -> e
+  | Exp :$ Exp           -- e1 $ e2
+    -}
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()

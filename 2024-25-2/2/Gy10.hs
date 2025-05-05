@@ -280,9 +280,9 @@ pVar = tok $ some (satisfy (isAlpha))
 pAtom :: Parser Exp
 pAtom =
   (BoolLit True <$ pKeyword "true") <|>
-  (BoolLit False <$ pKeyword "false") <|>
+  ((BoolLit False) <$ pKeyword "false") <|>
   (FloatLit <$> float) <|>
-  (Var <$> pVar) <|> 
+  (Var <$> pNonKeyword) <|> 
   (IntLit <$> integer')  
   <|> between (char' '(') pAdd (char' ')')
 
@@ -301,6 +301,7 @@ pMul = chainl1 pHash
   )
 -}
 
+-- Prefixnél
 pNeg :: Parser Exp
 pNeg = (Neg <$> (char' '~' *> pNeg)) <|> pAtom
 
@@ -311,7 +312,7 @@ pHash :: Parser Exp
 pHash = undefined -- pPow
 
 pMul :: Parser Exp
-pMul = leftAssoc (:*) (pHash) (char' ('*'))
+pMul = leftAssoc (:*) (pPow) (char' ('*'))
 
 pMinDiv :: Parser Exp
 pMinDiv = chainr1 pMul ((:-) <$ char' ('-') <|> (:/) <$ char' ('/'))
@@ -320,7 +321,8 @@ pAdd :: Parser Exp
 pAdd = leftAssoc (:+) (pMinDiv) (char' ('+'))
 
 pFactorial :: Parser Exp
-pFactorial = (Fact <$> pAdd <* (char' '!')) <|> pAtom
+-- Posztfixnél
+pFactorial = (Fact <$> pAdd <* (char' '!')) <|> pAdd
 
 pExp :: Parser Exp
 pExp = topLevel pFactorial
@@ -362,7 +364,8 @@ pExp = topLevel pFactorial
 +--------------------+--------------------+--------------------+
 -}
 
--- Egészítsd ki a nyelvet bool literálokkal  és == nem kötő 10-es erősségű operátorral. Mivel ebben az esetben már a true és false kulcsszó
+-- Egészítsd ki a nyelvet bool literálokkal  és == nem kötő 10-es erősségű operátorral. 
+-- Mivel ebben az esetben már a true és false kulcsszó
 -- vezessük be a kulcsszavak listáját és a kulcsszó/nem kulcssszó parsert
 -- Adjunk a nyelvhez láncolható perfix not operátort és nem-láncolható postfix ! operátort
 -- Adjunk a nyelvhez lambda kifejezéseket
@@ -374,7 +377,9 @@ keywords = ["true", "false", "not"]
 pNonKeyword :: Parser String
 pNonKeyword = do
   res <- tok $ some (satisfy isLetter)
-  res <$ (guard (res `notElem` keywords) <|> throwError "pNonKeyword: parsed a keyword")
+  res <$ 
+    (guard (res `notElem` keywords) 
+    <|> throwError "pNonKeyword: parsed a keyword")
 
 pKeyword :: String -> Parser ()
 pKeyword = string'
