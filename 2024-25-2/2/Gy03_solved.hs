@@ -26,19 +26,6 @@ data Tuple a = Tuple a a deriving (Eq, Show)
 data Quintuple a = Quintuple a a a a a deriving (Eq, Show)
 data List a = Nil | Cons a (List a) deriving (Eq, Show)
 data Maybe a = Just a | Nothing deriving (Eq, Show)
-data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
-data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
-data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show)
-data Either e a = Left e | Right a deriving (Eq, Show)
-data BiTuple e a = BiTuple e a deriving (Eq, Show)
-data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show)
-data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show)
-data Apply f a = MkApply (f a) deriving (Eq, Show)
-data Fix f a = MkFix (f (Fix f a))
-data Compose f g a = MkCompose (f (g a)) deriving (Eq, Show)
-data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show)
-data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
-data FList f a = FNil | FCons (f a) (f (FList f a))
 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
 foldrSingle f b (Single a) = f a b
@@ -142,32 +129,86 @@ instance Foldable Maybe where
   foldr :: (a -> b -> b) -> b -> Maybe a -> b
   foldr = foldrMaybe
 
+data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
+
 instance Foldable NonEmpty where
+  foldr :: (a -> b -> b) -> b -> NonEmpty a -> b
+  foldr f b (Last a)      = f a b
+  foldr f b (NECons a ns) = f a (foldr f b ns)
+
+data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
 
 instance Foldable NonEmpty2 where
+  foldr :: (a -> b -> b) -> b -> NonEmpty2 a -> b
+  foldr f b (NECons2 a ns) = f a (foldr f b ns)
+
+data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show)
 
 instance Foldable Tree where
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr f b (Leaf a) = f a b
+  foldr f b (Node l a r) = foldr f (f a (foldr f b r)) l
 
+data Either e a = Left e | Right a deriving (Eq, Show)
 instance Foldable (Either fixed) where
+  -- Csak a jobboldali értéket lehet hajtogatni
+  foldr :: (a -> b -> b) -> b -> Either fixed a -> b
+  foldr f b (Left fixed) = b
+  foldr f b (Right a) = f a b
 
+data BiTuple e a = BiTuple e a deriving (Eq, Show)
 instance Foldable (BiTuple fixed) where
+  foldr :: (a -> b -> b) -> b -> BiTuple fixed a -> b
+  foldr f b (BiTuple fx a) = (f a b)
 
+data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show)
 instance Foldable (TriEither fixed1 fixed2) where
+  foldr :: (a -> b -> b) -> b -> TriEither fixed1 fixed2 a -> b
+  foldr f b (LeftT fx)   = b
+  foldr f b (MiddleT fx) = b
+  foldr f b (RightT a)   = f a b
 
+data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show)
 instance Foldable (BiList fixed) where
+  foldr :: (a -> b -> b) -> b -> BiList fixed a -> b
+  foldr f b (ACons fx ls) = (foldr f b ls)
+  foldr f b (BCons a ls)  = f a (foldr f b ls)
+  foldr f b (ABNill)      = b
 
+data Apply f a = MkApply (f a) deriving (Eq, Show)
 -- Magasabbrendű megkötések
 instance Foldable f => Foldable (Apply f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Apply f a -> b
+  foldr f b (MkApply fa) = (foldr f b fa)
 
+data Fix f a = MkFix (f (Fix f a))
 instance Foldable f => Foldable (Fix f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Fix f a -> b
+  foldr f b (MkFix fFixfa)= foldr (\fixfa b' -> (foldr f b' fixfa)) b fFixfa
+--                                 flip (foldr f)
 
+data Compose f g a = MkCompose (f (g a)) deriving (Eq, Show)
 instance (Foldable f, Foldable g) => Foldable (Compose f g) where
+  foldr :: (Foldable f, Foldable g) => (a -> b -> b) -> b -> Compose f g a -> b
+  foldr f b (MkCompose fga) = foldr (\ga b' -> foldr f b' ga) b fga
 
+data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show)
 instance Foldable f => Foldable (Sum f fixed) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Sum f fixed a -> b
+  foldr f b (FLeft fx) = b
+  foldr f b (FRight fa) = foldr f b fa
 
+
+data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 instance Foldable f => Foldable (Prod f fixed) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Prod f fixed a -> b
+  foldr f b (FProd fx fa) = foldr f b fa
 
+data FList f a = FNil | FCons (f a) (f (FList f a))
 instance Foldable f => Foldable (FList f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> FList f a -> b
+  foldr f b FNil = b
+  foldr f b (FCons fa fFlistfa) = foldr f (foldr (flip (foldr f)) b fFlistfa) fa
 
 
 {-
@@ -219,15 +260,18 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = True
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
-
+  mempty = 0
+{-
+f . id = f -> \x -> f (id x) = f -> \x -> f x = f [QED]
+id . f = f -> \x -> id (f x) = f -> \x -> f x = f [QED]
+-}
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id
 
 
 -- A foldr művelet alternatívája: foldMap
@@ -245,15 +289,66 @@ instance Monoid (Endo a) where
 -- Írj ezekre Foldable instance-ot
 
 data Tree2 a = Leaf2 | Node2 (Tree2 a) a (Tree2 a) deriving (Eq, Show)
+instance Foldable (Tree2) where
+  foldr :: (a -> b -> b) -> b -> Tree2 a -> b
+  foldr f b Leaf2 = b
+  foldr f b (Node2 l a r) = foldr f (f a (foldr f b r)) l
+
 data RoseTree a = RoseLeaf a | RoseNode [RoseTree a] deriving (Eq, Show)
+instance Foldable (RoseTree) where
+  foldr :: (a -> b -> b) -> b -> RoseTree a -> b
+  foldr f b (RoseLeaf a) = f a b
+  foldr f b (RoseNode rs) = foldr (flip (foldr f)) b rs
+
 data Tree3 a = Leaf3 a | Node3 (Tree3 a) (Tree3 a) deriving (Eq, Show)
+instance Foldable (Tree3) where
+  foldr :: (a -> b -> b) -> b -> Tree3 a -> b
+  foldr f b (Leaf3 a) = f a b
+  foldr f b (Node3 l r) = foldr f (foldr f b r) l
+
 data SkipList a = Skip (SkipList a) | SCons a (SkipList a) | SNill deriving (Eq, Show)
+instance Foldable (SkipList) where
+  foldr :: (a -> b -> b) -> b -> SkipList a -> b
+  foldr f b (Skip ss) = foldr f b ss
+  foldr f b (SCons a ss) = f a (foldr f b ss)
+  foldr f b (SNill) = b
+
 data CrazyType a = C1 a a | C2 a Int | C3 (CrazyType a) deriving (Eq, Show)
+instance Foldable (CrazyType) where
+  foldr :: (a -> b -> b) -> b -> CrazyType a -> b
+  foldr f b (C1 a a') = f a (f a' b) 
+  foldr f b (C2 a i) = f a b
+  foldr f b (C3 ct)  = foldr f b ct
+
+
 data Either3 a b c = Left3 a | Middle3 b | Right3 c deriving (Eq, Show)
+instance Foldable (Either3 fixed fixed') where
+  foldr :: (a -> b -> b) -> b -> Either3 fixed fixed' a -> b
+  foldr f b (Left3 fx) = b 
+  foldr f b (Middle3 fx) = b
+  foldr f b (Right3 a) = f a b
+
 data Triplet a b c = Triplet a b c deriving (Eq, Show)
+instance Foldable (Triplet fixed fixed') where
+  foldr :: (a -> b -> b) -> b -> Triplet fixed fixed' a -> b
+  foldr f b (Triplet fx fx' a) = f a b
+
 data SplitTree a b = SplitTree (Tree a) a b (Tree b) deriving (Eq, Show)
+instance Foldable (SplitTree fixed) where
+  foldr :: (a -> b -> b) -> b -> SplitTree fixed a -> b
+  foldr f b (SplitTree fxs fx a r) = f a (foldr f b r) 
+
 data TriCompose f g h a = TriCompose (f (g (h a))) deriving (Eq, Show)
+instance (Foldable f, Foldable g, Foldable h) => Foldable (TriCompose f g h) where
+  foldr :: (Foldable f, Foldable g, Foldable h) => (a -> b -> b) -> b -> TriCompose f g h a -> b
+  foldr f b (TriCompose fgha) = foldr (\gha b' -> foldr (\ha b'' -> foldr f b'' ha) b' gha) b fgha
+
+
 data Free f a = Pure a | Free (f (Free f a))
+instance Foldable f => Foldable (Free f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Free f a -> b
+  foldr f b (Pure a) = f a b
+  foldr f b (Free fFreefa) = foldr (\freefa b' -> (foldr f b' freefa)) b fFreefa
 
 -- Mágia, ignore me
 deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (Fix f a)

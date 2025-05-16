@@ -1,1 +1,1 @@
--- aprilis 15, Divianszky Peter / Petes Marci
+-- aprilis 15. Korpa Peter

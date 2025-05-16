@@ -210,22 +210,108 @@ data UselessF f a = Mk1 (f Int) a
 
 -- Gyakorlás:
 
+--- Írjunk rájuk Functor instance-ot!
+
 data Tree a = Leaf | Node (Tree a) a (Tree a) deriving (Eq, Show)
+
+instance Functor (Tree) where
+  fmap :: (a -> b) -> Tree a -> Tree b
+  fmap f Leaf = Leaf
+  fmap f (Node l a r) = Node (fmap f l) (f a) (fmap f r)
+
 data RoseTree a = RoseLeaf a | RoseNode [RoseTree a] deriving (Eq, Show)
+
+instance Functor (RoseTree) where
+  fmap :: (a -> b) -> RoseTree a -> RoseTree b
+  fmap f (RoseLeaf a) = RoseLeaf $ f a
+  -- A RoseTree-ket tartalmazó listákat úgy lehet mappolni hogy minden elemre egy map-ot nyomunk
+  -- Ugyanaza mint amikor egy [[a]]-ra akarunk mappolni 
+  fmap f (RoseNode ts) = RoseNode $ fmap (fmap f) ts
+
 data Tree2 a = Leaf2 a | Node2 (Tree2 a) (Tree2 a) deriving (Eq, Show)
+
+instance Functor (Tree2) where
+  fmap :: (a -> b) -> Tree2 a -> Tree2 b
+  fmap f (Leaf2 a) = Leaf2 $ f a
+  fmap f (Node2 l r) = Node2 (fmap f l) (fmap f r)
+
 data SkipList a = Skip (SkipList a) | SCons a (SkipList a) | SNill deriving (Eq, Show)
+
+instance Functor (SkipList) where
+  fmap :: (a -> b) -> SkipList a -> SkipList b
+  fmap f (Skip as) = Skip $ fmap f as
+  fmap f (SCons a as) = SCons (f a) (fmap f as)
+  fmap f SNill = SNill
+
 data CrazyType a = C1 a a | C2 a Int | C3 (CrazyType a) deriving (Eq, Show)
+
+instance Functor (CrazyType) where
+  fmap :: (a -> b) -> CrazyType a -> CrazyType b
+  fmap f (C1 a a') = C1 (f a) (f a')
+  fmap f (C2 a i)  = C2 (f a) i
+  fmap f (C3 ts)   = C3 (fmap f ts)
+
 data Either3 a b c = Left3 a | Middle3 b | Right3 c deriving (Eq, Show)
+
+-- Csak a c-ben funcktor így csak azt tudjuk lecserélni
+instance Functor (Either3 fixed fixed') where
+  fmap :: (a -> b) -> Either3 fixed fixed' a -> Either3 fixed fixed' b
+  fmap f (Left3 fx) = (Left3 fx)
+  fmap f (Middle3 fx) = (Middle3 fx)
+  fmap f (Right3 a) = Right3 $ f a
+
 data Triplet a b c = Triplet a b c deriving (Eq, Show)
+
+-- Csak a c-ben funcktor így csak azt tudjuk lecserélni
+instance Functor (Triplet fixed fixed') where
+  fmap :: (a -> b) -> Triplet fixed fixed' a -> Triplet fixed fixed' b
+  fmap f (Triplet fx fx' c) = Triplet fx fx' (f c)
+
 data SplitTree a b = SplitTree (Tree a) a b (Tree b) deriving (Eq, Show)
+
+-- Csak a b-ben funcktor így csak azt tudjuk lecserélni
+instance Functor (SplitTree fixed) where
+  fmap :: (a -> b) -> SplitTree fixed a -> SplitTree fixed b
+  fmap f (SplitTree fxs fx b r) = SplitTree fxs fx (f b) (fmap f r)
+
 data TriCompose f g h a = TriCompose (f (g (h a))) deriving (Eq, Show)
+
+-- Meg kell kötni hogy f g h is funktor mert csak így férünk hozzá a benti a-hoz
+-- MIvel 3 funcktor mögött van az a így 3 fmap kell
+instance (Functor f, Functor g, Functor h) => Functor (TriCompose f g h) where
+  fmap :: (a -> b) -> TriCompose f g h a -> TriCompose f g h b
+  fmap f (TriCompose fgha) = TriCompose (fmap (fmap (fmap f)) fgha)
+
 data Free f a = Pure a | Free (f (Free f a))
+
+instance (Functor f) => Functor (Free f) where
+  fmap :: (a -> b) -> Free f a -> Free f b
+  fmap f (Pure a) = Pure $ f a
+  fmap f (Free fFreefa) = Free $ fmap (fmap f) fFreefa
+  -- Free $ _ --ban _ :: f (Free f b)
+  -- Free $ fmap _ fFreefa --ban _ :: Free f a -> Free f b, de ez pont az fmap vége Free-re
+
 type Fix :: (* -> *) -> * -> *
 data Fix f a = Fix (f (Fix f a))
+
+instance (Functor f) => Functor (Fix f) where
+  fmap :: (a -> b) -> Fix f a -> Fix f b
+  fmap f (Fix fFreefa) = Fix $ fmap (fmap f) fFreefa
+
 data Join a b = Join (a -> a -> b)
+
+instance Functor (Join fixed) where
+  fmap :: (a -> b) -> Join fixed a -> Join fixed b
+  fmap g (Join ffa) = Join $ \f f' -> g (ffa f f')
+
 data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
 
---- Írjunk rájuk Functor instance-ot!
+
+instance Functor (CrazyType2 fixed) where
+  fmap :: (a -> b) -> CrazyType2 fixed a -> CrazyType2 fixed b
+  fmap g (SingleA f)    = SingleA f
+  fmap g (SingleB a)    = SingleB $ g a
+  fmap g (Translate fa) = Translate $ \a -> g (fa a)
 
 -- Dont mind this
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds, TypeFamilies, StandaloneDeriving #-}
+
 module Gy09_pre where
 
 import Control.Monad
@@ -70,7 +72,7 @@ anychar = satisfy (const True)
 string :: String -> Parser ()
 string ""     = return ()
 string (c:cs) = do
-  char c
+  a <- char c
   string cs
   return ()
 -- így is lehet : string s = mapM_ char s
@@ -208,6 +210,58 @@ p13 = undefined
 infixl 3 `Ap`
 -- Applicative rész, úgynevezett Free applicative
 -- A free monoid == lista
+
+data Either a b 
+  = Left a
+  | Right b
+
+-- Left :: a -> Either a b
+-- Right :: b -> Either a b
+
+data Times a b =
+  Pair a b
+
+-- Pair :: a -> b -> Times a b
+
+data Times' a b where
+  Pair' :: a -> b -> Times' [a] b
+
+instance (Show a, Show b) => (Show (Times' a b)) where
+  show (Pair' a b) = undefined
+
+data Nat = Zero | Succ Nat
+
+data Vec b a where
+  Nil  :: Vec b Zero
+  Cons :: b -> Vec b n -> Vec b (Succ n)
+
+deriving instance (Show a) => Show (Vec a n)
+deriving instance (Eq a) => Eq (Vec a n)
+{-
+a :: Bool
+a = (Cons 1 $ Cons 1 Nil) == (Cons 1 $ Cons 1 $ Cons 1 Nil)
+-}
+
+eqVec_t1 :: Bool
+eqVec_t1 = (Cons 1 $ Cons 1 Nil) == (Cons 1 $ Cons 2 Nil)
+
+singleton :: a -> Vec a (Succ Zero)
+singleton a = Cons a Nil
+
+-- :k NatPlus :: Nat -> Nat -> Nat
+
+type family NatPlus n m where
+  NatPlus Zero     m = m
+  NatPlus (Succ n) m = Succ (NatPlus n m)
+
+(+++) :: Vec a n -> Vec a m -> Vec a (NatPlus n m)
+Nil         +++ xs = xs
+(Cons a as) +++ bs = Cons a (as +++ bs)
+{-
+-}
+
+
+class Applicative' f 
 
 data AltF f a where
   Ap     :: f a -> Alt f (a -> b) -> AltF f b
