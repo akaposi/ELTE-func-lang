@@ -52,7 +52,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
 
 | Hét | Előadás | Gyakorlat                                                                               |
 |-----|---------|-----------------------------------------------------------------------------------------|
-| 1   |         | Ismétlés, parametrikus ADTk (, , Either, ->), case, let kötések, Eq, Show, Ord          |
+| 1   | Lustaság (CbN, CbV), ADTk, lusta Nat, Kind rendszer, Típuscsaládok, Típusellenőrzés | Ismétlés, parametrikus ADTk (, , Either, ->), case, let kötések, Eq, Show, Ord          |
 | 2   |         | Eq, Show, Ord folytatás, Magasabbrendű polimorfizmus, Functor, Magasabbrendű megkötések |
 | 3   |         | Hajtogatás, Foldable, Semigroup, Monoid                                                 |
 | 4   |         | Monad, IO                                                                               |
