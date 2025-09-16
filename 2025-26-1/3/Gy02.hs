@@ -5,6 +5,7 @@ module Gy02 where
 
 import Prelude hiding (Either (..), Maybe (..))
 
+
 -- Vegyük az alábbi adattípusokat
 data Single a = Single a deriving (Eq, Show)
 data Tuple a = Tuple a a deriving (Eq, Show)
@@ -23,19 +24,21 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 -- Mivel a fenti típusok mind valamilyen szintent tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a1 a2) = Tuple (f a1) (f a2)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a1 a2 a3 a4 a5) = Quintuple (f a1) (f a2) (f a3) (f a4) (f a5)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f (Just a) = Just (f a)
+mapMaybe f Nothing = Nothing
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f Nil = Nil
+mapList f (Cons x xs) = Cons (f x) (mapList f xs)
 
 -- Ezt a mappolhatósági tulajdonságot le tudjuk írni a magasabbrendú polimorfizmus segítségével
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmus típusfüggvényekre alkalmazzuk):
@@ -84,31 +87,44 @@ instance Functor List where
 
 -- Írjuk meg a többi típusra is a Functor instance-ot!
 
+-- 0. lépés - illeszd le
+-- 1. lépés - vezessük be a leillesztet konstruktort
+-- 2. lépés - paraméter típusának megállapítása:
+--   - pontosan 'a' - f x
+--   - függ 'a'-tól - fmap f xs
+--   - független    - x
+
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a as) = NECons2 (f a) (fmap f as)
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left a) = Left a
+  fmap f (Right b) = Right (f b)
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
-  fmap = undefined
+  fmap f (BiTuple fix a) = BiTuple fix (f a)
 
 instance Functor (TriEither fixed1 fixed2) where
   fmap :: (a -> b) -> TriEither fixed1 fixed2 a -> TriEither fixed1 fixed2 b
-  fmap = undefined
+  fmap f (LeftT e1) = LeftT e1
+  fmap f (MiddleT e2) = MiddleT e2
+  fmap f (RightT e3) = RightT (f e3)
 
 instance Functor (BiList fixed) where
   fmap :: (a -> b) -> BiList fixed a -> BiList fixed b
-  fmap = undefined
+  fmap f ABNill = ABNill
+  fmap f (ACons a as) = ACons a (fmap f as)
+  fmap f (BCons b bs) = BCons (f b) (fmap f bs)
 
 -- "nagyon" magasabbrendú polimorfizmus. Ha egy Type -> Type kindú valamit és egy típust adunk meg, csak akkor lesz teljes
 
@@ -132,7 +148,7 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap f (Lift fa) = Lift (fmap f fa)
 
 -- f az vmi funktor
 -- g : a -> b
@@ -145,17 +161,20 @@ data Compose f g a = Compose (f (g a)) deriving (Eq, Show)
 
 instance (Functor f, Functor g) => Functor (Sum f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Sum f g a -> Sum f g b
-  fmap = undefined
+  fmap f (SumLeft fa) = SumLeft (fmap f fa)
+  fmap f (SumRight ga) = SumRight (fmap f ga)
 
 instance (Functor f, Functor g) => Functor (Product f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Product f g a -> Product f g b
-  fmap = undefined
+  fmap f (Product fa ga) = Product (fmap f fa) (fmap f ga)
 
 -- Nehéz
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga) -- f (g b) -- f (g ???) az nem funktor!!!, csak az f funktor, és a g funktor
+  -- be kell nyúlni az f alá egy fmap-al
+  -- majd azon belül egy másik fmap-al a g alá
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)

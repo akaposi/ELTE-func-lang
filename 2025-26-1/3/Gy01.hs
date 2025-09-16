@@ -220,3 +220,15 @@ instance (Eq a) => Eq (List a) where
 instance (Eq a) => Eq (Tree a) where
   (==) :: Tree a -> Tree a -> Bool
   (==) = undefined
+
+f15 :: (c -> Either a b) -> c -> Either b a
+f15 f c = case f c of
+  Left a -> Right a
+  Right b -> Left b
+
+data HappyLittleTree a = HappyLittleLeaf a a | HappyLittleNode (HappyLittleTree a) a deriving Show
+
+instance Eq a => Eq (HappyLittleTree a) where
+  (==) (HappyLittleLeaf a1 a2) (HappyLittleLeaf a1' a2') = a1 == a1' && a2 == a2'
+  (==) (HappyLittleNode r a) (HappyLittleNode r' a') = r == r' && a == a'
+  _ == _ = False
