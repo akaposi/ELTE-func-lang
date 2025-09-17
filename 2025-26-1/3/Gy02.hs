@@ -207,7 +207,7 @@ data Join a b = Join (a -> a -> b)
 data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
 
 instance Functor f => Functor (Fix f) where
-  fmap f (Fix ff) = Fix _
+  fmap f (Fix ff) = Fix (fmap (fmap f) ff)
 
 --- Írjunk rájuk Functor instance-ot!
 
