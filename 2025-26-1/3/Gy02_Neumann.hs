@@ -4,6 +4,7 @@
 module Gy02 where
 
 import Prelude hiding (Either (..), Maybe (..))
+import Data.Functor.Contravariant
 
 -- Vegyük az alábbi adattípusokat
 data Single a = Single a deriving (Eq, Show)
@@ -32,10 +33,20 @@ mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
 mapQuintuple = undefined
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f (Just a) = Just (f a)
+mapMaybe f Nothing = Nothing
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f Nil = Nil
+mapList f (Cons a as) = Cons (f a) (mapList f as)
+
+-- a :: Type
+-- f a :: Type
+-- f :: Type -> Type
+--                          V ????
+-- quirkyMap :: (a -> b) -> f a -> f b
+-- Kind-rendszer
+-- Magasabbrendű Polimorfizmusnak / Higher-Kinded Polymorphism
 
 -- Ezt a mappolhatósági tulajdonságot le tudjuk írni a magasabbrendú polimorfizmus segítségével
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmus típusfüggvényekre alkalmazzuk):
@@ -84,19 +95,43 @@ instance Functor List where
 
 -- Írjuk meg a többi típusra is a Functor instance-ot!
 
+{-
+
+0. lépés - leillesztjük az összes lehetséges konstruktort
+1. lépés - minden jobboldalra odaírjuk a leillesztett konstruktort
+2. lépés - MINDEN ÁGON MEGYÜNK EGYESÉVEL A PARAMÉTEREKEN:
+- Legyen ez a paraméter x :: t
+- HA: t == a               -> leírjuk, hogy f x
+- HA: t nem tartalmaz a-t  -> leírjuk, hogy x
+- HA: t tartalmaz a-t     *-> leírjuk, hogy fmap (fmap (fmap ... f)) x annyiszor fmapolva ahányszorosan funktor
+
+
+   t ---coerce -> f a
+    \              |
+     magic        fmap
+         \         |
+          \        V
+           -----> f b
+
+
+-}
+
+-- data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a as) = NECons2 (f a) (fmap f as)
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left e) = Left e
+  fmap f (Right a) = Right (f a)
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
@@ -117,6 +152,9 @@ instance Functor (BiList fixed) where
 type Lift :: (* -> *) -> * -> *
 data Lift f a = Lift (f a) deriving (Eq, Show)
 
+instance Functor f => Functor (Lift f) where
+  fmap f (Lift fa) = Lift (fmap f fa)
+
 -- data BiTuple e a = BiTuple e a deriving (Eq, Show)
 -- data Lift    f a = Lift   (f a) deriving (Eq, Show)
 -- Van különbség
@@ -130,10 +168,6 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 
 -- Le kell az első paramétert fixálnunk, hogy tudjunk rá Functor-t írni
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
-instance (Functor f) => Functor (Lift f) where
-  fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
-
 -- f az vmi funktor
 -- g : a -> b
 -- fa : Functor f => f a
@@ -153,9 +187,10 @@ instance (Functor f, Functor g) => Functor (Product f g) where
 
 -- Nehéz
 
+-- satured-type-families
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga) -- f (g a) -> f (g b)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
@@ -164,11 +199,29 @@ instance Functor (Fun q) where
   -- fmap :: (a -> b) -> (q -> a) -> (q -> b)
   -- Hint: mi a (.) típusa?
   fmap :: (a -> b) -> Fun q a -> Fun q b
-  fmap = undefined
+  fmap f (Fun g) = Fun (f . g)
 
 -- Egyéb érdekesség:
 data UselessF f a = Mk1 (f Int) a
 --                       ^ f nincs olyan pozícióban, hogy fmap-olni kéne rajta, tehát a Functor f megkötés felesleges
+
+
+-- fmap :: (a -> b) -> f a -> f b
+-- cmap :: (b -> a) -> f a -> f b
+
+-- kontravariáns funktor
+
+data Predikátum a = MkPredikátum (a -> Bool)
+
+instance Contravariant Predikátum where
+  contramap :: (a' -> a) -> Predikátum a -> Predikátum a'
+  contramap f (MkPredikátum p) = MkPredikátum $ \a' -> p (f a')
+
+data NNA q a = MkNNA ((a -> q) -> q) -- ¬¬ A az egy funktor
+-- ¬A az kontravariáns A -> Q
+
+instance Functor (NNA q) where
+  fmap f (MkNNA g) = MkNNA $ \h -> g (\a -> h (f a))
 
 -- Gyakorlás:
 
