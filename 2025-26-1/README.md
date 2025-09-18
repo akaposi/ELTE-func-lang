@@ -13,7 +13,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 
 #### Időpontok és helyszínek
 
-- Előadás (Xie Zongpu / Szumi): Déli Tömb 2-502, Csütörtök 17:45-19:15.
+- Előadás (Szumi / Xie Zongpu): Déli Tömb 2-502, Csütörtök 17:45-19:15.
 - Gyakorlatok:
   - 1-es csoport (Suszter Roland): Déli Tömb 00-524 (PC 4), Péntek 8:15-9:45 
   - 3-as csoport (Petes Márton): Déli Tömb 00-412 (PC 6), Kedd 17:45-19:15
@@ -21,7 +21,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 
 #### Elérhetőségek
 
-- Xie Zongpu, email: TBA
+- Szumi, email: szumi @ inf.elte.hu (szóköz nélkül)
 - Petes Márton, email: tx0lwm @ inf.elte.hu (szóköz nélkül)
 - Suszter Roland, Teams, email: xjq2db @ inf.elte.hu (szóköz nélkül)
 
