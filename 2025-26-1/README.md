@@ -13,7 +13,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 
 #### Időpontok és helyszínek
 
-- Előadás (Szumi / Xie Zongpu): Déli Tömb 2-502, Csütörtök 17:45-19:15.
+- Előadás (Szumi): Déli Tömb 2-502, Csütörtök 17:45-19:15.
 - Gyakorlatok:
   - 1-es csoport (Suszter Roland): Déli Tömb 00-524 (PC 4), Péntek 8:15-9:45 
   - 3-as csoport (Petes Márton): Déli Tömb 00-412 (PC 6), Kedd 17:45-19:15
@@ -53,7 +53,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
 | Hét | Előadás | Gyakorlat                                                                               |
 |-----|---------|-----------------------------------------------------------------------------------------|
 | 1   | Lustaság (CbN, CbV), ADTk, lusta Nat, Kind rendszer, Típuscsaládok, Típusellenőrzés | Ismétlés, parametrikus ADTk (, , Either, ->), case, let kötések, Eq, Show, Ord          |
-| 2   |         | Eq, Show, Ord folytatás, Magasabbrendű polimorfizmus, Functor, Magasabbrendű megkötések |
+| 2   | Semigroups, Monoids, Functors | Eq, Show, Ord folytatás, Magasabbrendű polimorfizmus, Functor, Magasabbrendű megkötések |
 | 3   |         | Hajtogatás, Foldable, Semigroup, Monoid                                                 |
 | 4   |         | Monad, IO                                                                               |
 | 5   |         | State, Except                                                                           |
