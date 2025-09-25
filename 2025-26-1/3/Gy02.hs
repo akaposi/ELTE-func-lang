@@ -206,6 +206,11 @@ data Fix f a = Fix (f (Fix f a))
 data Join a b = Join (a -> a -> b)
 data CrazyType2 a b = SingleA a | SingleB b | Translate (a -> b)
 
+instance Functor (CrazyType2 fixed) where
+  fmap f (SingleA a) = SingleA a
+  fmap f (SingleB b) = SingleB (f b)
+  fmap f (Translate g) = Translate (f . g)
+
 instance Functor f => Functor (Fix f) where
   fmap f (Fix ff) = Fix (fmap (fmap f) ff)
 
