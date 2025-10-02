@@ -98,7 +98,7 @@ readAndConcat :: IO ()
 readAndConcat = undefined
 
 readAndConcat' :: IO ()
-readAndConcat' = undefined
+readAndConcat' = getLine >>= \s1 -> getLine >>= \s2 -> putStrLn (s1 ++ s2)
 
 readAndSq :: IO ()
 readAndSq = undefined
