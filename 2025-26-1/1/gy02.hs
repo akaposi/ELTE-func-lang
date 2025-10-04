@@ -136,10 +136,15 @@ listOfInts = Lift (Cons 1 (Cons 2 Nil))
 maybeABool :: Lift Maybe Bool
 maybeABool = Lift (Just True) --Nothing -- pont nincs bool :(
 
+liftMaybe :: Lift Maybe Bool -> Bool
+liftMaybe (Lift (Just b)) = b
+liftMaybe (Lift Nothing) = False
+
+
 -- Le kell az első paramétert fixálnunk, hogy tudjunk rá Functor-t írni
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
-  fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
+  fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b -- Lift (f a) -> Lift (f b)
   fmap f (Lift fa) = Lift (fmap f fa)
 
 -- f az vmi funktor
