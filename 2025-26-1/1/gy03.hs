@@ -5,7 +5,7 @@ module Gy03 where
 import Prelude hiding (Maybe(..), Either(..))
 import Control.Monad (foldM)
 
-data InsaneType f a b = I1 (f a) (f b) | I2 a (InsaneType f a b) b | I3 (InsaneType f a b)  (f b) | I4 b b a deriving Eq
+data InsaneType f a b = I1 (f a) (f b) | I2 a (InsaneType f a b) b | I3 (InsaneType f a b) (f b) | I4 b b a deriving Eq
 
 
 instance (Functor f) => Functor (InsaneType f fixed) where
@@ -264,6 +264,9 @@ data CrazyType a = C1 a a | C2 a Int | C3 (CrazyType a) deriving (Eq, Show)
 data Either3 a b c = Left3 a | Middle3 b | Right3 c deriving (Eq, Show)
 data Triplet a b c = Triplet a b c deriving (Eq, Show)
 data SplitTree a b = SplitTree (Tree a) a b (Tree b) deriving (Eq, Show)
+instance Foldable (SplitTree fixed) where
+  foldMap f (SplitTree ta a b tb) = f b <> foldMap f tb
+
 data Free f a = Pure a | Free (f (Free f a))
 
 -- Mágia, ignore me
