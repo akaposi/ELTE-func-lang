@@ -23,19 +23,20 @@ import Control.Monad.Except
 --, hogy ha egy Jegyet bele rakunk, zölden világít és a Nyitva állapotra váltunk
 
 -- Definiáljuk az állapotok típusát
-data MachineState
+data MachineState = Open | Closed
   deriving (Eq, Show)
 
 -- Definiáljuk a fények típusát
-data LightColour
+data LightColour = Green | Red | Yellow
   deriving (Eq, Show)
 
 
 -- Definiáljuk az átmenetek függvényeit
 -- A függvények egy kezdeti állapotból egy végállapotba és egy világító fénybe képeznek
 push, insertTicket :: MachineState -> (LightColour, MachineState)
-push = undefined
-insertTicket = undefined
+push Closed = (Red, Closed)
+push Open = (Green, Closed)
+insertTicket t = (case t of { Closed -> Green ; Open -> Yellow }, Open)
 
 -- Ennek a segítségével például le tudjuk modellezni, hogy Pistike 2x próbál jegy nélkül bemenni
 pistike :: MachineState -> ([LightColour], MachineState)
@@ -74,7 +75,7 @@ háttérben a -> s -> (a,s)
 -- s -> (a,s) függvényeket a state függvénnyel lehet becsomagolni
 pushS, insertTicketS :: State MachineState LightColour
 pushS = state push
-insertTicketS = undefined
+insertTicketS = state insertTicket
 
 -- Így pistikét kicsit szebben lehet definiálni
 pistikeS :: State MachineState [LightColour]
@@ -113,16 +114,22 @@ countYellow = do
 -- Komplikáltabb feladatok
 -- Implementáljunk egy 'get' műveletet, amely visszaadja az állapotot
 get' :: State s s
-get' = undefined
+get' = get
 -- Implementáljunk egy 'put' műveletet, amely felülírja az állapotot
 put' :: s -> State s ()
-put' = undefined
+put' = put
 
 -- Ezek után nem kell a 'state' függvénnyel szórakozni
 
 -- Példa get/putra: Definiáljuk a safeHead függvényt ami az állapotban lévő lista fejelemét leszedi - ha van neki.
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do
+  stack <- get
+  case stack of
+    [] -> pure Nothing
+    (x:xs) -> do
+      put xs
+      return (Just x)
 
 -- Példa get/putra 2: Definiáljuk a take függvényt a belső állapotra (esetleg pop-ot is lehet használni).
 takeK :: Int -> State [a] [a]
@@ -136,10 +143,20 @@ sumK :: Num a => Int -> State [a] a -- Kiszedi és összeadja az első K elemet 
 sumK = undefined
 
 labelList :: [a] -> State Int [(a, Int)] -- Minden elemet megcímkéz, a belső állapot a számláló
-labelList = undefined
+labelList [] = pure []
+labelList (x : xs) = do
+  i <- get
+  put (i + 1)
+  ls <- labelList xs
+  return ((x, i) : ls)
 
 labelListBW :: [a] -> State Int [(a, Int)] -- Ugyanaz mint az előző csak, hátulról címkéz
-labelListBW = undefined
+labelListBW [] = pure []
+labelListBW (x : xs) = do
+  ls <- labelListBW xs
+  i <- get
+  put (i + 1)
+  return ((x, i) : ls)
 
 
 -- EXCEPT
