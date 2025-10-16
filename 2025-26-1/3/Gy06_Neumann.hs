@@ -21,14 +21,14 @@ type Environment = [(User, UserInfo)] -- nevekhez asszociált home direcory és 
 -- Definiáljunk egy függvényt ami egy adott nevű felhasználó home directoryját lekéri
 
 homeDirOf :: String -> Environment -> Maybe String
-homeDirOf = _
+homeDirOf = undefined
 
 -- Definiáljuk egy függvényt amely lekéri az összes admin felhasználó home directoryját
 -- Listafüggvényeket a demonstráció kedvéért ne használjuk és segédfüggvényt ne írjunk
 -- A rekurzív hivás során elemeket a környezetből, mert, mivel nincsen kimenet, ezért ez *nincsen reflektálva az eredményben*
 
 getAdminHomes :: Environment -> [String]
-getAdminHomes = _
+getAdminHomes = undefined
 
 -- A fenti mintákban a környezet továbbadása explicit volt (nekünk kell manuálisan megcsinálni)
 -- Viszont egy absztrakciós réteggel át lehet alakítani implicitté:
@@ -51,47 +51,47 @@ homeDirOfR :: String -> Reader Environment (Maybe String)
 homeDirOfR s = reader (homeDirOf s)
 
 getAdminHomesR :: Reader Environment [String]
-getAdminHomesR = _
+getAdminHomesR = undefined
 
 -- A Reader monádnak az alábbi két művelete van
 -- ask: lekérdezi a környezetet
 -- local: lokálisan megváltoztatja
 
 ask' :: Reader r r
-ask' = _
+ask' = undefined
 
 local' :: (r -> r) -> Reader r a -> Reader r a
-local' = _
+local' = undefined
 
 -- Írjuk meg a két fenti függvényt ask-al és local-al
 
 homeDirOfRM :: String -> Reader Environment (Maybe String)
-homeDirOfRM = _
+homeDirOfRM = undefined
 
 getAdminHomesRM :: Reader Environment [String]
-getAdminHomesRM = _
+getAdminHomesRM = undefined
 
 -- Extra feladatok
 
 -- Definiáljuk a labelWith függvényt readerrel
 
 labelListR :: Num i => [a] -> Reader i [(i,a)]
-labelListR = _
+labelListR = undefined
 
 -- Definiáljuk a sum függvényt úgy, hogy az olvasási környezetben van a részösszeg
 
 sumTRR :: Num a => [a] -> Reader a a
-sumTRR = _
+sumTRR = undefined
 
 -- Definiáljuk a filterWithIndex függvényt amely index alapján is szűr
 
 filterWithIndexR :: Num i => (i -> a -> Bool) -> Reader i [a]
-filterWithIndexR = _
+filterWithIndexR = undefined
 
 -- Definiáljuk a foldl függvényt readerrel
 
 foldlR :: (b -> a -> b) -> [a] -> Reader b b
-foldlR = _
+foldlR = undefined
 
 -- WRITER
 
@@ -102,13 +102,13 @@ type UUID = String
 -- Megváltoztatjuk az aritmetikai függvényeinket, hogy gyűjtsék össze a kimenetben, milyen függvényhívások történtek
 -- Ha az API request "localhost" adjunk vissza True-t különben False-ot. Függetlenül ettől loggoljuk az "apirequest" UUID-t
 apiRequest :: String -> (Bool, [UUID])
-apiRequest = _
+apiRequest = undefined
 
 -- Definiáljuk az alábbi függvényt, amely ha páros számot kap paraméterül akkor a "1.0.0.1" címre küld egy API requestet, ha nem, akkor nem csinál semmit.
 -- Függetlenül ettől loggoljuk a "nameserver" UUID-t.
 -- Eredményül adjuk vissza a szám felét.
 nameserver :: Int -> (Int, [UUID])
-nameserver = _
+nameserver = undefined
 
 -- A fenti két függvényben a tuple második paramétere, a [UUID] egy kiabsztrahálható réteg.
 -- Ez lesz a Writer monád
@@ -133,21 +133,21 @@ apiRequestW :: String -> Writer [UUID] Bool
 apiRequestW s = writer (apiRequest s)
 
 nameserverW :: Int -> Writer [UUID] Int
-nameserverW = _
+nameserverW = undefined
 
 -- A writernek egy számunkra releváns primitív művelete van:
 
 tell' :: w -> Writer w ()
-tell' = _
+tell' = undefined
 
 -- Advancedabb használathoz ld listen és pass
 -- Definiáljuk a fenti két függvény tell segítségével
 
 apiRequestWD :: String -> Writer [UUID] Bool
-apiRequestWD = _
+apiRequestWD = undefined
 
 nameserverWD :: Int -> Writer [UUID] Int
-nameserverWD = _
+nameserverWD = undefined
 
 -- Leggyakrabban lista lesz az írási környezet, de akármilyen Monoid lehet
 -- Tegyük fel, hogy hasító függvényt definiálunk és ehhez az alábbi Hash típust definiáljuk
@@ -165,8 +165,8 @@ primes = unfoldr (\(x:xs) -> Just (x, filter (\y -> mod y x /= 0) xs)) [2..]
 
 -- Hasítsunk úgy egy integer listát, hogy minden elemével beleindexelünk a prímek listájába és tell-eljük azt a prímet
 hashIntList :: [Int] -> Writer Hash ()
-hashIntList = _
+hashIntList = undefined
 
 -- Hasítsunk tetszőleges hajtogatható tárolót
 hashFoldable :: Foldable f => f Int -> Writer Hash ()
-hashFoldable = _
+hashFoldable = undefined
