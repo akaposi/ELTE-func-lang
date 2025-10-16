@@ -85,7 +85,7 @@ sumTRR = undefined
 
 -- Definiáljuk a filterWithIndex függvényt amely index alapján is szűr
 
-filterWithIndexR :: Num i => (i -> a -> Bool) -> Reader i [a]
+filterWithIndexR :: Num i => (i -> a -> Bool) -> [a] -> Reader i [a]
 filterWithIndexR = undefined
 
 -- Definiáljuk a foldl függvényt readerrel
@@ -137,7 +137,7 @@ nameserverW = undefined
 
 -- A writernek egy számunkra releváns primitív művelete van:
 
-tell' :: w -> Writer w ()
+tell' :: Monoid w => w -> Writer w ()
 tell' = undefined
 
 -- Advancedabb használathoz ld listen és pass
