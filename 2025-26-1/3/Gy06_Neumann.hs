@@ -21,24 +21,14 @@ type Environment = [(User, UserInfo)] -- nevekhez asszociált home direcory és 
 -- Definiáljunk egy függvényt ami egy adott nevű felhasználó home directoryját lekéri
 
 homeDirOf :: String -> Environment -> Maybe String
-homeDirOf username env = case lookup username env of
-  Just ui -> Just (getHomeDirectory ui)
-  Nothing -> Nothing
+homeDirOf = _
 
 -- Definiáljuk egy függvényt amely lekéri az összes admin felhasználó home directoryját
 -- Listafüggvényeket a demonstráció kedvéért ne használjuk és segédfüggvényt ne írjunk
 -- A rekurzív hivás során elemeket a környezetből, mert, mivel nincsen kimenet, ezért ez *nincsen reflektálva az eredményben*
 
 getAdminHomes :: Environment -> [String]
-getAdminHomes env = case env of
-  [] -> []
-  ((username, ui) : uis) -> if
-    isAdmin ui then
-    case homeDirOf username env of
-      Just hd -> hd : getAdminHomes uis
-      Nothing -> getAdminHomes uis
-      else
-    getAdminHomes uis
+getAdminHomes = _
 
 -- A fenti mintákban a környezet továbbadása explicit volt (nekünk kell manuálisan megcsinálni)
 -- Viszont egy absztrakciós réteggel át lehet alakítani implicitté:
@@ -61,81 +51,47 @@ homeDirOfR :: String -> Reader Environment (Maybe String)
 homeDirOfR s = reader (homeDirOf s)
 
 getAdminHomesR :: Reader Environment [String]
-getAdminHomesR = reader getAdminHomes
+getAdminHomesR = _
 
 -- A Reader monádnak az alábbi két művelete van
 -- ask: lekérdezi a környezetet
 -- local: lokálisan megváltoztatja
 
 ask' :: Reader r r
-ask' = reader id -- reader :: (r -> a) -> Reader r a
+ask' = _
 
--- runReader :: Reader r a -> r -> a
 local' :: (r -> r) -> Reader r a -> Reader r a
-local' f rr = reader (\r -> runReader rr (f r))
+local' = _
 
 -- Írjuk meg a két fenti függvényt ask-al és local-al
 
 homeDirOfRM :: String -> Reader Environment (Maybe String)
-homeDirOfRM s = do
-  env <- ask
-  case lookup s env of
-    Just x -> return (Just $ getHomeDirectory x)
-    Nothing -> return Nothing
+homeDirOfRM = _
 
 getAdminHomesRM :: Reader Environment [String]
-getAdminHomesRM = do
-  env <- ask
-  case env of
-    [] -> return []
-    ((s, x) : xs) -> do
-      hd <- homeDirOfRM s
-      local (const xs) $ case hd of
-        Just h -> if isAdmin x then do
-          r <- getAdminHomesRM
-          return (h : r)
-          else getAdminHomesRM
-        Nothing -> getAdminHomesRM -- local tail ... is jó
+getAdminHomesRM = _
 
 -- Extra feladatok
 
 -- Definiáljuk a labelWith függvényt readerrel
 
 labelListR :: Num i => [a] -> Reader i [(i,a)]
-labelListR [] = return []
-labelListR (x : xs) = do
-  i <- ask -- lekérjük a futóindexeket = a jelenlegi környezettel
-  xs' <- local (+1) $ labelListR xs -- lokálisan 1-el megnövelem a futóindexet
-  return ((i, x) : xs')
-
-{-
-
-r = 0                    r = 1 + 0                 r = 1 + 1 + 0            r = 1 + 1 + 1 + 0
-"abc"             --->   "bc"                --->  "c"               ---->  []
-
-(0, 'a') :               (1, 'b') :                (2, c) :                 []
-
--}
+labelListR = _
 
 -- Definiáljuk a sum függvényt úgy, hogy az olvasási környezetben van a részösszeg
 
 sumTRR :: Num a => [a] -> Reader a a
-sumTRR [] = ask
-sumTRR (x:xs) = local (+ x) $ sumTRR xs
+sumTRR = _
 
 -- Definiáljuk a filterWithIndex függvényt amely index alapján is szűr
 
-filterWithIndexR :: Num i => (i -> a -> Bool) -> [a] -> Reader i [a]
-filterWithIndexR p [] = return []
-filterWithIndexR p (x : xs) = do
-  i <- ask
-  res <- local (+1) $ filterWithIndexR p xs
-  if p i x then return (x : res) else return res
+filterWithIndexR :: Num i => (i -> a -> Bool) -> Reader i [a]
+filterWithIndexR = _
 
 -- Definiáljuk a foldl függvényt readerrel
 
 foldlR :: (b -> a -> b) -> [a] -> Reader b b
-foldlR = undefined
+foldlR = _
 
 -- WRITER
 
@@ -146,17 +102,13 @@ type UUID = String
 -- Megváltoztatjuk az aritmetikai függvényeinket, hogy gyűjtsék össze a kimenetben, milyen függvényhívások történtek
 -- Ha az API request "localhost" adjunk vissza True-t különben False-ot. Függetlenül ettől loggoljuk az "apirequest" UUID-t
 apiRequest :: String -> (Bool, [UUID])
-apiRequest "localhost" = (True, ["apirequest"])
-apiRequest _ = (False, ["apirequest"])
+apiRequest = _
 
 -- Definiáljuk az alábbi függvényt, amely ha páros számot kap paraméterül akkor a "1.0.0.1" címre küld egy API requestet, ha nem, akkor nem csinál semmit.
 -- Függetlenül ettől loggoljuk a "nameserver" UUID-t.
 -- Eredményül adjuk vissza a szám felét.
 nameserver :: Int -> (Int, [UUID])
-nameserver x = if even x
-  then
-  let (logic, logging) = apiRequest "1.0.0.1" in (mod x 2, logging ++ ["nameserver"])
-  else (mod x 2, ["nameserver"])
+nameserver = _
 
 -- A fenti két függvényben a tuple második paramétere, a [UUID] egy kiabsztrahálható réteg.
 -- Ez lesz a Writer monád
@@ -181,36 +133,21 @@ apiRequestW :: String -> Writer [UUID] Bool
 apiRequestW s = writer (apiRequest s)
 
 nameserverW :: Int -> Writer [UUID] Int
-nameserverW i = writer (nameserver i)
+nameserverW = _
 
 -- A writernek egy számunkra releváns primitív művelete van:
 
-tell' :: Monoid w => w -> Writer w ()
-tell' w = writer ((), w) 
+tell' :: w -> Writer w ()
+tell' = _
 
 -- Advancedabb használathoz ld listen és pass
 -- Definiáljuk a fenti két függvény tell segítségével
 
 apiRequestWD :: String -> Writer [UUID] Bool
-apiRequestWD xs = do
-  tell ["apirequest"]
-  return (xs == "localhost")
+apiRequestWD = _
 
 nameserverWD :: Int -> Writer [UUID] Int
-nameserverWD i = if even i
-  then do
-   apiRequestWD "1.0.0.1"
-   tell ["nameserver"]
-   return (mod i 2)
-  else do
-   tell ["nameserver"]
-   return (mod i 2)
-
-{-
-when (even i) $ void $ apiRequestWD "1.0.0.1"
-tell ["nameserver"]
-return (mod i 2)
--}
+nameserverWD = _
 
 -- Leggyakrabban lista lesz az írási környezet, de akármilyen Monoid lehet
 -- Tegyük fel, hogy hasító függvényt definiálunk és ehhez az alábbi Hash típust definiáljuk
@@ -228,11 +165,8 @@ primes = unfoldr (\(x:xs) -> Just (x, filter (\y -> mod y x /= 0) xs)) [2..]
 
 -- Hasítsunk úgy egy integer listát, hogy minden elemével beleindexelünk a prímek listájába és tell-eljük azt a prímet
 hashIntList :: [Int] -> Writer Hash ()
-hashIntList [] = return ()
-hashIntList (x : xs) = do
-  tell (primes !! x)
-  hashIntList xs
+hashIntList = _
 
 -- Hasítsunk tetszőleges hajtogatható tárolót
 hashFoldable :: Foldable f => f Int -> Writer Hash ()
-hashFoldable = undefined
+hashFoldable = _
