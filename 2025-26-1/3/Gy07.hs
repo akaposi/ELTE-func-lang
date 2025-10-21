@@ -8,7 +8,9 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Except
-
+import Control.Monad.State -- !!!
+import Data.List
+import Control.Monad
 
 -- Cheatsheet:
 {-
@@ -46,7 +48,9 @@ data Env = MkEnv { isAdmin :: Bool, homeDir :: String } deriving (Eq, Show)
 -- Definiáljunk egy függvényt, amely kiírja a felhasználó home directoryját
 -- ha a felhasználó admin
 printHomeDirIfAdmin :: ReaderT Env (Writer [String]) ()
-printHomeDirIfAdmin = undefined
+printHomeDirIfAdmin = do
+  MkEnv admin hd <- ask
+  if admin then tell [hd] else return ()
 
 -- Miért typecheckel a tell, ask stb
 -- :t ask
@@ -54,7 +58,9 @@ printHomeDirIfAdmin = undefined
 -- Ezekkel a típusosztályokkal is fel lehet írni a függvényt
 
 printHomeDirIfAdmin' :: (MonadReader Env m, MonadWriter [String] m) => m ()
-printHomeDirIfAdmin' = undefined
+printHomeDirIfAdmin' = do
+  MkEnv admin hd <- ask
+  if admin then tell [hd] else return ()
 
 -- Vizsgán ennél a feladatnál mindenkinek a saját típusszignatúráját fel kell majd írnia
 -- Lehet mindkettőt használni
@@ -69,25 +75,73 @@ basicExecutables = ["/usr/bin/bash", "/usr/bin/ls", "/bin/sh"]
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
 -- Rakjuk be a felhasználó home directoryját a fájl rendszerbe ha még nincs benne
-addHomeIfNotIn :: type_signature_goes_here
-addHomeIfNotIn = undefined
-
+addHomeIfNotIn :: StateT FileSystem (Reader Env) ()
+-- ReaderT Env (State FileSystem) ()
+-- (MonadReader Env m, MonadState FileSystem m) => m ()
+addHomeIfNotIn = do
+  MkEnv _ home <- ask
+  fs <- get
+  if (home `notElem` fs) then put (home : fs) else return ()
 
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy [String] típusú írási környezetünk
--- Töröljük ki a duplikált fájlokat a fájlrendszerből és azokat írjuk ki az írási környezetbe
-undupe :: type_signature_goes_here
-undupe = undefined
+-- Töröljük ki az első 3 fájlt a rendszerből és írjuk ki az írási környezetbe
+removeFst3 :: StateT FileSystem (Writer [String]) ()
+removeFst3 = do
+  env <- get
+  case env of
+    [] -> tell [] >> put []
+    [x] -> tell [x] >> put []
+    [x,y] -> tell [x,y] >> put []
+    (x:y:z:xs) -> tell [x,y,z] >> put xs
 
+{-
+removeFst3 = do
+  xs <- get
+  tell (take 3 xs)
+  put (drop 3 xs)
+-}
+
+-- Töröljük ki a duplikált fájlokat a fájlrendszerből és azokat írjuk ki az írási környezetbe
+-- elem :: Eq a => a -> [a] -> Bool
+-- filter :: (a -> Bool) -> [a] -> Bool
+-- nub :: Eq a => [a] -> [a]
+-- (\\) :: Eq a => [a] -> [a] -> [a]
+undupe :: StateT FileSystem (Writer [String]) ()
+undupe = do
+  env <- get
+  tell (env \\ nub env)
+  put (nub env)
+
+{-
+undupe = do
+  env <- get
+  case env of
+    [] -> return ()
+    (x:xs) | x `elem` xs -> do
+       tell [x]
+       put (filter (/= x) xs)
+       undupe
+       modify (x:)
+    (x:xs) -> do
+       put xs
+       undupe
+       modify (x:)
+-}
 
 data FSError = FileExists | NotAnAdmin | BadPath deriving (Eq, Show)
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy FSError típusú hibakezelési környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
--- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem amin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
+-- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem admin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
 -- Ha nem létezik rakjuk be a fájlrendszerbe
-tryAdd :: type_signature_goes_here
-tryAdd = undefined
+tryAdd :: String -> StateT FileSystem (ExceptT FSError (Reader Env)) ()
+tryAdd path = do
+  MkEnv admin _ <- ask
+  unless admin $ throwError NotAnAdmin
+  env <- get
+  when (path `elem` env) $ throwError FileExists
+  put (path : env)
 
 
 -- ExceptT-vel vigyázzunk!!!
@@ -105,7 +159,11 @@ what = do
 -- Az IO monádot is bele lehet varázsolni a stackbe, de csak a legaljára
 -- Mivel minden transzformer monádot vár paraméterül ezért az IO-t is át lehet adni
 getAndPrint :: WriterT [String] IO ()
-getAndPrint = undefined
+getAndPrint = do
+   x <- liftIO getLine
+   tell [x]
+
+  
   -- az hogy x <- getLine nem typecheckel, mivel getLine :: IO String
   -- erre van egy szuper liftIO nevű függvény, amely egy transzformerben le tud futtatni IO függvényt
 
@@ -123,6 +181,12 @@ getAndPrint' = undefined
 -- [String] típusú írási környezet
 -- IO környezet
 -- Vizsgán általában csak 4 lesz az 5-ből
+
+type MyMonad a = ReaderT Env (StateT FileSystem (ExceptT FSError (WriterT [String] IO))) a
+
+splitOn :: Eq a => a -> [a] -> [[a]]
+splitOn x = map tail . groupBy (/=) . (x:)
+
 
 -- Olvassunk be konzolrol egy a konzolról egy stringet
 -- ha valid útvonal (/-ekkel elváálasztott nem üres stringek) akkor adjuk hozzá a fájlrendszerhez
