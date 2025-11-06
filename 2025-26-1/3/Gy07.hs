@@ -11,6 +11,9 @@ import Control.Monad.Except
 import Control.Monad.State -- !!!
 import Data.List
 import Control.Monad
+import Language.Haskell.TH (inferR)
+import Data.Char
+import GHC.Real (infinity)
 
 -- Cheatsheet:
 {-
@@ -212,3 +215,29 @@ f3 = undefined
 -- Egyéb érdekes transzformerek
 -- Megszakítási környezet: ContT transzformer
 -- Akkumulációs környezet: AccumT transzformer
+
+
+-- (1 pont)
+type Calc a = StateT Int IO a
+type CalcC m = (MonadState Int m, MonadIO m)
+
+runCalc m = runStateT m 0
+
+-- (1 pont)
+infinityCalc :: Calc () -- CalcC m => m (), StateT Int IO (), (MonadState Int m, MonadIO m) => m ()
+infinityCalc = do
+  line <- liftIO getLine
+  case line of
+    "print" -> do
+      x <- get
+      liftIO $ print x
+    ('+' : ' ' : xs) -> do
+      modify (+ read xs)
+    ('-' : ' ' : xs) -> do
+      modify (flip (-) (read xs))
+    xs | all isDigit xs -> do
+      put (read xs)
+    _ -> pure ()
+  infinityCalc
+
+
