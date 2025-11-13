@@ -6,7 +6,11 @@ import Prelude hiding (Maybe(..), Either(..))
 -- Definiáljuk egy függvényt, amely egy "mellékhatásos" függvényt végig mappol egy listán
 --                                          v az m mellékhatást összegyűjtjük
 mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
-mapMList = undefined
+mapMList f [] = pure []
+mapMList f (x:xs) = do
+  fx <- f x
+  res <- mapMList f xs
+  return (fx : res)
 
 -- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
 data Single a = Single a deriving (Eq, Show, Functor, Foldable)
@@ -33,7 +37,10 @@ mapMSingle :: Monad m => (a -> m b) -> Single a -> m (Single b)
 mapMSingle = undefined
 
 mapMTuple :: Monad m => (a -> m b) -> Tuple a -> m (Tuple b)
-mapMTuple = undefined
+mapMTuple f (Tuple a a') = do
+  an <- f a
+  a'n <- f a'
+  return (Tuple an a'n)
 
 mapMQuintuple :: Monad m => (a -> m b) -> Quintuple a -> m (Quintuple b)
 mapMQuintuple = undefined
@@ -73,7 +80,9 @@ liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
 -- Írjuk meg a mapM műveletet Applicative segítségével
 -- Az algoritmus ugyanaz mint a funktornál csak függvényalkalmazás helyett <*> és független értékek esetén pure
 mapA :: Applicative f => (a -> f b) -> List a -> f (List b)
-mapA = undefined
+mapA f Nil = pure Nil
+mapA f (Cons x xs) = Cons <$> f x <*> mapA f xs
+-- do { x <- f x; xs <- mapA f xs; return (Cons x xs) }
 
 -- Ez a mappolhatósági tulajdonság lesz az úgynevezett Traversable típusosztály
 {-
@@ -104,7 +113,17 @@ instance Traversable List where
 
 instance Traversable Maybe where
 
+{-
+Ha a konstruktornak nincs paramétere: akkor pure Cons
+Ha van paramétere, akkor Cons <$>
+- t :: a -> f t
+- t !:: a -> pure t
+- t ~:: a -> rekurzív hívás; traverse f* t
+-}
+  
 instance Traversable NonEmpty where
+  traverse f (Last a) = Last <$> f a
+  traverse f (NECons x xs) = NECons <$> f x <*> traverse f xs
 
 instance Traversable NonEmpty2 where
 
