@@ -253,6 +253,7 @@ pAdd = leftAssoc (:+) pDiv (char' '+')
 +--------------------+--------------------+--------------------+
 -}
 
+
 -- Egészítsd ki a nyelvet bool literálokkal  és == nem kötő 10-es erősségű operátorral. Mivel ebben az esetben már a true és false kulcsszó
 -- vezessük be a kulcsszavak listáját és a kulcsszó/nem kulcssszó parsert
 -- Adjunk a nyelvhez láncolható perfix not operátort és nem-láncolható postfix ! operátort
