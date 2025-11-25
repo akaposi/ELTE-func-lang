@@ -177,7 +177,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not"]
+keywords = ["true", "false", "not", "if", "then", "end", "do", "while"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -227,24 +227,41 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
+  deriving (Eq, Show)
 
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = sepBy1 statement (char' ';')
 
 statement :: Parser Statement
-statement = undefined
+statement = sIf <|> sWhile <|> sAssign
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = do   -- If <$> (pKeyword "if" *> pExp) <*> (pKeyword "then" *> program <* pKeyword "end")
+  pKeyword "if"
+  e <- pExp
+  pKeyword "then"
+  p <- program
+  pKeyword "end"
+  return (If e p)
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = do
+  pKeyword "while"
+  e <- pExp
+  pKeyword "do"
+  p <- program
+  pKeyword "end"
+  return (While e p)
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = do
+  var <- pNonKeyword
+  pKeyword ":="
+  e <- pExp
+  return (Assign var e)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -258,6 +275,7 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
+  deriving (Eq, Show)
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
@@ -269,11 +287,88 @@ data InterpreterError
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp exp env = case exp of
+  IntLit i -> return (VInt i)
+  FloatLit d -> return (VFloat d)
+  BoolLit b -> return (VBool b)
+  Var v -> case lookup v env of
+    Just val -> return val
+    Nothing -> throwError (ScopeError $ "Variable not in scope: " ++ v)
+  LamLit s e -> return (VLam s env e)
+  l :+ r -> do
+    v1 <- evalExp l env
+    v2 <- evalExp r env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return $ VInt (i1 + i2)
+      (VFloat f1, VFloat f2) -> return $ VFloat (f1 + f2)
+      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
+  l :* r -> do
+    v1 <- evalExp l env
+    v2 <- evalExp r env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return $ VInt (i1 * i2)
+      (VFloat f1, VFloat f2) -> return $ VFloat (f1 * f2)
+      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)          
+  l :- r -> do
+    v1 <- evalExp l env
+    v2 <- evalExp r env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return $ VInt (i1 - i2)
+      (VFloat f1, VFloat f2) -> return $ VFloat (f1 - f2)
+      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
+  l :/ r -> do
+    v1 <- evalExp l env
+    v2 <- evalExp r env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> if i2 == 0
+        then throwError (DivByZeroError "Trying to divide by an integer zero")
+        else return $ VInt (i1 `div` i2)
+      (VFloat f1, VFloat f2) -> if f2 == 0
+        then throwError (DivByZeroError "Trying to divide by a float zero")
+        else return $ VFloat (f1 / f2)
+      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
+  l :== r -> do
+    v1 <- evalExp l env
+    v2 <- evalExp r env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return $ VBool (i1 == i2)
+      (VFloat f1, VFloat f2) -> return $ VBool (f1 == f2)
+      (VBool b1, VBool b2) -> return $ VBool (b1 == b2)
+      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
+  l :$ r -> do
+    v1 <- evalExp l env
+    v2 <- evalExp r env
+    case v1 of
+      (VLam s env' e) -> evalExp e ((s, v2) : env')
+      _ -> throwError (TypeError "Function application first parameter isn't a lambda")
+  Not n -> _              -- not e
+
+updateEnv :: String -> Val -> Env -> Env
+updateEnv s v [] = [(s,v)]
+updateEnv s v ((s', v'):xs)
+  | s == s' = (s, v) : xs
+  | otherwise = (s', v') : updateEnv s v xs
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement (Assign n e) = do
+  env <- get
+  v <- evalExp e env
+  modify (updateEnv n v)
+evalStatement (If e p) = do
+  env <- get
+  v <- evalExp e env
+  case v of
+    VBool True -> evalProgram p -- do a <- x return a ==== x
+    VBool False -> return ()
+    _ -> throwError (TypeError "Not a bool in if")
+evalStatement (While e p) = do
+  env <- get
+  v <- evalExp e env
+  case v of
+    VBool True -> evalProgram p >> evalStatement (While e p)
+    VBool False -> return ()
+    _ -> throwError (TypeError "Not a bool in while")
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
