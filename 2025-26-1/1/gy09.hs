@@ -23,7 +23,7 @@ instance Monad Parser where
 
 
 -- A Parser és a State két fő különbsége
--- 1. A Parsernek a "belső állapota" mindig string
+-- 1. A Parsernek a "belső állapota" mindig String
 -- 2. A Parser el tud hasalni (ezt a belső Maybe reprezentálja)
 -- Az elhasalásnál megjegyezhetjük miért áltunk meg egy hiba formájában
 -- Ekkor a Parsert lehetne ExceptT String (State String) a-val is reprezentálni (később ezzel is lesz)
@@ -31,39 +31,51 @@ instance Monad Parser where
 -- Primitív parserek
 -- Olyan parser, amely lenyel egy karaktert a bemenetről és akkor fogad el, ha az adott predikátum teljesül rá
 satisfy :: (Char -> Bool) -> Parser Char
-satisfy = undefined
+satisfy p = Parser $ \input -> case input of
+  (c : cs) -> if p c then Just (c , cs) else Nothing
+  [] -> Nothing
 
 -- Olyan parser, amely akkor fogad el, ha nincs semmi a bemeneten
 eof :: Parser ()
-eof = undefined
+eof = Parser $ \input -> case input of
+  [] -> Just ((),[]) --pure []
+  _  -> Nothing
 
 -- Ezekből felépíthetőek egyéb parserek
 -- Olyan parser, ami egy adott karaktert parseol
 -- Itt irreleváns az, hogy mi a kimenet
 char :: Char -> Parser ()
-char = undefined
+char c = do--void $ satisfy (== c)
+  satisfy (== c)
+  return ()
 
 -- Parseoljunk akármilyen karaktert
 anychar :: Parser Char
-anychar = undefined
+anychar = satisfy (const True)
 
 -- Parseoljunk egy konkrét stringet
 -- hint: mapM_
 string :: String -> Parser ()
-string = undefined
-
+--string [] = return ()
+string s = mapM_ char s{-do
+  char x
+  string xs 
+-}
 -- Parsernél fontos a "vagy" művelet (ha az első parser elhasal, akkor a másikat próbáljuk meg)
 -- Ez lesz az Alternative típusosztály
 instance Alternative Parser where
   empty :: Parser a -- Garantáltan elhasaló parser
-  empty = undefined
+  empty = Parser $ const Nothing
   (<|>) :: Parser a -> Parser a -> Parser a -- Ha a baloldali sikertelen, futassuk le a jobboldalit (hint: A Maybe is egy alternatív)
-  (<|>) = undefined
+  p1 <|> p2 = Parser $ \input -> case runParser p1 input of
+                                  Nothing -> runParser p2 input
+                                  x -> x
 
 -- Definiáljunk egy parsert ami egy 'a' vagy egy 'b' karaktert parseol
 
 aorb :: Parser Char
-aorb = undefined
+aorb = ('a' <$ char 'a') <|> ('b' <$ char 'b')
+--satisfy (== 'a') <|> satisfy (== 'b')
 
 -- many :: Parser a -> Parser [a]
 -- 0 vagy többször lefuttatja a parsert
@@ -79,17 +91,22 @@ some' p = (:) <$> p <*> many' p -- Lefuttatja 1x és utána 0 vagy többször
 -- optional' :: Parser a -> Parser (Maybe a)
 -- ha elhasalna a parser, mégse hasal el
 optional' :: Parser a -> Parser (Maybe a)
-optional' p = undefined
+optional' p = do
+  a <- (Just <$> p) <|> return Nothing
+  return a
+
 
 -- replicateM :: Int -> Parser a -> Parser [a]
 -- n-szer lefuttat egy parsert
 replicateM' :: Integral i => i -> Parser a -> Parser [a]
-replicateM' = undefined
+replicateM' 0 _ = return []
+replicateM' n p = (:) <$> p <*> replicateM' (n - 1) p
 
 -- asum :: [Parser a] -> Parser a
 -- Sorban megpróbálja az összes parsert lefuttatni
 asum' :: [Parser a] -> Parser a
-asum' = undefined
+asum' [] = empty
+asum' (p : ps) = p <|> asum' ps
 
 -- Regex féle parserek
 {-
@@ -110,7 +127,9 @@ asum' = undefined
 
 -- alm(a|ák)
 p1 :: Parser ()
-p1 = undefined
+p1 = do
+  string "alm"
+  char 'a' <|> string "ák"
 
 -- c(i+)ca
 p2 :: Parser ()
@@ -118,7 +137,12 @@ p2 = undefined
 
 -- (c*)i?(c+)a{3}
 p3 :: Parser ()
-p3 = undefined
+p3 = do
+  many (char 'c')
+  optional' (char 'i')
+  some (char 'c')
+  replicateM' 3 (char 'a')--string "aaa"
+  return ()
 
 -- (alma|banana)?
 p4 :: Parser ()
