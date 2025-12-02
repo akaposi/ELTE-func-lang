@@ -363,16 +363,23 @@ evalStatement (If e p) = do
   env <- get
   v <- evalExp e env
   case v of
-    VBool True -> evalProgram p -- do a <- x return a ==== x
+    VBool True -> inBlockScope $ evalProgram p -- do a <- x return a ==== x
     VBool False -> return ()
     _ -> throwError (TypeError "Not a bool in if")
 evalStatement (While e p) = do
   env <- get
   v <- evalExp e env
   case v of
-    VBool True -> evalProgram p >> evalStatement (While e p)
+    VBool True -> inBlockScope $ evalProgram p >> evalStatement (While e p)
     VBool False -> return ()
     _ -> throwError (TypeError "Not a bool in while")
+
+inBlockScope :: MonadState Env m => m a -> m a
+inBlockScope m = do
+  env <- get
+  a <- m
+  modify (take (length env))
+  return a
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
