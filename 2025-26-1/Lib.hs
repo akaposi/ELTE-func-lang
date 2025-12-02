@@ -1,14 +1,64 @@
 {-# LANGUAGE LambdaCase #-}
-module Gy11 where
+{-# OPTIONS_GHC -Wno-unused-imports -Wno-name-shadowing -Wno-unused-matches -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Werror=incomplete-patterns #-}
+module Lib where
 
 import Control.Monad.State
 import Control.Monad.Except
+import Control.Monad.Reader
+import Control.Monad.Writer
+import Control.Monad.IO.Class
 import Data.List
 import Data.Bifunctor
+import Data.Bitraversable
 import Control.Monad
 import Data.Functor
 import Data.Char
-import Data.Foldable
+import Data.Foldable hiding ( asum )
+import GHC.Stack
+import Debug.Trace
+
+{-# ANN module "HLint: ignore Evaluate" #-}
+{-# ANN module "HLint: ignore Use ++" #-}
+
+
+-- Utils
+
+stackTrace :: HasCallStack => String
+stackTrace = concatMap
+  (\(fun, s) -> "\tcall to '" ++ fun ++ "' at line " ++ show (srcLocStartLine s) ++ ", column " ++ show (srcLocStartCol s) ++ "\n") $
+  getCallStack callStack
+
+printRest :: Parser ()
+printRest = get >>= traceM
+
+evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
+evalProgram = mapM_ evalStatement
+
+runProgramT :: Monad m => [Statement] -> m (Either InterpreterError Env)
+runProgramT = runExceptT . flip execStateT [] . evalProgram
+
+runProgram :: [Statement] -> Either InterpreterError Env
+runProgram = runExcept . flip execStateT [] . evalProgram
+
+runProgramPretty :: [Statement] -> IO ()
+runProgramPretty sts = do
+  res <- runProgramT sts
+  case res of
+    Right env -> forM_ env $ \(var, val) -> putStrLn $ var ++ " == " ++ show val
+    Left err -> putStrLn (message err)
+
+parseAndRunProgram :: String -> IO ()
+parseAndRunProgram s = do
+  Right r <- bitraverse fail pure (parseProgram s)
+  runProgramPretty r
+
+run :: String -> Env
+run s = case parseProgram s of
+  Right sts -> case runProgram sts of
+    Right e -> e
+    _ -> error "interpreter error"
+  _ -> error "parse error"
 
 -- Parser
 
@@ -30,6 +80,9 @@ many p = some p <|> pure []
 some :: MonadError e m => m a -> m [a]
 some p = (:) <$> p <*> many p
 
+asum :: MonadError e m => e -> [m a] -> m a
+asum e = foldr (<|>) (throwError e)
+
 -- Primitívek
 
 satisfy :: (Char -> Bool) -> Parser Char
@@ -38,7 +91,7 @@ satisfy p = get >>= \case
   _            -> throwError "satisfy: condition not met or string empty"
 
 eof :: Parser ()
-eof = get >>= (<|> throwError "eof: String not empty") . guard . null
+eof = get >>= \s -> (<|> throwError ("eof: String not empty. Remaining string: "  ++ s)) (guard $ null s)
 
 char :: Char -> Parser ()
 char c = void $ satisfy (== c) <|> throwError ("char: not equal to " ++ [c])
@@ -153,13 +206,26 @@ data Exp
   | Exp :== Exp          -- e1 == e2
   | Exp :$ Exp           -- e1 $ e2
   | Not Exp              -- not e
+  | Sign Exp             -- sign e
   deriving (Eq, Show)
+
+instance Num Exp where
+  (+) = (:+)
+  (*) = (:*)
+  abs x = x * signum x
+  (-) = (:-)
+  fromInteger = IntLit . fromInteger
+  signum = Sign
+
+instance Fractional Exp where
+  (/) = (:/)
+  fromRational = FloatLit . fromRational
 
 {-
 +--------------------+--------------------+--------------------+
 | Operátor neve      | Kötési irány       | Kötési erősség     |
 +--------------------+--------------------+--------------------+
-| not                | Prefix             | 20                 |
+| not, sign          | Prefix             | 20                 |
 +--------------------+--------------------+--------------------+
 | *                  | Jobbra             | 18                 |
 +--------------------+--------------------+--------------------+
@@ -177,7 +243,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not", "if", "then", "end", "do", "while"]
+keywords = ["true", "false", "not", "sign", "if", "then", "do", "for", "lam", "end"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -188,7 +254,7 @@ pKeyword :: String -> Parser ()
 pKeyword = string'
 
 pAtom :: Parser Exp
-pAtom = asum [
+pAtom = asum "pAtom: no atom matched" [
   FloatLit <$> float',
   IntLit <$> integer',
   BoolLit True <$ pKeyword "true",
@@ -196,10 +262,10 @@ pAtom = asum [
   LamLit <$> (pKeyword "lam" *> pNonKeyword) <*> (string' "->" *> pExp),
   Var <$> pNonKeyword,
   between (char' '(') pExp (char' ')')
-             ] <|> throwError "pAtom: no literal, var or bracketed matches"
+             ]
 
 pNot :: Parser Exp
-pNot = (Not <$> (pKeyword "not" *> pNot)) <|> pAtom
+pNot = (Not <$> (pKeyword "not" *> pNot)) <|> (Sign <$> (pKeyword "sign" *> pNot)) <|> pAtom
 
 pMul :: Parser Exp
 pMul = chainr1 pNot ((:*) <$ char' '*')
@@ -229,39 +295,21 @@ data Statement
   | Assign String Exp         -- v := e
   deriving (Eq, Show)
 
--- Írjunk ezekre parsereket!
--- Egy programkód egyes sorait ;-vel választjuk el
-
 program :: Parser [Statement]
-program = sepBy1 statement (char' ';')
+program = tok $ many (statement <* char' ';')
+
 
 statement :: Parser Statement
-statement = sIf <|> sWhile <|> sAssign
+statement = asum "statement: no statement matched" [sIf, sWhile, sAssign]
 
 sIf :: Parser Statement
-sIf = do   -- If <$> (pKeyword "if" *> pExp) <*> (pKeyword "then" *> program <* pKeyword "end")
-  pKeyword "if"
-  e <- pExp
-  pKeyword "then"
-  p <- program
-  pKeyword "end"
-  return (If e p)
+sIf = If <$> (pKeyword "if" *> pExp) <*> (pKeyword "then" *> program <* pKeyword "end")
 
 sWhile :: Parser Statement
-sWhile = do
-  pKeyword "while"
-  e <- pExp
-  pKeyword "do"
-  p <- program
-  pKeyword "end"
-  return (While e p)
+sWhile = While <$> (pKeyword "while" *> pExp) <*> (pKeyword "do" *> program <* pKeyword "end")
 
 sAssign :: Parser Statement
-sAssign = do
-  var <- pNonKeyword
-  pKeyword ":="
-  e <- pExp
-  return (Assign var e)
+sAssign = Assign <$> pNonKeyword <*> (pKeyword ":=" *> pExp)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -280,108 +328,107 @@ data Val
 type Env = [(String, Val)] -- a jelenlegi környezet
 
 data InterpreterError
-  = TypeError String -- típushiba üzenettel
-  | ScopeError String -- variable not in scope üzenettel
-  | DivByZeroError String -- 0-val való osztás hibaüzenettel
-  | ParseError String
-  deriving Show
+  = TypeError { message :: String } -- típushiba üzenettel
+  | ScopeError { message :: String } -- variable not in scope üzenettel
+  | DivByZeroError { message :: String } -- 0-val való osztás hibaüzenettel
+  deriving (Eq, Show)
 
--- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
-evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
+evalExp :: (HasCallStack, MonadError InterpreterError m) => Exp -> Env -> m Val
 evalExp exp env = case exp of
   IntLit i -> return (VInt i)
-  FloatLit d -> return (VFloat d)
+  FloatLit f -> return (VFloat f)
   BoolLit b -> return (VBool b)
-  Var v -> case lookup v env of
-    Just val -> return val
-    Nothing -> throwError (ScopeError $ "Variable not in scope: " ++ v)
   LamLit s e -> return (VLam s env e)
-  l :+ r -> do
-    v1 <- evalExp l env
-    v2 <- evalExp r env
+  Not e -> evalExp e env >>= \case
+    VBool b -> return (VBool $ not b)
+    _       -> throwError (TypeError $ "Type error in the operand of not\nSTACK TRACE:\n" ++ stackTrace)
+  Sign e -> evalExp e env >>= \case
+    VInt i -> return (VInt $ signum i)
+    VFloat f -> return (VFloat $ signum f)
+    _       -> throwError (TypeError $ "Type error in the operand of sign\nSTACK TRACE:\n" ++ stackTrace)
+  Var str -> case lookup str env of
+    Just v -> return v
+    Nothing -> throwError (ScopeError $ "Variable not in scope: " ++ str ++ "\nSTACK TRACE:\n" ++ stackTrace)
+  e1 :+ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
     case (v1, v2) of
-      (VInt i1, VInt i2) -> return $ VInt (i1 + i2)
-      (VFloat f1, VFloat f2) -> return $ VFloat (f1 + f2)
-      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
-  l :* r -> do
-    v1 <- evalExp l env
-    v2 <- evalExp r env
+      (VInt i1, VInt i2) -> return (VInt (i1 + i2))
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 + f2))
+      _ -> throwError (TypeError $ "Type error in the operands of +\nSTACK TRACE:\n" ++ stackTrace)
+  e1 :- e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
     case (v1, v2) of
-      (VInt i1, VInt i2) -> return $ VInt (i1 * i2)
-      (VFloat f1, VFloat f2) -> return $ VFloat (f1 * f2)
-      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)          
-  l :- r -> do
-    v1 <- evalExp l env
-    v2 <- evalExp r env
+      (VInt i1, VInt i2) -> return (VInt (i1 - i2))
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 - f2))
+      _ -> throwError (TypeError $ "Type error in the operands of -\nSTACK TRACE:\n" ++ stackTrace)
+  e1 :* e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
     case (v1, v2) of
-      (VInt i1, VInt i2) -> return $ VInt (i1 - i2)
-      (VFloat f1, VFloat f2) -> return $ VFloat (f1 - f2)
-      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
-  l :/ r -> do
-    v1 <- evalExp l env
-    v2 <- evalExp r env
+      (VInt i1, VInt i2) -> return (VInt (i1 * i2))
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 * f2))
+      _ -> throwError (TypeError $ "Type error in the operands of *\nSTACK TRACE:\n" ++ stackTrace)
+  e1 :/ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
     case (v1, v2) of
-      (VInt i1, VInt i2) -> if i2 == 0
-        then throwError (DivByZeroError "Trying to divide by an integer zero")
-        else return $ VInt (i1 `div` i2)
-      (VFloat f1, VFloat f2) -> if f2 == 0
-        then throwError (DivByZeroError "Trying to divide by a float zero")
-        else return $ VFloat (f1 / f2)
-      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
-  l :== r -> do
-    v1 <- evalExp l env
-    v2 <- evalExp r env
+      (VInt i1, VInt 0) -> throwError (DivByZeroError $ "Cannot divide by integer zero\nSTACK TRACE:\n" ++ stackTrace)
+      (VInt i1, VInt i2) -> return (VInt (div i1 i2))
+      (VFloat f1, VFloat f2) | abs f2 < 0.0001 -> throwError (DivByZeroError $ "Cannot divide by float zero\nSTACK TRACE:\n" ++ stackTrace)
+      (VFloat f1, VFloat f2) -> return (VFloat (f1 / f2))
+      _ -> throwError (TypeError $ "Type error in the operands of /\nSTACK TRACE:\n" ++ stackTrace)
+  e1 :== e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
     case (v1, v2) of
-      (VInt i1, VInt i2) -> return $ VBool (i1 == i2)
-      (VFloat f1, VFloat f2) -> return $ VBool (f1 == f2)
-      (VBool b1, VBool b2) -> return $ VBool (b1 == b2)
-      _ -> throwError (TypeError $ "Couldn't match the type of " ++ show v1 ++ " with the type of " ++ show v2)
-  l :$ r -> do
-    v1 <- evalExp l env
-    v2 <- evalExp r env
+      (VInt i1, VInt i2) -> return (VBool (i1 == i2))
+      (VFloat f1, VFloat f2) -> return (VBool (f1 == f2))
+      (VBool b1, VBool b2) -> return (VBool (b1 == b2))
+      _ -> throwError (TypeError $ "Type error in the operands of ==\nSTACK TRACE:\n" ++ stackTrace)
+  e1 :$ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
     case v1 of
       (VLam s env' e) -> evalExp e ((s, v2) : env')
-      _ -> throwError (TypeError "Function application first parameter isn't a lambda")
-  Not n -> evalExp n env >>= \case
-    VBool t -> pure (VBool $ not t)
-    t  -> throwError (TypeError $ "Couldn't match the type of " ++ show t ++ " with Bool")
+      _ -> throwError (TypeError $ "Type error in the operands of function application\nSTACK TRACE:\n" ++ stackTrace)
 
-updateEnv :: String -> Val -> Env -> Env
-updateEnv s v [] = [(s,v)]
-updateEnv s v ((s', v'):xs)
+
+updateEnv :: Env -> String -> Val -> Env
+updateEnv [] s v = [(s,v)]
+updateEnv ((s', v'):xs) s v
   | s == s' = (s, v) : xs
-  | otherwise = (s', v') : updateEnv s v xs
+  | otherwise = (s', v') : updateEnv xs s v
+
+inBlockScope :: MonadState Env m => m a -> m a
+inBlockScope f = do
+  env <- get
+  a <- f
+  modify (take (length env))
+  pure a
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
-evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement (Assign n e) = do
-  env <- get
-  v <- evalExp e env
-  modify (updateEnv n v)
-evalStatement (If e p) = do
-  env <- get
-  v <- evalExp e env
-  case v of
-    VBool True -> evalProgram p -- do a <- x return a ==== x
-    VBool False -> return ()
-    _ -> throwError (TypeError "Not a bool in if")
-evalStatement (While e p) = do
-  env <- get
-  v <- evalExp e env
-  case v of
-    VBool True -> evalProgram p >> evalStatement (While e p)
-    VBool False -> return ()
-    _ -> throwError (TypeError "Not a bool in while")
-
-evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
-evalProgram = mapM_ evalStatement
-
-runProgram :: [Statement] -> Either InterpreterError Env
-runProgram s = runExcept (execStateT (evalProgram s) [])
-
-runStringProgram :: String -> Either InterpreterError Env
-runStringProgram s = either (throwError . ParseError) pure (parseProgram s) >>= runProgram
-
--- Egészítsük ki a nyelvet egy print állítással (hint: MonadIO megkötés)
--- Egészítsük ki a nyelvet más típusokkal (tuple, either stb)
+evalStatement :: (HasCallStack, MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
+evalStatement st = case st of
+  Assign x e -> do
+    env <- get
+    v <- evalExp e env
+    put (updateEnv env x v)
+  If e sts -> do
+    env <- get
+    v1 <- evalExp e env
+    case v1 of
+      VBool True -> inBlockScope $ evalProgram sts
+      VBool _ -> pure ()
+      _ -> throwError (TypeError $ "Type error in the condition of 'if'\nSTACK TRACE:\n" ++ stackTrace)
+  While e sts -> do
+    env <- get
+    v1 <- evalExp e env
+    case v1 of
+      VBool True -> do
+        inBlockScope $ evalProgram sts
+        evalStatement (While e sts)
+      VBool _ -> pure ()
+      _ -> throwError (TypeError $ "Type error in the condition of 'while'\nSTACK TRACE:\n" ++ stackTrace)
