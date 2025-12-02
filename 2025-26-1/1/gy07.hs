@@ -11,6 +11,7 @@ import Control.Monad.Except
 import Control.Monad
 import Control.Monad.State
 import Data.List
+import Data.Char
 
 
 prodTR :: Num a => [a] -> a
@@ -190,3 +191,30 @@ f3 = undefined
 -- Egyéb érdekes transzformerek
 -- Megszakítási környezet: ContT transzformer
 -- Akkumulációs környezet: AccumT transzformer
+
+infinityCalc' :: StateT Int IO ()
+infinityCalc' = do
+    line <- liftIO getLine
+    case line of
+      ('+' : ' ' : xs ) -> modify (+ read xs)
+      ('-' : ' ' : xs ) -> modify (\x -> x - read xs)
+      "print" -> (do
+        state <- get
+        liftIO (print state))
+      _ -> put (read line)
+    infinityCalc'
+
+
+infinityCalc :: StateT Int IO ()
+infinityCalc = do
+    line <- liftIO getLine
+    case line of
+      ('+' : ' ' : xs ) -> modify (+ read xs)
+      ('-' : ' ' : xs ) -> modify (\x -> x - read xs)
+      l -> when (all isDigit l) (put (read line))
+    when (line == "print") (do
+        state <- get
+        liftIO (print state))
+    infinityCalc
+    
+runCalc m = runStateT m 0
