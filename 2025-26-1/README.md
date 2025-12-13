@@ -62,7 +62,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
 | 8   |         | Parser, Alternative (reguláris kifejezések)                                             |
 | 9   |         | Parser kombinátorok, egyszerű kifejezésnyelv, recursive descent parsing algoritmus      |
 | 10  |         | While nyelv állításokkal, interpreter                                                   |
-| 11  |         | Interpreter kiegészítése                                                                |
+| 11  | Invited talk by Diviánszky Péter ([file 1](https://github.com/faulhornlabs/csip/blob/main/experiment/FunctionalAssembly.hs), [file 2](https://github.com/faulhornlabs/csip/blob/main/experiment/functionalAssembly.idr)) | Interpreter kiegészítése                                                                |
 
 
 #### Anyagok
