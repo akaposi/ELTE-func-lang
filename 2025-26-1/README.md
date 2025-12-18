@@ -46,7 +46,7 @@ Az ELTE BSc-s "funkcionális programozás" tárgy anyagának készség szintű i
   + 28 pont megszerzése esetén a vizsgán +1 jegyet lehet szerezni, legalább 2-es megszerzése esetén.
 - Gyakorlatok látogatása kötelező, maximum három hiányzás engedélyezett.
 - Az előadások látogatása (BSc hallgatóknak) kötelező.
-- A tárgyi jegy vizsgaidőszaki vizsgából áll elő. A vizsga jelenléti. A vizsgázás előfeltétele a gyakorlati követelmény teljesítése. A vizsga gépes feladmegoldásból áll és két órás. Vizsgán minden segédeszköz/internet használható, viszont együttműködés más vizsgázóval, külső személlyel vagy mesterséges intelligenciával (ChatGPT, BingAI stb) nem engedélyezett, aki ezt megsérti, elégtelen jegyet kap és nem vizsgázhat újra az adott vizsgaidőszakban. A vizsga megoldást akárhányszor be lehet küldeni, az utolsó beküldött verzió számít. A vizsgán csak az önmagában forduló kód lesz értékelve, a kommentek figyelembe lesznek véve.
+- A tárgyi jegy vizsgaidőszaki vizsgából áll elő. A vizsga jelenléti. A vizsgázás előfeltétele a gyakorlati követelmény teljesítése. A vizsga gépes feladmegoldásból áll és 2.5 órás. Vizsgán minden segédeszköz/internet használható, viszont együttműködés más vizsgázóval, külső személlyel vagy mesterséges intelligenciával (ChatGPT, BingAI stb) nem engedélyezett, aki ezt megsérti, elégtelen jegyet kap és nem vizsgázhat újra az adott vizsgaidőszakban. A vizsga megoldást akárhányszor be lehet küldeni, az utolsó beküldött verzió számít. A vizsgán csak az önmagában forduló kód lesz értékelve, a kommentek figyelembe lesznek véve.
 
 #### Tematika
 
