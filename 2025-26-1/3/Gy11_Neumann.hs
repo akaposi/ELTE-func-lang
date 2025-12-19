@@ -227,24 +227,41 @@ data Statement
   = If Exp [Statement]        -- if e then p end
   | While Exp [Statement]     -- while e do p end
   | Assign String Exp         -- v := e
+  deriving Show
 
 -- Írjunk ezekre parsereket!
 -- Egy programkód egyes sorait ;-vel választjuk el
 
 program :: Parser [Statement]
-program = undefined
+program = sepBy1 statement (char' ';')
 
 statement :: Parser Statement
-statement = undefined
+statement = sIf <|> sWhile <|> sAssign
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = do
+  pKeyword "if"
+  e <- pExp
+  pKeyword "then"
+  p <- program
+  pKeyword "end"
+  return (If e p)
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = do
+  pKeyword "while"
+  e <- pExp
+  pKeyword "do"
+  p <- program
+  pKeyword "end"
+  return (While e p)
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = do
+  n <- pNonKeyword
+  string' ":="
+  e <- pExp
+  return (Assign n e)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -258,6 +275,7 @@ data Val
   | VFloat Double         -- double kiértékelt alakban
   | VBool Bool            -- bool kiértékelt alakban
   | VLam String Env Exp   -- lam kiértékelt alakban
+  deriving Show
 
 type Env = [(String, Val)] -- a jelenlegi környezet
 
@@ -265,11 +283,28 @@ data InterpreterError
   = TypeError String -- típushiba üzenettel
   | ScopeError String -- variable not in scope üzenettel
   | DivByZeroError String -- 0-val való osztás hibaüzenettel
+  deriving Show
 
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp e env = case e of
+  l :+ r -> do
+    lv <- evalExp l env
+    rv <- evalExp r env
+    case (lv, rv) of
+      (VInt i1, VInt i2) -> pure (VInt $ i1 + i2)
+      _                  -> throwError (TypeError "hiba")
+  Var x -> case lookup x env of
+    Just v -> pure v
+    Nothing -> throwError (ScopeError "hiba")
+  LamLit x t -> pure (VLam x env t)
+  l :$ r -> do
+    lv <- evalExp l env
+    rv <- evalExp r env
+    case lv of
+      VLam x e t -> evalExp t ((x, rv) : e)
+      _ -> throwError (TypeError "hiba")
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
