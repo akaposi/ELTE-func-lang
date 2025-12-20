@@ -308,7 +308,34 @@ evalExp e env = case e of
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement (If e p) = do
+  env <- get
+  v <- evalExp e env
+  case v of
+    VBool True -> inBlockScope $ evalProgram p
+    VBool False -> pure ()
+    _ -> throwError (TypeError "hiba")
+evalStatement (Assign n e) = do
+  env <- get
+  v <- evalExp e env
+  modify (updateEnv n v)
+
+inBlockScope :: MonadState Env m => m a -> m a
+inBlockScope m = do
+  l <- length <$> get -- gets :: MonadState m s => (s -> a) -> m a
+  a <- m
+  modify (take l)
+  return a
+
+-- Ha az envben benne van: in place update
+-- Ha nincs: vegere
+
+updateEnv :: String -> Val -> Env -> Env
+updateEnv s v [] = [(s,v)]
+updateEnv s v ((s', v'):xs)
+  | s == s' = (s, v) : xs
+  | otherwise = (s', v') : updateEnv s v xs
+
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
