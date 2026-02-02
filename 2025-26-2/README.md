@@ -1,4 +1,4 @@
-# Funckionális nyelvek, 2025 ősz, EA + GY
+# Funckionális nyelvek, 2025/26 tavasz, EA + GY
 
 Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 
