@@ -28,7 +28,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 | Petes Márton                      | tx0lwm @ inf.elte.hu  | Petes Márton / TX0LWM (Preferált)   |
 | Suszter Roland                    | xjq2db @ inf.elte.hu  | Suszter Roland / XJQ2DB (Preferált) |
 | Stefania Damato                   | TBA                   | TBA                                 |
-| Szávó Tamás (Javító Demonstrátor) | TBA                   | TBA                                 |
+| Szávó Tamás (Javító Demonstrátor) | hq11w9 @ inf.elte.hu  | Szávó Tamás / HQ11W9 (Preferált)    |
 
 
 #### Infrastruktúra
