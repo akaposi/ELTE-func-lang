@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wincomplete-patterns #-}
 
 module Gy01 where
+import Data.Binary.Get (Decoder(Fail))
 
 {-
 
@@ -43,14 +44,25 @@ Pragmák:
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+xor True True = False 
+xor False False = False 
+xor _ _ = True
 
+xor' :: Bool -> Bool -> Bool
+xor' a b = a /= b
+
+f :: Int -> Int -> Int
+f x y
+  | y < 4 = x - y
+  | otherwise = case x + y of
+                3 -> 136
+                _ -> -1 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
 {-
-case x of
-  True -> ...
-  False -> ...
+case x + y of
+  3 -> ...
+  _ -> ...
 -}
 
 -- Let/Where kifejezések: lokális definíciók:
@@ -58,17 +70,21 @@ twelve :: Int
 twelve = x + x
   where
     x = 6
+    help :: a -> a
+    help a = a
 
 twelve' :: Int
 twelve' = let x = 6 in x + x
 
 -- Polimorfizmus: A függvény tetszőleges típusokra működik
-id' :: a -> a
-id' x = x
+id' :: Num a => a -> b -> a
+id' x y = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (a, (b, (c, d))) = (b, c)
+
+
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -76,32 +92,38 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 f = f
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 f g = f . g -- f (g a)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 f b a = f a b 
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
 -- snd :: (a,b) -> b
 
 f5 :: ((a, b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
-f5 = undefined
+f5 = curry
+
+f5' :: ((a, b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
+f5' f a b = f (a , b)
 
 f6 :: (a -> b -> c) -> (a, b) -> c
-f6 = undefined
+f6 = uncurry
+
+f6' :: (a -> b -> c) -> (a, b) -> c
+f6' f (a,b) = f a b
 
 -- Ha az eredménybe függvényt kell megadni használj lambdákat!
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\x -> fst (f x) , \x -> snd (f x))
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
-f8 = undefined
+f8 (f , g) a = (f a, g a)
 
 -- ADT-k emlékeztető:
 -- Either adattípus. Két konstruktora van, Left és Right, ami vagy a-t vagy b-t tárol:
@@ -111,13 +133,15 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 (Left a) = Right a
+f9 (Right b) = Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
-f10 = undefined
+f10 f = (\a -> f (Left a), \b -> f (Right b)) 
 
 f11 :: (a -> c, b -> c) -> (Either a b -> c)
-f11 = undefined
+f11 (f,g) (Right b) = g b
+f11 (f,g) (Left a) = f a
 
 -- Bónusz
 
@@ -136,10 +160,11 @@ f14 = undefined
 -- Definiáljuk a map, filter függvényeket listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
-map' = undefined
+map' f [] = []
+map' f (x : xs) = f x : map' f xs
 
 filter' :: (a -> Bool) -> [a] -> [a]
-filter' = undefined
+filter' p l = [ x | x <- l, p x] 
 
 
 -- Definiáljunk egyéb hasznos lista függvényeket, amelyek részei a standard librarynek.
