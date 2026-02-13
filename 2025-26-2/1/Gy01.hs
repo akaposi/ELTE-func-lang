@@ -43,7 +43,16 @@ Pragmák:
 
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+-- xor True False = True
+-- xor False True = True
+-- xor _ _ = False
+-- xor x y
+--   | (x && not y) || (not x && y) = True
+--   | otherwise = False
+--xor x y = x /= y
+xor x y = case x of
+  True -> not y
+  False -> y
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -68,7 +77,7 @@ id' x = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (_, (b, (c, _))) = (b, c) 
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -76,32 +85,32 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 f = f
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 g f = g . f -- a $ b c === (a . b) c
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 f b a = f a b
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
 -- snd :: (a,b) -> b
 
 f5 :: ((a, b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
-f5 = undefined
+f5 f a b = f (a,b)
 
 f6 :: (a -> b -> c) -> (a, b) -> c
-f6 = undefined
+f6 f (a,b) = f a b
 
 -- Ha az eredménybe függvényt kell megadni használj lambdákat!
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\a -> fst (f a), \a -> snd (f a))
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
-f8 = undefined
+f8 (f, g) a = (f a, g a)
 
 -- ADT-k emlékeztető:
 -- Either adattípus. Két konstruktora van, Left és Right, ami vagy a-t vagy b-t tárol:
@@ -111,13 +120,16 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 (Left a) = Right a
+f9 (Right b) = Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
 f10 = undefined
 
 f11 :: (a -> c, b -> c) -> (Either a b -> c)
-f11 = undefined
+f11 (f, g) e = case e of
+  Left a -> f a
+  Right b -> g b
 
 -- Bónusz
 
@@ -136,11 +148,15 @@ f14 = undefined
 -- Definiáljuk a map, filter függvényeket listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
-map' = undefined
+map' f xs = [ f x | x <- xs]
+--              ^ sorba veszem az xs elemeit
 
 filter' :: (a -> Bool) -> [a] -> [a]
-filter' = undefined
-
+-- filter' p [] = []
+-- filter' p (x : xs)
+--   | p x = x : filter' p xs
+--   | otherwise = filter' p xs
+filter' p xs = foldr (\x filteredXs -> if p x then x : filteredXs else filteredXs) [] xs
 
 -- Definiáljunk egyéb hasznos lista függvényeket, amelyek részei a standard librarynek.
 -- !! Vizsgán érdemes nem újrainventálni a teljes Haskell stdlib-et !!
