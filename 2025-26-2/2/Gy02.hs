@@ -13,31 +13,29 @@ data Tuple a = Tuple a a deriving (Eq, Show)
 data Quintuple a = Quintuple a a a a a deriving (Eq, Show)
 data List a = Nil | Cons a (List a) deriving (Eq, Show)
 data Maybe a = Just a | Nothing deriving (Eq, Show)
-data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
-data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
 data Either e a = Left e | Right a deriving (Eq, Show)
-data BiTuple e a = BiTuple e a deriving (Eq, Show)
-data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show)
-data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show)
+
 
 -- Próbáljunk meg olyan függvényeket írni, ami a fent említett típusoknak a típusparaméterét megváltoztatja
 -- Pl.: Single a -> Single b vagy List a -> List b
 -- Mivel a fenti típusok mind valamilyen szinten tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a1 a2) = Tuple (f a1) (f a2)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
 mapQuintuple = undefined
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f (Just a) = Just (f a) 
+mapMaybe f Nothing = Nothing
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f Nil = Nil
+mapList f (Cons a xs) = Cons (f a) (mapList f xs)
 
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmust típusfüggvényekre alkalmazzuk):
 {-
@@ -85,31 +83,50 @@ instance Functor List where
 
 -- Írjuk meg a többi típusra is a Functor instance-ot!
 
+data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
 
+data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a as) = NECons2 (f a) (fmap f as)
+
+
+-- 0. lépés - illeszd le
+-- 1. lépés - vezessük be a leillesztet konstruktort
+-- 2. lépés - paraméter típusának megállapítása:
+--   - pontosan 'a' - f a
+--   - függ 'a'-tól - fmap f as
+--   - független    - x
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left fix) = Left fix
+  fmap f (Right a) = Right (f a)
 
+data BiTuple e a = BiTuple e a deriving (Eq, Show)
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
-  fmap = undefined
+  fmap f (BiTuple fix a) = BiTuple fix (f a)
 
+data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show)
 instance Functor (TriEither fixed1 fixed2) where
   fmap :: (a -> b) -> TriEither fixed1 fixed2 a -> TriEither fixed1 fixed2 b
-  fmap = undefined
+  fmap f (RightT a) = RightT (f a)
+  fmap f (LeftT fix) = LeftT fix
+  fmap f (MiddleT fix) = MiddleT fix
 
+data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show)
 instance Functor (BiList fixed) where
   fmap :: (a -> b) -> BiList fixed a -> BiList fixed b
-  fmap = undefined
+  fmap f (ACons fix as) = ACons fix (fmap f as)
+  fmap f (BCons a as) = BCons (f a) (fmap f as)
+  fmap f ABNill = ABNill 
 
 -- "nagyon" magasabbrendú polimorfizmus. Ha egy Type -> Type kindú valamit és egy típust adunk meg, csak akkor lesz teljes
 
@@ -123,17 +140,17 @@ newtype Lift f a = Lift (f a) deriving (Eq, Show)
 -- Van különbség
 
 -- Példa:
-listOfInts :: Lift List Int
+listOfInts :: Lift List Int -- Lift (List a)
 listOfInts = Lift (Cons 1 (Cons 2 Nil))
 
-maybeABool :: Lift Maybe Bool
+maybeABool :: Lift Maybe Bool --Lift (Maybe Bool)
 maybeABool = Lift Nothing -- pont nincs bool :(
 
 -- Le kell az első paramétert fixálnunk, hogy tudjunk rá Functor-t írni
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap f (Lift fa) = Lift $ fmap f fa
 
 -- f az vmi funktor
 -- g : a -> b
@@ -146,17 +163,18 @@ data Compose f g a = Compose (f (g a)) deriving (Eq, Show)
 
 instance (Functor f, Functor g) => Functor (Sum f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Sum f g a -> Sum f g b
-  fmap = undefined
+  fmap f (SumLeft fa) = SumLeft $ fmap f fa
+  fmap f (SumRight ga) = SumRight $ fmap f ga
 
 instance (Functor f, Functor g) => Functor (Product f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Product f g a -> Product f g b
-  fmap = undefined
+  fmap f (Product fa ga) = Product (fmap f fa) (fmap f ga)
 
 -- Nehéz
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
@@ -165,11 +183,15 @@ instance Functor (Fun q) where
   -- fmap :: (a -> b) -> (q -> a) -> (q -> b)
   -- Hint: mi a (.) típusa?
   fmap :: (a -> b) -> Fun q a -> Fun q b
-  fmap = undefined
+  fmap f (Fun g) = Fun $ f . g
 
 -- Egyéb érdekesség:
 data UselessF f a = Mk1 (f Int) a
 --                       ^ f nincs olyan pozícióban, hogy fmap-olni kéne rajta, tehát a Functor f megkötés felesleges
+
+instance Functor (UselessF useless) where
+  fmap :: (a -> b) -> UselessF useless a -> UselessF useless b
+  fmap f (Mk1 useless a) = Mk1 useless (f a)
 
 -- Gyakorlás:
 
