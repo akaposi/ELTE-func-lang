@@ -24,20 +24,23 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 -- Pl.: Single a -> Single b vagy List a -> List b
 -- Mivel a fenti típusok mind valamilyen szinten tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
+--                        V
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a b) = Tuple (f a) (f b)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a b c d e) = Quintuple (f a) (f b) (f c) (f d) (f e)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f Nothing = Nothing
+mapMaybe f (Just a) = Just (f a)
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f Nil = Nil
+mapList f (Cons a as) = Cons (f a) (mapList f as)
 
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmust típusfüggvényekre alkalmazzuk):
 {-
@@ -86,30 +89,48 @@ instance Functor List where
 -- Írjuk meg a többi típusra is a Functor instance-ot!
 
 instance Functor NonEmpty where
+  --       V a
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
+
+-- 1. Minden konstruktort leillesztünk
+-- 2. Minden ágra leírjuk a leillesztett konstruktort
+-- 3. Minden ágon sorba megyünk a konstruktor paramétereken és a típusaikon
+--    3a. Ha egy t paraméternek a típusa t :: a, akkor leírjuk azt, hogy f t
+--    3b. Ha egy t paraméternek a típusa t :: q, ahol q nem tartalmaz a-t, akkor leírjuk, hogy t
+--    3c. Ha egy t paraméternek a típusa t :: f a, akkor leírjuk azt, hogy fmap f t
+--    3d. Ha egy t paraméternek a típusa t :: f (g (... a)), akkor leírjuk azt, hogy fmap (fmap (...)) t
+
+-- data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a as) = NECons2 (f a) (fmap f as)
+  --       ^ 1.            ^ 2.    ^ 3a.  ^ 3c.
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
-instance Functor (Either fixed) where
+instance Functor (Either fixed) where -- Functor (\a -> Either a fixed)
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left e) = Left e --- 3b
+  fmap f (Right a) = Right (f a) --- 3a
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
-  fmap = undefined
+  fmap f (BiTuple e a) = BiTuple e (f a)
 
 instance Functor (TriEither fixed1 fixed2) where
   fmap :: (a -> b) -> TriEither fixed1 fixed2 a -> TriEither fixed1 fixed2 b
-  fmap = undefined
+  fmap f (LeftT e1) = LeftT e1
+  fmap f (MiddleT e2) = MiddleT e2
+  fmap f (RightT a) = RightT (f a)
 
 instance Functor (BiList fixed) where
   fmap :: (a -> b) -> BiList fixed a -> BiList fixed b
-  fmap = undefined
+  fmap f ABNill = ABNill
+  fmap f (ACons a as) = ACons a (fmap f as)
+  fmap f (BCons b bs) = BCons (f b) (fmap f bs)
 
 -- "nagyon" magasabbrendú polimorfizmus. Ha egy Type -> Type kindú valamit és egy típust adunk meg, csak akkor lesz teljes
 
@@ -133,7 +154,8 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap f (Lift fa) = Lift (fmap f fa)
+  -- fa :: f a
 
 -- f az vmi funktor
 -- g : a -> b
@@ -146,7 +168,8 @@ data Compose f g a = Compose (f (g a)) deriving (Eq, Show)
 
 instance (Functor f, Functor g) => Functor (Sum f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Sum f g a -> Sum f g b
-  fmap = undefined
+  fmap f (SumLeft fa) = SumLeft (fmap f fa)
+  fmap f (SumRight ga) = SumRight (fmap f ga)
 
 instance (Functor f, Functor g) => Functor (Product f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Product f g a -> Product f g b
@@ -156,7 +179,7 @@ instance (Functor f, Functor g) => Functor (Product f g) where
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
