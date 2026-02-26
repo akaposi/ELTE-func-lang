@@ -17,34 +17,23 @@ data Tuple a = Tuple a a deriving (Eq, Show)
 data Quintuple a = Quintuple a a a a a deriving (Eq, Show)
 data List a = Nil | Cons a (List a) deriving (Eq, Show)
 data Maybe a = Just a | Nothing deriving (Eq, Show)
-data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
-data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
-data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show)
-data Either e a = Left e | Right a deriving (Eq, Show)
-data BiTuple e a = BiTuple e a deriving (Eq, Show)
-data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show)
-data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show)
-data Apply f a = MkApply (f a) deriving (Eq, Show)
-data Fix f a = MkFix (f (Fix f a))
-data Compose f g a = MkCompose (f (g a)) deriving (Eq, Show)
-data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show)
-data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
-data FList f a = FNil | FCons (f a) (f (FList f a))
 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
-foldrSingle = undefined
+foldrSingle f b (Single a) = f a b
 
 foldrTuple :: (a -> b -> b) -> b -> Tuple a -> b
-foldrTuple = undefined
+foldrTuple f b (Tuple a1 a2) = f a1 (f a2 b) -- nem f a2 (f a1 b)
 
 foldrQuintuple :: (a -> b -> b) -> b -> Quintuple a -> b
 foldrQuintuple = undefined
 
 foldrList :: (a -> b -> b) -> b -> List a -> b
-foldrList = undefined
+foldrList f b Nil = b
+foldrList f b (Cons a as) = f a (foldrList f b as)
 
 foldrMaybe :: (a -> b -> b) -> b -> Maybe a -> b
-foldrMaybe = undefined
+foldrMaybe f b Nothing = b
+foldrMaybe f b (Just a) = f a b
 
 -- Hasonlóan a mappolhatósághoz, a hajtogatás is általánosítható a Foldable típusosztály segítéségvel
 {-
@@ -97,31 +86,86 @@ instance Foldable Maybe where
   foldr :: (a -> b -> b) -> b -> Maybe a -> b
   foldr = foldrMaybe
 
+data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
 instance Foldable NonEmpty where
+  foldr :: (a -> b -> b) -> b -> NonEmpty a -> b
+  foldr f b (Last a) = f a b
+  foldr f b (NECons a as) = f a (foldr f b as)
 
+  foldMap :: Monoid m => (a -> m) -> NonEmpty a -> m
+  foldMap f (Last a) = f a
+  foldMap f (NECons a as) = f a <> foldMap f as
+
+data NonEmpty2 a = NECons2 a (List a) deriving (Eq, Show)
 instance Foldable NonEmpty2 where
+  foldr :: (a -> b -> b) -> b -> NonEmpty2 a -> b
+  foldr f b (NECons2 a as) = f a (foldr f b as)
 
+data Tree a = Leaf a | Node (Tree a) a (Tree a) deriving (Eq, Show)
 instance Foldable Tree where
+  foldr :: (a -> b -> b) -> b -> Tree a -> b
+  foldr f b (Node l a r) = foldr f (f a (foldr f b r)) l
+  foldr f b (Leaf a) = f a b
 
+  foldMap :: Monoid m => (a -> m) -> Tree a -> m
+  foldMap f (Node l a r) = foldMap f l <> f a <> foldMap f r
+  foldMap f (Leaf a) = f a
+
+data Either e a = Left e | Right a deriving (Eq, Show)
 instance Foldable (Either fixed) where
+  foldr :: (a -> b -> b) -> b -> Either fixed a -> b
+  foldr f b (Left fix) = b
+  foldr f b (Right a) = f a b
 
+data BiTuple e a = BiTuple e a deriving (Eq, Show)
 instance Foldable (BiTuple fixed) where
+  foldr :: (a -> b -> b) -> b -> BiTuple fixed a -> b
+  foldr f b (BiTuple fix a) = f a b
 
+data TriEither e1 e2 a = LeftT e1 | MiddleT e2 | RightT a deriving (Eq, Show)
 instance Foldable (TriEither fixed1 fixed2) where
+  foldr :: (a -> b -> b) -> b -> TriEither fixed1 fixed2 a -> b
+  foldr f b (LeftT fix) = b
+  foldr f b (MiddleT fix) = b
+  foldr f b (RightT a) = f a b
 
+data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving (Eq, Show)
 instance Foldable (BiList fixed) where
+  foldr :: (a -> b -> b) -> b -> BiList fixed a -> b
+  foldr f b ABNill = b
+  foldr f b (ACons fix as) = foldr f b as
+  foldr f b (BCons a as) = f a $ foldr f b as
 
 -- Magasabbrendű megkötések
+data Apply f a = MkApply (f a) deriving (Eq, Show)
 instance Foldable f => Foldable (Apply f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Apply f a -> b
+  foldr f b (MkApply fa) = foldr f b fa
 
+  foldMap :: (Foldable f, Monoid m) => (a -> m) -> Apply f a -> m
+  foldMap f (MkApply fa) = foldMap f fa
+
+data Fix f a = MkFix (f (Fix f a))
 instance Foldable f => Foldable (Fix f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Fix f a -> b
+  foldr f b (MkFix ffixfa) = foldr (\fixfa b -> foldr f b fixfa) b ffixfa
 
+data Compose f g a = MkCompose (f (g a)) deriving (Eq, Show)
 instance (Foldable f, Foldable g) => Foldable (Compose f g) where
+    foldr :: (Foldable f, Foldable g) => (a -> b -> b) -> b -> Compose f g a -> b
+    foldr f b (MkCompose fga) = foldr (\fga b -> foldr f b fga) b fga
 
+    foldMap :: (Foldable f, Foldable g, Monoid m) => (a -> m) -> Compose f g a -> m
+    foldMap f (MkCompose fga) = foldMap (foldMap f) fga
+
+
+data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show)
 instance Foldable f => Foldable (Sum f fixed) where
 
+data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 instance Foldable f => Foldable (Prod f fixed) where
 
+data FList f a = FNil | FCons (f a) (f (FList f a))
 instance Foldable f => Foldable (FList f) where
 
 
@@ -136,17 +180,17 @@ Ez Haskellben a Semigroup típusosztály
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (||)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = undefined
+  (<>) = (+)
 
 data Endo a = MkEndo (a -> a)
 
 instance Semigroup (Endo a) where
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  (MkEndo f) <> (MkEndo g) = MkEndo $ f . g
 
 {-
 Egy halmazhoz több művelet is választható, hogy félcsoportot alkossanak
@@ -174,21 +218,21 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = False
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
+  mempty = 0
 
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id
 
 
 -- A foldr művelet alternatívája: foldMap
 -- foldMap :: Monoid m => (a -> m) -> f a -> m
 -- A <> műveletet használja kombinálásra, pl.:
--- foldMap f [a,b,c ...] = f a <> f b <> f c <> ... <> mempty
+-- foldMap f [a,b,c ...] = f a <> f b <> f c <> ... (<> mempty)
 
 -- Írd meg a fenti típusokra a foldMap műveletet is!
 -- Érdemes belátni, hogy
