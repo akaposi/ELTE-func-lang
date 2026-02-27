@@ -1,7 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE InstanceSigs #-}
 
-module Ea2 where
+module Ea02 where
 
 import Data.Kind
 
@@ -76,14 +77,14 @@ from f = (\a -> fst (f a), \a -> snd (f a))
 -- [] :: Type -> Type
 -- Either :: Type -> Type -> Type
 
-type Tree :: Type -> Type
+type Tree :: Type -> Type -- (language extension: DataKinds)
 data Tree a
   = Leaf a
   | Node (Tree a) (Tree a)
   deriving (Show)
 
 -- id' :: a -> a
-id' :: forall (a :: Type). a -> a
+id' :: forall (a :: Type). a -> a -- (language extension: RankNTypes)
 id' x = x
 
 -- wrong :: Maybe -> Maybe   -- kind error
@@ -108,7 +109,7 @@ class Functor (f :: Type -> Type) where
 -}
 
 instance Functor Tree where
-  fmap :: (a -> b) -> Tree a -> Tree b
+  fmap :: (a -> b) -> Tree a -> Tree b -- (language extension: InstanceSigs)
   fmap f (Leaf a) = Leaf (f a)
   fmap f (Node l r) = Node (fmap f l) (fmap f r)
 
