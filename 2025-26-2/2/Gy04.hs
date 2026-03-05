@@ -1,6 +1,8 @@
 {-# OPTIONS_GHC -Wno-noncanonical-monad-instances #-}
 module Gyak04 where
 import Control.Monad
+import Distribution.Compat.Lens (_1)
+import GHC.Exts.Heap.Closures (GenStackFrame(retFunFun))
 
 -- Probléma:
 -- Tfh van sok, például Maybe a-ba képző függvényünk:
@@ -25,7 +27,11 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+magicFunction x = case incrementIfEven x of
+                    Just y -> case combineThrees (*) x y of
+                                Just z -> incrementIfEven z
+                                Nothing -> Nothing
+                    Nothing -> Nothing
 
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
@@ -49,7 +55,9 @@ class Functor m => Monad m where
 -- TODO : Miért
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x = incrementIfEven x >>= 
+  \y -> combineThrees (*) x y {-combineThrees (*) x-} >>=
+  \z -> incrementIfEven z
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -62,8 +70,14 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
-
+magicFunctionDo x = do
+  y <- incrementIfEven x
+  z <- combineThrees (*) x y
+  incrementIfEven z
+  {-
+  a <- incrementIfEven z
+  return a
+-}
 
 -- Monád példa: IO monád
 -- "IO a" egy olyan "a" típusú értéket jelent, amelyhez valami I/O műveletet kell elvégezni, pl konzolról olvasás
@@ -95,28 +109,64 @@ print :: Show a => a -> IO ()
 -- d, beolvas egy számot minden listaelemhez és azt hozzáadja
 
 readAndConcat :: IO ()
-readAndConcat = undefined
+readAndConcat = getLine >>= \x -> getLine >>= \y -> putStrLn (x ++ y)
 
 readAndConcat' :: IO ()
 readAndConcat' = undefined
 
 readAndSq :: IO ()
-readAndSq = undefined
+readAndSq = (readLn :: IO Int) >>= \x -> print (x*x)
 
 readAndSq' :: IO ()
-readAndSq' = undefined
+readAndSq' = do
+  x <- readLn :: IO Int
+  print (x*x)
 
 printAll :: Show a => [a] -> IO ()
 printAll = undefined
 
 printAll' :: Show a => [a] -> IO ()
-printAll' = undefined
+printAll' [] = return ()
+printAll' (x : xs) = do
+  print x
+  printAll' xs
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd [] = return []
+readAndAdd l = readLn >>= helper l
+  where
+    helper (x : xs) y = readAndAdd xs >>= \z -> return ((x + y) : z) 
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd' = undefined
+readAndAdd' [] = return []
+readAndAdd' (x : xs) = do
+  y <- readLn
+  z <- readAndAdd' xs
+  return ((x + y) : z)
+
+--Kapunk egy számot paraméterül
+--Olvassunk be annyi db sort a STDIN-ról és gyűjtsük össze egy listába
+readThatMany :: Int -> IO [String]
+readThatMany 0 = return []
+readThatMany n = do
+  z <- getLine
+  x <- readThatMany (n - 1)
+  return (z : x)
+
+--Definiáljuk a readAndSumK függvényt, amely k darab számot beolvas a stdinről és összeadja őket! 
+--A paraméterről feltételezhetjük, hogy >= 0
+readAndSumK :: Int -> IO Integer
+readAndSumK 0 = return 0
+readAndSumK n = do
+  x <- readLn :: IO Integer
+  y <- readAndSumK (n-1)
+  return (x + y)
+
+--Olvass be a lista minden eleméhez 1-1 bool értéket, 
+--ha igazat kapjuk a lista elemét adjuk hozzá az összeghez, ha hamisat vonjuk ki belőle!
+f :: Num a => [a] -> IO a
+f = undefined
+
 
 -- Micsoda még monád?
 -- Pl lista:
