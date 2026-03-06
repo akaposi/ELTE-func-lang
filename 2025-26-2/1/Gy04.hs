@@ -25,7 +25,11 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+magicFunction x = case incrementIfEven x of
+  Just y -> case combineThrees (*) x y of
+    Just z -> incrementIfEven z
+    Nothing -> Nothing
+  Nothing -> Nothing
 
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
@@ -49,7 +53,19 @@ class Functor m => Monad m where
 -- TODO : Miért
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x =
+  incrementIfEven x >>= \y ->
+  combineThrees (*) x y >>= \z ->
+  incrementIfEven z
+
+{-
+magicFunction :: Integral a => a -> Maybe a
+magicFunction x = case incrementIfEven x of
+  Just y -> case combineThrees (*) x y of
+    Just z -> incrementIfEven z
+    Nothing -> Nothing
+  Nothing -> Nothing
+-}
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -62,7 +78,16 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
+magicFunctionDo x = do
+  y <- incrementIfEven x
+  z <- combineThrees (*) x y
+  incrementIfEven z
+
+f = do
+  line <- getLine
+  putStrLn line
+  putStrLn line
+  
 
 
 -- Monád példa: IO monád
@@ -95,10 +120,16 @@ print :: Show a => a -> IO ()
 -- d, beolvas egy számot minden listaelemhez és azt hozzáadja
 
 readAndConcat :: IO ()
-readAndConcat = undefined
+readAndConcat = do
+  line1 <- getLine
+  line2 <- getLine
+  putStrLn (line1 ++ line2)
 
 readAndConcat' :: IO ()
-readAndConcat' = undefined
+readAndConcat' =
+  getLine >>= \x ->
+  getLine >>= \y ->
+  putStrLn (x ++ y)
 
 readAndSq :: IO ()
 readAndSq = undefined
@@ -107,16 +138,28 @@ readAndSq' :: IO ()
 readAndSq' = undefined
 
 printAll :: Show a => [a] -> IO ()
-printAll = undefined
+printAll [] = return ()
+printAll (x:xs) = do
+  print x
+  printAll xs
 
 printAll' :: Show a => [a] -> IO ()
 printAll' = undefined
 
 readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd [] = return []
+readAndAdd (x:xs) = do
+  y <- readLn
+  ys <- readAndAdd xs
+  case 1 of
+    1 -> print 1
+    _ -> print 2
+  let x = 3
+  return $ (x + y) : ys
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd' = undefined
+readAndAdd' [] = return []
+readAndAdd' (x:xs) = readLn >>= \y -> readAndAdd' xs >>= \ys -> return ((x + y) : ys)
 
 -- Micsoda még monád?
 -- Pl lista:
