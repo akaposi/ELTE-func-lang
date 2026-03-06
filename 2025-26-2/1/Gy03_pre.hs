@@ -31,20 +31,24 @@ data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show)
 data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 data FList f a = FNil | FCons (f a) (f (FList f a))
 
+--                V             V       V        V 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
-foldrSingle = undefined
+foldrSingle f b (Single a) = f a b
 
 foldrTuple :: (a -> b -> b) -> b -> Tuple a -> b
-foldrTuple = undefined
+foldrTuple f b (Tuple a1 a2) = f a1 (f a2 b)
+-- f a1 b -- f a2 b
 
 foldrQuintuple :: (a -> b -> b) -> b -> Quintuple a -> b
-foldrQuintuple = undefined
+foldrQuintuple f b (Quintuple a1 a2 a3 a4 a5) = f a1 $ f a2 $ f a3 $ f a4 $ f a5 b
 
 foldrList :: (a -> b -> b) -> b -> List a -> b
-foldrList = undefined
+foldrList _ b Nil = b
+foldrList f b (Cons a as) = f a (foldrList f b as)
 
 foldrMaybe :: (a -> b -> b) -> b -> Maybe a -> b
-foldrMaybe = undefined
+foldrMaybe f b (Just a) = f a b
+foldrMaybe f b Nothing = b
 
 -- Hasonlóan a mappolhatósághoz, a hajtogatás is általánosítható a Foldable típusosztály segítéségvel
 {-
@@ -97,19 +101,40 @@ instance Foldable Maybe where
   foldr :: (a -> b -> b) -> b -> Maybe a -> b
   foldr = foldrMaybe
 
+-- data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
+-- 1. Leillesztjük az összes konstruktort
+-- 2. Sorba megyünk az összes paraméteren - Legyen ennek a paraméternek 't' a neve
+--   2a. t :: a              -> f t _           | f a <> _
+--   2b. t :: hajtogatható a -> foldr f _ t     | foldMap f t <> _
+--   2c. t független a-tól   -> _               | _
+-- 3. Ha kifogytunk a paraméterekből: b         | mempty
 instance Foldable NonEmpty where
+  foldr f b (Last a) = f a b
+  foldr f b (NECons a as) = f a (foldr f b as)
 
+  foldMap f (Last a) = f a -- <> mempty
+  foldMap f (NECons a as) = f a <> foldMap f as -- <> mempty
+  
 instance Foldable NonEmpty2 where
+  foldr f b (NECons2 a a1) = f a (foldr f b a1)
 
 instance Foldable Tree where
+  foldr f b (Leaf a) = f a b
+  foldr f b (Node left middle right) = foldr f (f middle (foldr f b right)) left
+  ---f middle (foldr f (foldr f b left) right)
 
 instance Foldable (Either fixed) where
+  foldr f b (Right a) = f a b
+  foldr f b (Left a) = b
 
 instance Foldable (BiTuple fixed) where
 
 instance Foldable (TriEither fixed1 fixed2) where
 
 instance Foldable (BiList fixed) where
+  foldr f b (ACons e eas) = foldr f b eas
+  foldr f b (BCons a eas) = f a (foldr f b eas)
+  foldr f b ABNill = b
 
 -- Magasabbrendű megkötések
 instance Foldable f => Foldable (Apply f) where
@@ -117,9 +142,17 @@ instance Foldable f => Foldable (Apply f) where
 instance Foldable f => Foldable (Fix f) where
 
 instance (Foldable f, Foldable g) => Foldable (Compose f g) where
+  foldr f b (MkCompose fga) = foldr (\ga b' -> foldr f b' ga) b fga
+  foldMap f (MkCompose fga) = foldMap (foldMap f) fga
 
+-- data Sum f a b = FLeft (f a) | FRight (f b) deriving (Eq, Show)
 instance Foldable f => Foldable (Sum f fixed) where
+  foldr f b (FLeft fa) = b
+  foldr f b (FRight fb) = foldr f b fb
 
+  foldMap f (FLeft fa) = mempty
+  foldMap f (FRight fb) = foldMap f fb
+  
 instance Foldable f => Foldable (Prod f fixed) where
 
 instance Foldable f => Foldable (FList f) where
@@ -136,17 +169,17 @@ Ez Haskellben a Semigroup típusosztály
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (&&)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = undefined
+  (<>) = (+)
 
 data Endo a = MkEndo (a -> a)
 
 instance Semigroup (Endo a) where
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  (<>) (MkEndo f) (MkEndo g) = MkEndo (f . g) 
 
 {-
 Egy halmazhoz több művelet is választható, hogy félcsoportot alkossanak
@@ -174,15 +207,15 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = True
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
+  mempty = 0
 
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id
 
 
 -- A foldr művelet alternatívája: foldMap
