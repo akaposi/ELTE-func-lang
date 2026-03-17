@@ -21,14 +21,19 @@ type Environment = [(User, UserInfo)] -- a map of names to home directories and 
 -- Let's define a function that retrieves the home directory of a given username
 
 homeDirOf :: String -> Environment -> Maybe String
-homeDirOf = undefined
+homeDirOf uname env = case lookup uname env of
+                      Nothing -> Nothing
+                      Just inf -> Just (getHomeDirectory inf)
 
 -- Define a function that retrieves the home directories of all admin users
 -- For demonstration purposes, do not use list functions and do not write helper functions
 -- During recursive calls, retrieve elements from the environment because, since there is no output, this is *not reflected in the result*
 
 getAdminHomes :: Environment -> [String]
-getAdminHomes = undefined
+getAdminHomes [] = []
+getAdminHomes ((name, info):xs)
+  | isAdmin info = getHomeDirectory info : getAdminHomes xs
+  | otherwise = getAdminHomes xs
 
 -- In the above examples, the transfer of the environment was explicit (we had to do it manually).
 -- However, with an abstraction layer, it can be made implicit:
@@ -51,32 +56,65 @@ homeDirOfR :: String -> Reader Environment (Maybe String)
 homeDirOfR s = reader (homeDirOf s)
 
 getAdminHomesR :: Reader Environment [String]
-getAdminHomesR = undefined
+getAdminHomesR = reader getAdminHomes
 
 -- The Reader monad has the following two operations
 -- ask: queries the environment
 -- local: changes it locally
 
 ask' :: Reader r r
-ask' = undefined
+ask' = reader (\r -> r) -- id
 
 local' :: (r -> r) -> Reader r a -> Reader r a
-local' = undefined
+local' f m = reader (\r -> runReader m (f r))
 
 -- Define the two functions above using ask and local
 
 homeDirOfRM :: String -> Reader Environment (Maybe String)
-homeDirOfRM = undefined
+homeDirOfRM uname = do
+  env <- ask
+  case lookup uname env of
+    Nothing -> return Nothing
+    Just inf -> return $ Just (getHomeDirectory inf)
 
 getAdminHomesRM :: Reader Environment [String]
-getAdminHomesRM = undefined
+getAdminHomesRM = ask >>= \env -> case env of
+                                    [] -> return []
+                                    ((uname, uinfo):_) -> if isAdmin uinfo then rest 
+                                      >>= (\ls -> return $ getHomeDirectory uinfo : ls)
+                                      else rest >>= return
+                        where
+                          rest = local (drop 1) getAdminHomesRM
 
+getAdminHomesRM' :: Reader Environment [String]
+getAdminHomesRM' = do
+  env <- ask
+  case env of
+    [] -> return []
+    ((uname, uinfo):xs) -> if isAdmin uinfo 
+      then do
+        rest <- local (const xs) getAdminHomesRM'
+        return (getHomeDirectory uinfo : rest)
+      else local (const xs) getAdminHomesRM'
+
+
+{-
+const xs = \_ -> xs
+-}
 -- Extra tasks
 
 -- Define the labelWith function with reader monad
 
 labelListR :: Num i => [a] -> Reader i [(i,a)]
-labelListR = undefined
+labelListR (x : xs) = ask >>= \i -> fmap ((i,x) :) $ local (+1) (labelListR xs)
+labelListR [] = return []
+
+labelListR' :: Num i => [a] -> Reader i [(i,a)]
+labelListR' (x : xs) = do
+  i <- ask
+  rest <- local (+1) (labelListR xs)
+  return ((i,x) : rest)
+labelListR' [] = return []
 
 -- Define the sum function in a tail recursive way, such that the acummulator is in the reader environment
 
@@ -102,13 +140,16 @@ type UUID = String
 -- We change our arithmetic functions to collect the function calls that were made in the output
 -- If the API request is "localhost," we return True, otherwise False. Regardless of this, we log the "apirequest" UUID
 apiRequest :: String -> (Bool, [UUID])
-apiRequest = undefined
+apiRequest "localhost" = (True, ["localhost"]) 
+apiRequest x = (False, [x]) 
 
 -- Define the following function, which sends an API request to the address "1.0.0.1" if it receives an even number as a parameter, and does nothing if it does not.
 -- Regardless of this, log the "nameserver" UUID.
 -- Return half of the number as the result.
 nameserver :: Int -> (Int, [UUID])
-nameserver = undefined
+nameserver x
+  | even x = let (_,l) = apiRequest "1.0.0.1" in (div x 2, "nameserver" : l)
+  | otherwise = (div x 2, ["nameserver"])
 
 -- In the above two functions, the second parameter of the tuple, [UUID], can be abstracted away.
 -- This is the Writer monad.
@@ -133,21 +174,33 @@ apiRequestW :: String -> Writer [UUID] Bool
 apiRequestW s = writer (apiRequest s)
 
 nameserverW :: Int -> Writer [UUID] Int
-nameserverW = undefined
+nameserverW x = writer (nameserver x)
 
 -- The writer has a primitive operation that is relevant to us:
 
-tell' :: w -> Writer w ()
-tell' = undefined
+tell' :: Monoid w => w -> Writer w ()
+tell' w = writer ((),w)
 
 -- For more advanced usage, see listen and pass
 -- Define the above function using tell
 
 apiRequestWD :: String -> Writer [UUID] Bool
-apiRequestWD = undefined
+apiRequestWD "localhost" = do 
+  tell ["localhost"]
+  return True
+apiRequestWD x = do
+  tell [x]
+  return False
 
 nameserverWD :: Int -> Writer [UUID] Int
-nameserverWD = undefined
+nameserverWD x
+  | even x = do
+    apiRequestWD "1.0.0.1"
+    tell ["nameserver"]
+    return (div x 2)
+  | otherwise = do
+    tell ["nameserver"]
+    return (div x 2)
 
 -- Most often, the writer environment will be a list, but it can be any Monoid
 -- Let's assume that we define a function and define the following Hash type for it
