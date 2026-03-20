@@ -20,15 +20,21 @@ type Environment = [(User, UserInfo)] -- nevekhez asszociált home direcory és 
 -- A környezet a műveletek során nem változik, ezért kimeneti környezet nem szükséges
 -- Definiáljunk egy függvényt ami egy adott nevű felhasználó home directoryját lekéri
 
+-- 
 homeDirOf :: String -> Environment -> Maybe String
-homeDirOf = undefined
+homeDirOf user [] = Nothing
+homeDirOf user ((u, ui) : xs)
+  | user == u = Just (getHomeDirectory ui)
+  | otherwise = homeDirOf user xs
 
 -- Definiáljuk egy függvényt amely lekéri az összes admin felhasználó home directoryját
 -- Listafüggvényeket a demonstráció kedvéért ne használjuk és segédfüggvényt ne írjunk
 -- A rekurzív hivás során elemeket a környezetből, mert, mivel nincsen kimenet, ezért ez *nincsen reflektálva az eredményben*
 
 getAdminHomes :: Environment -> [String]
-getAdminHomes = undefined
+getAdminHomes [] = []
+getAdminHomes ((u, MkUserInfo hd True):xs) = hd : getAdminHomes xs
+getAdminHomes ((u, ui):xs) = getAdminHomes xs
 
 -- A fenti mintákban a környezet továbbadása explicit volt (nekünk kell manuálisan megcsinálni)
 -- Viszont egy absztrakciós réteggel át lehet alakítani implicitté:
@@ -58,35 +64,64 @@ getAdminHomesR = undefined
 -- local: lokálisan megváltoztatja
 
 ask' :: Reader r r
-ask' = undefined
+ask' = reader (\r -> r)
 
 local' :: (r -> r) -> Reader r a -> Reader r a
-local' = undefined
+local' f r = reader (\r' -> runReader r (f r'))
 
 -- Írjuk meg a két fenti függvényt ask-al és local-al
 
 homeDirOfRM :: String -> Reader Environment (Maybe String)
-homeDirOfRM = undefined
+homeDirOfRM s = do
+  ls <- ask
+  case ls of
+    [] -> return Nothing
+    ((u, ui) : _) | u == s -> return (Just $ getHomeDirectory ui)
+    (_ : xs) -> local (\_ -> xs) $ homeDirOfRM s
 
 getAdminHomesRM :: Reader Environment [String]
-getAdminHomesRM = undefined
+getAdminHomesRM = do
+  ls <- ask
+  case ls of
+    [] -> return []
+    ((u,ui):xs)
+      | isAdmin ui -> do
+          ys <- local (const xs) $ getAdminHomesRM
+          return $ getHomeDirectory ui : ys
+    (_ : xs) -> local (const xs) $ getAdminHomesRM
 
 -- Extra feladatok
 
 -- Definiáljuk a labelWith függvényt readerrel
 
 labelListR :: Num i => [a] -> Reader i [(i,a)]
-labelListR = undefined
+labelListR [] = return []
+labelListR (a:as) = do
+  i <- ask
+  as' <- local (+1) $ labelListR as
+  return ((i, a) : as')
 
 -- Definiáljuk a sum függvényt úgy, hogy az olvasási környezetben van a részösszeg
 
 sumTRR :: Num a => [a] -> Reader a a
-sumTRR = undefined
+sumTRR (x:xs) = local (+x) $ sumTRR xs
+sumTRR [] = ask
+  {- -do -- x <- ....; return x ==== .....
+  x <- ask
+  return x
+-}
+  --- ask
 
 -- Definiáljuk a filterWithIndex függvényt amely index alapján is szűr
 
 filterWithIndexR :: Num i => (i -> a -> Bool) -> [a] -> Reader i [a]
-filterWithIndexR = undefined
+filterWithIndexR f [] = return []
+filterWithIndexR f (x:xs) = do
+  i <- ask
+  y <- local (\_ -> i + 1) $ filterWithIndexR f xs
+  case f i x of
+    True -> return (x : y)
+    False -> return y
 
 -- Definiáljuk a foldl függvényt readerrel
 
@@ -102,13 +137,15 @@ type UUID = String
 -- Megváltoztatjuk az aritmetikai függvényeinket, hogy gyűjtsék össze a kimenetben, milyen függvényhívások történtek
 -- Ha az API request "localhost" adjunk vissza True-t különben False-ot. Függetlenül ettől loggoljuk az "apirequest" UUID-t
 apiRequest :: String -> (Bool, [UUID])
-apiRequest = undefined
+apiRequest endpoint = (endpoint == "localhost", ["apiRequest"])
 
 -- Definiáljuk az alábbi függvényt, amely ha páros számot kap paraméterül akkor a "1.0.0.1" címre küld egy API requestet, ha nem, akkor nem csinál semmit.
 -- Függetlenül ettől loggoljuk a "nameserver" UUID-t.
 -- Eredményül adjuk vissza a szám felét.
 nameserver :: Int -> (Int, [UUID])
-nameserver = undefined
+nameserver x
+  | even x = let (_, qa) = apiRequest "1.0.0.1" in (div x 2, qa ++ ["nameserver"])
+  | otherwise = (div x 2, ["nameserver"])
 
 -- A fenti két függvényben a tuple második paramétere, a [UUID] egy kiabsztrahálható réteg.
 -- Ez lesz a Writer monád
@@ -137,17 +174,26 @@ nameserverW = undefined
 
 -- A writernek egy számunkra releváns primitív művelete van:
 
-tell' :: w -> Writer w ()
-tell' = undefined
+tell' :: Monoid w => w -> Writer w ()
+tell' w = writer ((), w)
 
 -- Advancedabb használathoz ld listen és pass
 -- Definiáljuk a fenti két függvény tell segítségével
 
 apiRequestWD :: String -> Writer [UUID] Bool
-apiRequestWD = undefined
+apiRequestWD s = do
+  tell ["apiRequest"]
+  return (s == "localhost")
 
 nameserverWD :: Int -> Writer [UUID] Int
-nameserverWD = undefined
+nameserverWD x
+  | even x = do
+      tell ["nameserver"]
+      apiRequestWD "1.0.0.1"
+      return (div x 2)
+  | otherwise = do
+      tell ["nameserver"]
+      return (div x 2)
 
 -- Leggyakrabban lista lesz az írási környezet, de akármilyen Monoid lehet
 -- Tegyük fel, hogy hasító függvényt definiálunk és ehhez az alábbi Hash típust definiáljuk
@@ -165,7 +211,10 @@ primes = unfoldr (\(x:xs) -> Just (x, filter (\y -> mod y x /= 0) xs)) [2..]
 
 -- Hasítsunk úgy egy integer listát, hogy minden elemével beleindexelünk a prímek listájába és tell-eljük azt a prímet
 hashIntList :: [Int] -> Writer Hash ()
-hashIntList = undefined
+hashIntList [] = return ()
+hashIntList (x:xs) = do
+  tell (primes !! x)
+  hashIntList xs
 
 -- Hasítsunk tetszőleges hajtogatható tárolót
 hashFoldable :: Foldable f => f Int -> Writer Hash ()
