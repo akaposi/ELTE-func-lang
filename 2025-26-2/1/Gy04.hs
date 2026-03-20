@@ -159,7 +159,13 @@ readAndAdd (x:xs) = do
 
 readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
 readAndAdd' [] = return []
-readAndAdd' (x:xs) = readLn >>= \y -> readAndAdd' xs >>= \ys -> return ((x + y) : ys)
+readAndAdd' zs@(_:_) = do
+	let x = last zs
+	let xs = init zs
+	y <- readLn
+	ys <- readAndAdd' xs
+	return (ys ++ [x + y])  
+	-- readLn >>= \y -> readAndAdd' xs >>= \ys -> return ((x + y) : ys)
 
 -- Micsoda még monád?
 -- Pl lista:
