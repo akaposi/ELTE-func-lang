@@ -23,19 +23,23 @@ import Control.Monad.Except
 --, hogy ha egy Jegyet bele rakunk, zölden világít és a Nyitva állapotra váltunk
 
 -- Definiáljuk az állapotok típusát
-data MachineState
+data MachineState = Closed | Open
   deriving (Eq, Show)
 
 -- Definiáljuk a fények típusát
-data LightColour
+data LightColour = Green | Yellow | Red
   deriving (Eq, Show)
 
 
 -- Definiáljuk az átmenetek függvényeit
 -- A függvények egy kezdeti állapotból egy végállapotba és egy világító fénybe képeznek
 push, insertTicket :: MachineState -> (LightColour, MachineState)
-push = undefined
-insertTicket = undefined
+
+push Closed = (Red, Closed)
+push Open = (Green, Closed)
+
+insertTicket Closed = (Green, Open)
+insertTicket Open = (Yellow, Open)
 
 -- Ennek a segítségével például le tudjuk modellezni, hogy Pistike 2x próbál jegy nélkül bemenni
 pistike :: MachineState -> ([LightColour], MachineState)
@@ -74,7 +78,7 @@ háttérben a -> s -> (a,s)
 -- s -> (a,s) függvényeket a state függvénnyel lehet becsomagolni
 pushS, insertTicketS :: State MachineState LightColour
 pushS = state push
-insertTicketS = undefined
+insertTicketS = state insertTicket
 
 -- Így pistikét kicsit szebben lehet definiálni
 pistikeS :: State MachineState [LightColour]
@@ -109,24 +113,54 @@ countYellow = do
 -- Gerike: Tol, Jegy, Tol, Tol
 -- Gerike esetén azt adjuk vissza, hányszor 'Piros' volt az átmenetek eredménye
 
+janika :: State MachineState [LightColour]
+janika = do
+  j1 <- insertTicketS
+  j2 <- insertTicketS
+  j3 <- pushS
+  return [j1, j2, j3]
 
+gerike :: State MachineState Int
+gerike = do
+  l1 <- pushS
+  l2 <- insertTicketS
+  l3 <- pushS
+  l4 <- pushS
+  return $ length $ filter (== Red) [l1, l2, l3, l4]
+
+  
 -- Komplikáltabb feladatok
 -- Implementáljunk egy 'get' műveletet, amely visszaadja az állapotot
 get' :: State s s
-get' = undefined
+get' = state $ \s -> (s,s)
 -- Implementáljunk egy 'put' műveletet, amely felülírja az állapotot
 put' :: s -> State s ()
-put' = undefined
+put' snew = state $ \_ -> ((), snew)
 
 -- Ezek után nem kell a 'state' függvénnyel szórakozni
 
 -- Példa get/putra: Definiáljuk a safeHead függvényt ami az állapotban lévő lista fejelemét leszedi - ha van neki.
 pop :: State [a] (Maybe a)
-pop = undefined
+pop = do
+  ls <- get
+  case ls of
+    [] -> return Nothing
+    (x : xs) -> do
+      put xs
+      return (Just x)
 
 -- Példa get/putra 2: Definiáljuk a take függvényt a belső állapotra (esetleg pop-ot is lehet használni).
 takeK :: Int -> State [a] [a]
-takeK = undefined
+takeK 0 = return []
+takeK k = do
+  xs <- get
+  case xs of
+    [] -> return []
+    (y:ys) -> do
+      put ys -- Leszedtük az elemet
+      ys' <- takeK (k - 1)
+      return (y : ys')
+      
 
 -- Definiáljuk az alábbi függvényeket!
 popLast :: State [a] (Maybe a) -- leszedi az utolsó elemet a listából - ha van.
@@ -136,10 +170,20 @@ sumK :: Num a => Int -> State [a] a -- Kiszedi és összeadja az első K elemet 
 sumK = undefined
 
 labelList :: [a] -> State Int [(a, Int)] -- Minden elemet megcímkéz, a belső állapot a számláló
-labelList = undefined
+labelList [] = return []
+labelList (x : xs) = do
+  i <- get -- Ez lesz az x címkéje
+  put (i + 1)
+  xs' <- labelList xs
+  return ((x, i) : xs')
 
 labelListBW :: [a] -> State Int [(a, Int)] -- Ugyanaz mint az előző csak, hátulról címkéz
-labelListBW = undefined
+labelListBW [] = return []
+labelListBW (x : xs) = do
+  xs' <- labelListBW xs
+  i <- get
+  put (i + 1)
+  return ((x, i) : xs')
 
 
 -- EXCEPT
@@ -149,12 +193,13 @@ labelListBW = undefined
 -- 0-val való osztás hiba
 -- Asszertációs hiba
 -- Üres lista hiba
-data CustomError
+data CustomError = DivByZeroError | AssertionError | EmptyListError
   deriving (Eq, Show)
 
 -- Példa: biztonságos osztás
 safeDiv :: Integral a => a -> a -> Either CustomError a
-safeDiv = undefined
+safeDiv x 0 = Left DivByZeroError
+safeDiv x y = Right (div x y)
 
 -- Az either-t is lehet monadikusan kezelni
 bindE :: Either e a -> (a -> Either e b) -> Either e b
@@ -180,11 +225,15 @@ assert = undefined
 
 -- Biztonságos osztás
 safeDivE :: Integral a => a -> a -> Except CustomError a
-safeDivE = undefined
+safeDivE x 0 = throwError DivByZeroError
+safeDivE x y = return (div x y)
 
 -- Végezzük el a safeDiv műveletet, de ha kivételt dobnánk, adjunk vissza 0-t inkább
 safeDivF :: Integral a => a -> a -> Except CustomError a
-safeDivF = undefined
+safeDivF x y = catchError (safeDivE x y) (\err -> case err of
+                                             DivByZeroError -> return 0
+                                             _ -> throwError err
+                                             )
 
 -- Feladatok
 
