@@ -8,6 +8,9 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Control.Monad.Except
+import Control.Monad.State
+import Control.Monad
+import Data.List
 
 
 -- Cheatsheet:
@@ -46,7 +49,9 @@ data Env = MkEnv { isAdmin :: Bool, homeDir :: String } deriving (Eq, Show)
 -- Definiáljunk egy függvényt, amely kiírja a felhasználó home directoryját
 -- ha a felhasználó admin
 printHomeDirIfAdmin :: ReaderT Env (Writer [String]) ()
-printHomeDirIfAdmin = undefined
+printHomeDirIfAdmin = do
+  env <- ask
+  when (isAdmin env) $ tell [homeDir env]
 
 -- Miért typecheckel a tell, ask stb
 -- :t ask
@@ -54,7 +59,9 @@ printHomeDirIfAdmin = undefined
 -- Ezekkel a típusosztályokkal is fel lehet írni a függvényt
 
 printHomeDirIfAdmin' :: (MonadReader Env m, MonadWriter [String] m) => m ()
-printHomeDirIfAdmin' = undefined
+printHomeDirIfAdmin' = do
+  env <- ask
+  when (isAdmin env) $ tell [homeDir env]
 
 -- Vizsgán ennél a feladatnál mindenkinek a saját típusszignatúráját fel kell majd írnia
 -- Lehet mindkettőt használni
@@ -69,29 +76,46 @@ basicExecutables = ["/usr/bin/bash", "/usr/bin/ls", "/bin/sh"]
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
 -- Rakjuk be a felhasználó home directoryját a fájl rendszerbe ha még nincs benne
-addHomeIfNotIn :: type_signature_goes_here
-addHomeIfNotIn = undefined
+addHomeIfNotIn :: (MonadState FileSystem m, MonadReader Env m) => m () --String -> StateT FileSystem (Reader Env) ()
+addHomeIfNotIn = do
+  env <- ask
+  filesystem <- get
+  let dir = homeDir env
+  unless (elem dir filesystem) (put (dir : filesystem))
+  --if elem dir filesystem then return () else put (dir : filesystem)
+    {-where
+      dir = homeDir env-}
 
 
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy [String] típusú írási környezetünk
 -- Töröljük ki a duplikált fájlokat a fájlrendszerből és azokat írjuk ki az írási környezetbe
-undupe :: type_signature_goes_here
-undupe = undefined
+undupe :: StateT FileSystem (Writer [String]) ()--(MonadState FileSystem m, MonadWriter [String] m) => m ()
+undupe = do
+  fs <- get
+  let nfs = nub fs
+  put (nfs)
+  tell (fs \\ nfs)
 
 
 data FSError = FileExists | NotAnAdmin | BadPath deriving (Eq, Show)
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
 -- Legyen egy FSError típusú hibakezelési környezetünk
 -- Legyen egy Env típusú olvasási környezetünk
--- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem amin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
+-- A függvény várjon egy útvonalat paraméterül. Ha a felhasználó nem admin, dobjunk NotAnAdmin hibát, illetve ha a fájl létezik dobjunk FileExists hibát
 -- Ha nem létezik rakjuk be a fájlrendszerbe
-tryAdd :: type_signature_goes_here
-tryAdd = undefined
+tryAdd :: (MonadState FileSystem m, MonadError FSError m, MonadReader Env m) => String -> m ()
+tryAdd path = do
+  env <- ask
+  fs <- get
+  if isAdmin env then 
+    if path `elem` fs then throwError FileExists
+    else put (path : fs)
+  else throwError NotAnAdmin
 
 
 -- ExceptT-vel vigyázzunk!!!
-what :: (MonadError String m, MonadWriter [String] m) => m ()
+what :: ExceptT String (Writer [String]) ()--(MonadError String m, MonadWriter [String] m) => m ()
 what = do
   tell ["Ez ki lesz irva?"]
   throwError "Hiba!"
@@ -105,14 +129,18 @@ what = do
 -- Az IO monádot is bele lehet varázsolni a stackbe, de csak a legaljára
 -- Mivel minden transzformer monádot vár paraméterül ezért az IO-t is át lehet adni
 getAndPrint :: WriterT [String] IO ()
-getAndPrint = undefined
+getAndPrint = do
+  x <- liftIO getLine
+  tell [x]
   -- az hogy x <- getLine nem typecheckel, mivel getLine :: IO String
   -- erre van egy szuper liftIO nevű függvény, amely egy transzformerben le tud futtatni IO függvényt
 
 -- a liftIO típusából látszódik, hogy az IO-t megkötéssel is le lehet írni
 -- :t lifIO :: MonadIO m => IO a -> m a
 getAndPrint' :: (MonadWriter [String] m, MonadIO m) => m ()
-getAndPrint' = undefined
+getAndPrint' = do
+  x <- liftIO getLine
+  tell [x]
 
 -- Lényegében MonadX azt jelenti, hogy m valami Monad, aminek X képességei is vannak
 
@@ -123,6 +151,8 @@ getAndPrint' = undefined
 -- [String] típusú írási környezet
 -- IO környezet
 -- Vizsgán általában csak 4 lesz az 5-ből
+
+type FMonad = ExceptT FSError (State Int)
 
 -- Olvassunk be konzolrol egy a konzolról egy stringet
 -- ha valid útvonal (/-ekkel elváálasztott nem üres stringek) akkor adjuk hozzá a fájlrendszerhez
