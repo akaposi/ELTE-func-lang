@@ -7,7 +7,11 @@ import Prelude hiding (Maybe(..), Either(..))
 -- Definiáljuk egy függvényt, amely egy "mellékhatásos" függvényt végig mappol egy listán
 --                                          v az m mellékhatást összegyűjtjük
 mapMList :: Monad m => (a -> m b) -> [a] -> m [b]
-mapMList = undefined
+mapMList f [] = return []
+mapMList f (x:xs) = do
+  x' <- f x
+  xs' <- mapMList f xs
+  return (x' : xs')
 
 -- Mivel a Functor (sima mappolás) általánosítható volt, ez a mellékhatásos mappolás is lehet általánosítható
 data Single a = Single a deriving (Eq, Show, Functor, Foldable)
@@ -31,22 +35,34 @@ data FList f a = FNil | FCons (f a) (f (FList f a)) deriving (Functor, Foldable)
 
 -- Írjuk meg ezt a műveletet pár fenti típusra!
 mapMSingle :: Monad m => (a -> m b) -> Single a -> m (Single b)
-mapMSingle = undefined
+mapMSingle f (Single a) = do
+  a' <- f a
+  return (Single a')
 
 mapMTuple :: Monad m => (a -> m b) -> Tuple a -> m (Tuple b)
-mapMTuple = undefined
+mapMTuple f (Tuple a b) = do
+  a' <- f a
+  b' <- f b
+  return (Tuple a' b')
 
 mapMQuintuple :: Monad m => (a -> m b) -> Quintuple a -> m (Quintuple b)
 mapMQuintuple = undefined
 
 mapMMaybe :: Monad m => (a -> m b) -> Maybe a -> m (Maybe b)
-mapMMaybe = undefined
+mapMMaybe f Nothing = return Nothing
+mapMMaybe f (Just a) = do
+  a' <- f a
+  return (Just a')
 
 -- Ehhez a mellékhatásos mappoláshoz viszont a Monád megkötés sokat enged meg
 -- A monád fő művelete a (>>=) :: m a -> (a -> m b) -> m b
 -- Ami mellékhatásos műveletek közti függőséged modellez.
 -- Viszont mappolásnál az egyes elemek között eredmény alapú függőség nincs
 -- Applicative típusosztály: A Functor és a Monád között van
+
+-- test :: Functor f => (a -> b -> c) -> f a -> f b -> f c
+-- test f fa fb = _ $ fmap f fa
+
 {-
 :i Applicative
 type Applicative :: (* -> *) -> Constraint
@@ -74,7 +90,13 @@ liftA4 func fa fb fc = func <$> fa <*> fb <*> fc
 -- Írjuk meg a mapM műveletet Applicative segítségével
 -- Az algoritmus ugyanaz mint a funktornál csak függvényalkalmazás helyett <*> és független értékek esetén pure
 mapA :: Applicative f => (a -> f b) -> List a -> f (List b)
-mapA = undefined
+mapA f Nil = pure Nil
+mapA f (Cons x xs) = Cons <$> f x <*> mapA f xs
+-- (<$>) = fmap
+
+-- pontosan "a" a paraméter típusa -> f a
+-- függ "a"-tól                    -> traverse f a
+-- nem függ a-tól                  -> pure a
 
 -- Ez a mappolhatósági tulajdonság lesz az úgynevezett Traversable típusosztály
 {-
@@ -89,9 +111,23 @@ class (Functor t, Foldable t) => Traversable t where
         -- Defined in ‘Data.Traversable’
 -}
 
+-- <$> = fmap
+-- <*> = ap
+-- >>= = bind
+-- <|> = alt
+-- <$ = const fmap
+-- *> = (const) right ap
+-- <* = (const) left ap
+-- >> = const bind
+
+
 instance Traversable Single where
+  traverse :: Applicative f => (a -> f b) -> Single a -> f (Single b)
+  traverse f (Single a) = Single <$> f a
 
 instance Traversable Tuple where
+  traverse :: Applicative f => (a -> f b) -> Tuple a -> f (Tuple b)
+  traverse f (Tuple a b) = Tuple <$> f a <*> f b
 
 instance Traversable Quintuple where
 
@@ -106,23 +142,35 @@ instance Traversable List where
 instance Traversable Maybe where
 
 instance Traversable NonEmpty where
+  traverse f (Last a) = Last <$> f a
+  traverse f (NECons a as) = NECons <$> f a <*> traverse f as
 
 instance Traversable NonEmpty2 where
 
 instance Traversable Tree where
-
+  traverse :: Applicative f => (a -> f b) -> Tree a -> f (Tree b)
+  traverse f (Leaf a) = Leaf <$> f a
+  traverse f (Node l m r) = Node <$> traverse f l <*> f m <*> traverse f r
+  
 instance Traversable (Either fixed) where
+  traverse f (Left e) = Left <$> pure e -- pure (Left e)
+  traverse f (Right a) = Right <$> f a
 
 instance Traversable (BiTuple fixed) where
 
 instance Traversable (TriEither fixed1 fixed2) where
 
 instance Traversable (BiList fixed) where
+  traverse f (ACons t as) = ACons <$> pure t <*> traverse f as
+  traverse f (BCons b bs) = BCons <$> f b <*> traverse f bs
+  traverse f ABNill = pure ABNill
 
 -- Magasabbrendű megkötések
 instance Traversable f => Traversable (Apply f) where
 
 instance Traversable f => Traversable (Fix f) where
+  traverse :: (Traversable f, Applicative f1) => (a -> f1 b) -> Fix f a -> f1 (Fix f b)
+  traverse f (MkFix ffa) = MkFix <$> traverse (traverse f) ffa
 
 instance (Traversable f, Traversable g) => Traversable (Compose f g) where
 
@@ -139,3 +187,9 @@ deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (Fix f a)
 deriving instance (Show a, forall a. Show a => Show (f a)) => Show (Fix f a)
 deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (FList f a)
 deriving instance (Show a, forall a. Show a => Show (f a)) => Show (FList f a)
+
+labelTrav :: Traversable t => t a -> t (a, Int)
+labelTrav = _
+
+-- toList (snd <$> labelTrav ...)
+-- rendezett listát kéne előállítania
