@@ -257,8 +257,8 @@ parseProgram s = case runParser (topLevel program) s of
 
 -- Try running:
 -- parseProgram "x := 1; x := x - 5;"
--- parseProgram "x := 1; b := False; if b == True then x := x * 2 end;"
--- parseProgram "x := 1; b := False; while b == False do x := x * 2; i := True; end;"
+-- parseProgram "x := 1; b := false; if b == true then x := x * 2 end;"
+-- parseProgram "x := 1; b := false; while b == false do x := x * 2; i := true; end;"
 
 -- Interpreter
 -- Type of evaluated expressions:
