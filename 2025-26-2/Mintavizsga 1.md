@@ -1,4 +1,5 @@
-# Funkcionális Nyelvek Mintavizsga
+
+- The first parameter of the `AssignAt` operat# Funkcionális Nyelvek Mintavizsga
 
 A feladatsor megoldására 2.5 óra áll rendelkezésre. Külső segítség és kollaboráció nem megengedett (együttműködés más vizsgázóval, külső személlyel vagy mesterséges intelligenciával : ChatGPT, BingAI stb). A megoldást akárhányszor be lehet küldeni, az utolsó megoldás számít. Részpontszám kapható minden feladatra. A leírás végén megtaláljátok a teljes Haskell fájlt, amit ki kell egészíteni és feltölteni.
 
@@ -178,11 +179,11 @@ Egészítsd ki a `Val` típust egy `VList :: [Val] -> Val` konstruktorral és a 
 Az új műveletek működése a következő:
 
 - A `List` literál értékelje ki a benne tárolt összes kifejezést és adja őket egy `VList`-ben vissza.
-- Az `Index` művelet csak akkor helyes, ha az első paraméter egy `VList`-re, a második pedig egy `VInt`-re értékelődik ki. Egyéb esetben dobjunk `IndexOutOfRangeError` kivételt.
+- Az `Index` művelet csak akkor helyes, ha az első paraméter egy `VList`-re, a második pedig egy `VInt`-re értékelődik ki és a benne tárolt érték kisebb mint a lista hossza. Egyéb esetben dobjunk `IndexOutOfRangeError` kivételt.
 - Ha a típusok stimmelnek, akkor az első paraméter értékébe indexeljünk bele a második paraméter értékével.
 - Az `AssignAt` művelet első paramétere egy változónevet reprezentáljon, ami egy `VList`-re értékelődik majd ki, a második paramétere pedig egy `VInt`-re. Ha a típusok stimmelnek, akkor írjuk fölül az adott változó i-edik elemét a harmadik paraméterrel kiértékelt értékre. Ha szám kilóg a lista méretéből, akkor dobjunk `IndexOutOfRangeError` kivételt.
 - Az indexelés mindkét műveletnél 0-tól kezdődik.
-- Összeadás esetén két listát konkatenáljunk. 
+- Listák közti összeadás esetén a két listát konkatenáljuk. 
 - A lista literálok minden más művelettel típushibát dobnak (kivéve az egyenlőségnél, ott két lista akkor egyenlő, ha az összes elemük és a hosszuk egyenlő. Egyenlőséget elég a `Val` típus `Eq` instanceával vizsgálni).
 
 __(5 pont)__
