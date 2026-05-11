@@ -2,7 +2,7 @@
 
 You have 2.5 hours to complete the exam. External assistance and collaboration are not permitted (this includes collaborating with other examinees, external individuals, or artificial intelligence such as ChatGPT, BingAI, etc.). You may submit your solution as many times as you like; the last submission will be the one that counts. Partial credit is available for each problem. At the end of the description, you will find the complete Haskell file, which you must complete and upload.
 
-If you have earned 28 points from the practical assessments, we will automatically award you the +1 credit provided the exam score meets the passing threshold.
+If you have earned 8 points from the practical assessments, we will automatically award you the +1 credit provided the exam score meets the passing threshold.
 
 
 # Score Ranges
