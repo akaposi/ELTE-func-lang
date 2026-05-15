@@ -53,15 +53,21 @@ string str = mapM_ (\c -> char c <|> throwError ("string: mismatch on char " ++ 
 
 -- Parseoljunk be legalább 1 számjegyet!
 atLeastOneDigit :: Parser [Int]
-atLeastOneDigit = undefined
+atLeastOneDigit = some digit
 
 -- Ennek segítségével tudunk már természetes számokat parseolni
 natural :: Parser Int
-natural = undefined
+natural = foldl (\a r -> a * 10 + r) 0 <$> atLeastOneDigit
+--        \r -> sum $ zipWith (*) (reverse r) (map (10^) [0..])
 
 -- Parseoljunk be egy egész számot! (Előjel opcionális)
 integer :: Parser Int
-integer = undefined
+integer = do
+  sign <- optional (char '-')
+  i <- natural
+  case sign of
+    Just _ -> return (negate i)
+    Nothing -> return i
 
 -- Bónusz: Float parser (nem kell tudni, csak érdekes)
 float :: Parser Double
@@ -75,7 +81,12 @@ float = do
 -- Definiáljunk egy parsert ami két adott parser között parseol valami mást
 -- pl bewteen (char '(') (string "alma") (char ')') illeszkedik az "(alma)"-ra de nem az "alma"-ra
 between :: Parser left -> Parser a -> Parser right -> Parser a
-between = undefined                    
+between l a r = l *> a <* r
+  -- do
+  -- l
+  -- a' <- a
+  -- r
+  -- return a'
 
 
 -- Definiáljunk egy parsert ami valami elválasztó karakterrel elválasztott parsereket parseol (legalább 1-et)
@@ -85,16 +96,19 @@ between = undefined
 -- runParser (sepBy1 anyChar (char ',')) "" == Nothing
 
 sepBy1 :: Parser a -> Parser delim -> Parser {- nem üres -} [a]
-sepBy1 = undefined
+sepBy1 a delim = do
+  a' <- a
+  as <- (delim *> sepBy1 a delim) <|> return []
+  return (a' : as)
 
 -- Ugyanaz mint a fenti, de nem követeli meg, hogy legalább 1 legyen
 sepBy :: Parser a -> Parser delim -> Parser [a]
-sepBy = undefined
+sepBy a delim = sepBy1 a delim <|> return []
 
 -- Írjunk egy parsert ami egy listaliterált parseol számokkal benne!
 -- pl [1,2,30,40,-10]
 listOfNumbers :: Parser [Int]
-listOfNumbers = undefined
+listOfNumbers = between (char '[') (sepBy integer (char ',')) (char ']')
 
 -- Whitespace-k elhagyása
 ws :: Parser ()
@@ -123,7 +137,7 @@ string' str = tok $ string str
 
 -- Írjuk újra a listOfNumbers parsert úgy, hogy engedjen space-eket a számok előtt és után illetve a [ ] előtt és után!
 goodListofNumbers :: Parser [Int]
-goodListofNumbers = undefined
+goodListofNumbers = topLevel $ between (char' '[') (sepBy integer' (char' ',')) (char' ']')
 
 -- Hajtogató parserek
 
@@ -132,11 +146,11 @@ goodListofNumbers = undefined
 -- Jobbra asszocialó kifejezést parseoljon.
 -- Sep által elválasztott kifejezéseket gyűjtsön össze, majd azokra a megfelelő sorrendbe alkalmazza a függvényt
 rightAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-rightAssoc = undefined
+rightAssoc f a delim = foldr1 f <$> sepBy1 a delim
 
 -- Ugyanaz mint a rightAssoc csak balra
 leftAssoc :: (a -> a -> a) -> Parser a -> Parser sep -> Parser a
-leftAssoc  = undefined
+leftAssoc f a delim = foldl1 f <$> sepBy1 a delim
 
 -- Nem kötelező HF
 -- Olyan parser amit nem lehet láncolni (pl == mert 1 == 2 == 3 == 4 se jobbra se balra nem asszociál tehát nincs értelmezve)
@@ -178,6 +192,7 @@ data Exp
   | Exp :+ Exp -- összeadás
   | Exp :* Exp -- szorzás
   | Exp :^ Exp -- hatványozás
+  | Exp :^^ Exp 
   deriving (Eq, Show)
 
 -- Recursive Descent Parsing algoritmus
@@ -186,7 +201,7 @@ data Exp
 +--------------------+--------------------+--------------------+
 | Operátor neve      | Kötési Irány       | Kötési Erősség     |
 +--------------------+--------------------+--------------------+
-| ^                  | Jobbra             | 16                 |
+| ^, ^^              | Jobbra             | 16                 |
 +--------------------+--------------------+--------------------+
 | *                  | Balra              | 14                 |
 +--------------------+--------------------+--------------------+
@@ -196,16 +211,20 @@ data Exp
 -- 2, Írunk k + 1 parsert, minden operátornak 1 és az atomnak is 1
 
 pAtom :: Parser Exp
-pAtom = undefined <|> between (char' '(') pAdd (char' ')')
+pAtom = (IntLit <$> integer') <|>
+        (FloatLit <$> tok float) <|>
+        (Var <$> tok (some (satisfy isLetter))) <|>
+        between (char' '(') pAdd (char' ')')
 
 pPow :: Parser Exp
-pPow = undefined
+pPow = chainr1 pAtom ((:^) <$ char' '^' <|> (:^^) <$ string' "^^")
+  -- rightAssoc (:^) pAtom (char' '^')
 
 pMul :: Parser Exp
-pMul = undefined
+pMul = leftAssoc (:*) pPow (char' '*')
 
 pAdd :: Parser Exp
-pAdd = chainl1 _ ((\_ -> (:+)) <$> ... <|> (:-) <$ ...)
+pAdd = leftAssoc (:+) pMul (char' '+')
 
 -- 3,
 -- Minden operátor parsernél a kötési irány alapján felépítünk egy parsert
