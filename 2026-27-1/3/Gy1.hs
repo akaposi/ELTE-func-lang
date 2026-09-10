@@ -41,9 +41,25 @@ Pragmák:
 
 -}
 
+-- >>> :t 1 + "alma"
+-- No instance for `Num String' arising from the literal `1'
+-- In the first argument of `(+)', namely `1'
+-- In the expression: 1 + "alma"
+
 -- Mai téma: Ismétlés (függvények, mintaillesztés, algebrai adattípusok, típusosztályok)
 xor :: Bool -> Bool -> Bool
-xor x y = undefined
+xor False False = False
+xor True True = False
+xor _ _ = True
+
+xor' a b = a /= b
+
+xor'' a b = case a of
+  True -> not b
+  False -> b
+
+--- >>> xor False False
+-- False
 
 -- Több megoldás is lehet (mintaillesztés, beépített függvények)
 -- Új "case" kifejezés
@@ -68,7 +84,7 @@ id' x = x
 
 -- lehet több típusváltozó is
 f1 :: (a, (b, (c, d))) -> (b, c)
-f1 = undefined
+f1 (a, (b, (c, d))) = (b, c)
 
 -- Segítség: Hole technológia!
 -- Haskellben ha az egyenlőség jobb oldalára _-t írunk, a fordító megmondja milyen típusú kifejezés kell oda
@@ -76,20 +92,20 @@ f1 = undefined
 -- Minden függvényre van több megoldás (beépített fügvénnyel pl)
 
 f2 :: (a -> b) -> a -> b
-f2 = undefined
+f2 f a = f a -- ($)
 
 f3 :: (b -> c) -> (a -> b) -> a -> c
-f3 = undefined
+f3 = undefined -- (.)
 
 f4 :: (a -> b -> c) -> b -> a -> c
-f4 = undefined
+f4 f b a = f a b -- flip 
 
 -- Segédfüggvények:
 -- fst :: (a,b) -> a
 -- snd :: (a,b) -> b
 
 f5 :: ((a, b) -> c) -> (a -> (b -> c)) -- Curryzés miatt a -> b -> c == a -> (b -> c)
-f5 = undefined
+f5 f a b = f (a, b)
 
 f6 :: (a -> b -> c) -> (a, b) -> c
 f6 = undefined
@@ -98,7 +114,7 @@ f6 = undefined
 -- pl.: \x -> x
 
 f7 :: (a -> (b, c)) -> (a -> b, a -> c)
-f7 = undefined
+f7 f = (\a -> fst (f a), \a -> snd (f a))
 
 f8 :: (a -> b, a -> c) -> (a -> (b, c))
 f8 = undefined
@@ -111,10 +127,12 @@ data Either a b = Left a | Right b
 -}
 
 f9 :: Either a b -> Either b a
-f9 = undefined
+f9 e = case e of
+  Left a -> Right a
+  Right b -> Left b
 
 f10 :: (Either a b -> c) -> (a -> c, b -> c)
-f10 = undefined
+f10 f = (\x -> f (Left x), \x -> f (Right x)) 
 
 f11 :: (a -> c, b -> c) -> (Either a b -> c)
 f11 = undefined
@@ -128,7 +146,7 @@ f13 :: (a, Either b c) -> Either (a, b) (a, c)
 f13 = undefined
 
 f14 :: (a -> a -> b) -> ((a -> b) -> a) -> b
-f14 = undefined
+f14 f g = let b = g (\a -> f a a) in f b b 
 
 -- Listák emlékeztető
 -- Hogyan is van a lista definiálva?
@@ -136,10 +154,21 @@ f14 = undefined
 -- Definiáljuk a map, filter függvényeket listagenerátorral, rekurzióval és hajtogatással
 
 map' :: (a -> b) -> [a] -> [b]
-map' = undefined
+map' f [] = []
+map' f (x : xs) = f x : map' f xs
+
+map'' f a = [f x | x <- a]
+
+map''' f a = foldr (\x as -> f x : as) [] a 
 
 filter' :: (a -> Bool) -> [a] -> [a]
-filter' = undefined
+filter' p [] = []
+filter' p (x:xs) -- = if p x then x : filter' p xs else filter' p xs
+  | p x = x : filter' p xs
+  | otherwise = filter' p xs
+
+-- >>> filter (>5) [1..10]
+-- [6,7,8,9,10]
 
 
 -- Definiáljunk egyéb hasznos lista függvényeket, amelyek részei a standard librarynek.
@@ -151,7 +180,12 @@ take' = undefined
 drop' = undefined
 
 splitAt' :: Int -> [a] -> ([a], [a])
-splitAt' = undefined
+splitAt' 0 xs = ([], xs)
+splitAt' _ [] = ([], [])
+splitAt' i (x:xs) = let (l, r) = splitAt' (i - 1) xs in (x:l, r)
+
+-- >>> splitAt' 3 "almafa"
+-- ("alm","afa")
 
 takeWhile', dropWhile' :: (a -> Bool) -> [a] -> [a]
 
