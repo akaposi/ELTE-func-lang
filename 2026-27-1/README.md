@@ -17,7 +17,7 @@ Fontos, hogy megfelelő kóddal vedd fel a tárgyat:
 |--------------|----------------------------|------------------|-----------------|---------|
 | 90 (Előadás) | Péntek 14:00-16:00         | Déli Tömb 2-502  | Szumi           | Angol   |
 | 1            | Péntek 12:00-14:00         | Déli Tömb 2-710  | Szávó Tamás     | Magyar  |
-| 3            | Csütörtök 17:30-19:15      | Déli Tömb 2-108  | Petes Márton    | Magyar  |
+| 3            | Csütörtök ~~17:30~~ 17:45-19:15      | Déli Tömb 2-108  | Petes Márton    | Magyar  |
 
 #### Elérhetőségek
 
