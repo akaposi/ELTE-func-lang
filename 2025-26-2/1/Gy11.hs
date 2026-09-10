@@ -145,7 +145,7 @@ data Exp
   | FloatLit Double      -- 1.0 2.11 ...
   | BoolLit Bool         -- true false
   | Var String           -- x y ...
-  | LamLit String Exp    -- \x -> e
+  | LamLit String Exp    -- lam x -> e
   | Exp :+ Exp           -- e1 + e2
   | Exp :* Exp           -- e1 * e2
   | Exp :- Exp           -- e1 - e2
@@ -177,7 +177,7 @@ data Exp
 -}
 
 keywords :: [String]
-keywords = ["true", "false", "not"]
+keywords = ["true", "false", "not", "lam", "if", "then", "end", "while", "do"]
 
 pNonKeyword :: Parser String
 pNonKeyword = do
@@ -230,22 +230,39 @@ data Statement
   deriving (Eq, Show)
 
 -- Írjunk ezekre parsereket!
--- Egy programkód egyes sorait ;-vel választjuk el
+-- Egy programkód egyes sorait ;-el bezárva
+-- a ; b ; c ; d ;
 
 program :: Parser [Statement]
-program = undefined
+program = many (statement <* char' ';')
 
 statement :: Parser Statement
-statement = undefined
+statement = sIf <|> sWhile <|> sAssign
 
 sIf :: Parser Statement
-sIf = undefined
+sIf = do -- If <$> (string' "if" *> pExp) <*> (string' "then" *> program <* string' "end")
+  string' "if"
+  e <- pExp
+  string' "then"
+  p <- program
+  string' "end"
+  return (If e p)
 
 sWhile :: Parser Statement
-sWhile = undefined
+sWhile = do
+  string' "while"
+  e <- pExp
+  string' "do"
+  p <- program
+  string' "end"
+  return (While e p)
 
 sAssign :: Parser Statement
-sAssign = undefined
+sAssign = do
+  v <- pNonKeyword
+  string' ":="
+  p <- pExp
+  return (Assign v p)
 
 parseProgram :: String -> Either String [Statement]
 parseProgram s = case runParser (topLevel program) s of
@@ -272,11 +289,76 @@ data InterpreterError
 -- Az interpreter típusát nem adjuk meg explicit, hanem használjuk a monád transzformerek megkötéseit!
 -- Értékeljünk ki egy kifejezést!
 evalExp :: MonadError InterpreterError m => Exp -> Env -> m Val
-evalExp = undefined
+evalExp x env = case x of
+  IntLit i -> return (VInt i)           
+  FloatLit d -> return (VFloat d)
+  BoolLit b -> return (VBool b)
+  Var s -> case lookup s env of
+    Just v -> return v
+    Nothing -> throwError (ScopeError "")
+  LamLit s e -> return (VLam s env e)
+  e1 :+ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VInt $ i1 + i2)
+      (VFloat d1, VFloat d2) -> return (VFloat $ d1 + d2)
+      _ -> throwError (TypeError "Operands of + didnt have the correct type")
+  e1 :* e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VInt $ i1 * i2)
+      (VFloat d1, VFloat d2) -> return (VFloat $ d1 * d2)
+      _ -> throwError (TypeError "Operands of * didnt have the correct type")        
+  e1 :- e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (VInt i1, VInt i2) -> return (VInt $ i1- i2)
+      (VFloat d1, VFloat d2) -> return (VFloat $ d1 - d2)
+      _ -> throwError (TypeError "Operands of + didnt have the correct type")
+  e1 :/ e2 -> do
+    v1 <- evalExp e1 env
+    v2 <- evalExp e2 env
+    case (v1, v2) of
+      (_, VInt 0) -> throwError (DivByZeroError "")
+      (_, VFloat 0) -> throwError (DivByZeroError "")
+      (VInt i1, VInt i2) -> return (VInt $ i1 `div` i2)
+      (VFloat d1, VFloat d2) -> return (VFloat $ d1 / d2)
+      _ -> throwError (TypeError "Operands of + didnt have the correct type")
+  e1 :== e2 -> _          
+  e1 :$ e2 -> do
+    l <- evalExp e1 env
+    v <- evalExp e2 env
+    case l of
+      VLam s env' e -> evalExp e ((s, v) : env')
+  Not e -> _              
+
+inBlockScope :: MonadState Env m => m a -> m a
+inBlockScope f = do
+  env <- get
+  a <- f
+  modify (take (length env))
+  pure a
 
 -- Állítás kiértékelésénér egy state-be eltároljuk a jelenlegi környezetet
 evalStatement :: (MonadError InterpreterError m, MonadState Env m) => Statement -> m ()
-evalStatement = undefined
+evalStatement (If e p) = do
+  env <- get
+  v <- evalExp e env
+  case v of
+    VBool True -> inBlockScope $ evalProgram p
+    VBool False -> return ()
+    _ -> throwError (TypeError "")
+evalStatement (While e p) = do
+  env <- get
+  v <- evalExp e env
+  case v of
+    VBool True -> do
+      inBlockScope $ evalProgram p >> evalStatement (While e p)
+    VBool False -> return ()
+    _ -> throwError (TypeError "")
 
 evalProgram :: (MonadError InterpreterError m, MonadState Env m) => [Statement] -> m ()
 evalProgram = mapM_ evalStatement
