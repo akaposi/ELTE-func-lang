@@ -32,19 +32,21 @@ data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 data FList f a = FNil | FCons (f a) (f (FList f a))
 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
-foldrSingle = undefined
+foldrSingle f b (Single a) = f a b
 
 foldrTuple :: (a -> b -> b) -> b -> Tuple a -> b
-foldrTuple = undefined
+foldrTuple f b (Tuple a1 a2) = f a1 (f a2 b)
 
 foldrQuintuple :: (a -> b -> b) -> b -> Quintuple a -> b
-foldrQuintuple = undefined
+foldrQuintuple f b (Quintuple a1 a2 a3 a4 a5) = f a1 $ f a2 $ f a3 $ f a4 $ f a5 b
 
 foldrList :: (a -> b -> b) -> b -> List a -> b
-foldrList = undefined
+foldrList f b (Cons a l) = f a (foldrList f b l)
+foldrList f b Nil = b
 
 foldrMaybe :: (a -> b -> b) -> b -> Maybe a -> b
-foldrMaybe = undefined
+foldrMaybe f b Nothing = b
+foldrMaybe f b (Just a) = f a b
 
 -- Hasonlóan a mappolhatósághoz, a hajtogatás is általánosítható a Foldable típusosztály segítéségvel
 {-
@@ -96,14 +98,34 @@ instance Foldable List where
 instance Foldable Maybe where
   foldr :: (a -> b -> b) -> b -> Maybe a -> b
   foldr = foldrMaybe
+{-
 
+0. Minden konstruktorra csinálunk egy ágat
+1. Minden paraméter esetén
+1a. t :: a -> f t _                           | f t
+1b. t :: f a, ahol f Foldable -> foldr f _ t  | foldMap f t
+1c. t :: c, ahol c nem tartalmaz a-t -> _     | ignoráljuk
+2. Ha nincs több paraméter -> b               | Az összes paraméter eredményét, összekombináljuk <>-el (ha nem is volt paraméter, akkor mempty)
+-}
 instance Foldable NonEmpty where
+  foldr f b (Last a) = f a b
+  foldr f b (NECons a as) = f a (foldr f b as)
 
 instance Foldable NonEmpty2 where
 
 instance Foldable Tree where
+  foldr f b (Leaf a) = f a b
+  foldr f b (Node l a r) = foldr f (f a (foldr f b r)) l
 
+  foldMap f (Leaf a) = f a
+  foldMap f (Node l a r) = foldMap f l <> f a <> foldMap f r
+  
 instance Foldable (Either fixed) where
+  foldr f b (Left e) = b
+  foldr f b (Right a) = f a b
+
+  foldMap f (Left e) = mempty
+  foldMap f (Right a) = f a
 
 instance Foldable (BiTuple fixed) where
 
@@ -113,12 +135,16 @@ instance Foldable (BiList fixed) where
 
 -- Magasabbrendű megkötések
 instance Foldable f => Foldable (Apply f) where
+  foldr f b (MkApply fa) = foldr f b fa
 
 instance Foldable f => Foldable (Fix f) where
+  foldr f b (MkFix ffa) = foldr (\fa b' -> foldr f b' fa) b ffa
 
 instance (Foldable f, Foldable g) => Foldable (Compose f g) where
 
 instance Foldable f => Foldable (Sum f fixed) where
+  foldr f b (FRight a) = foldr f b a
+  foldr f b (FLeft _) = b -- foldr (\_ b' -> b') b l
 
 instance Foldable f => Foldable (Prod f fixed) where
 
@@ -136,17 +162,17 @@ Ez Haskellben a Semigroup típusosztály
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (||)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = undefined
+  (<>) = (*)
 
 data Endo a = MkEndo (a -> a)
 
 instance Semigroup (Endo a) where
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  (MkEndo f) <> (MkEndo g) = MkEndo (f . g)
 
 {-
 Egy halmazhoz több művelet is választható, hogy félcsoportot alkossanak
@@ -174,15 +200,15 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = False
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
+  mempty = 1
 
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id 
 
 
 -- A foldr művelet alternatívája: foldMap
@@ -209,6 +235,10 @@ data Triplet a b c = Triplet a b c deriving (Eq, Show)
 data SplitTree a b = SplitTree (Tree a) a b (Tree b) deriving (Eq, Show)
 data TriCompose f g h a = TriCompose (f (g (h a))) deriving (Eq, Show)
 data Free f a = Pure a | Free (f (Free f a))
+
+instance Foldable RoseTree where
+  foldMap f (RoseLeaf a) = f a
+  foldMap f (RoseNode lra) = foldMap (foldMap f) lra
 
 -- Mágia, ignore me
 deriving instance (Eq a, forall a. Eq a => Eq (f a)) => Eq (Fix f a)
