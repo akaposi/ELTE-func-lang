@@ -25,19 +25,27 @@ data BiList a b = ACons a (BiList a b) | BCons b (BiList a b) | ABNill deriving 
 -- Mivel a fenti típusok mind valamilyen szinten tárolnak magukban 'a' típusú elemet ezért szükséges lesz egy (a -> b) függvényre
 
 mapSingle :: (a -> b) -> Single a -> Single b
-mapSingle = undefined
+mapSingle f (Single a) = Single (f a)
 
 mapTuple :: (a -> b) -> Tuple a -> Tuple b
-mapTuple = undefined
+mapTuple f (Tuple a b) = Tuple (f a) (f b)
 
 mapQuintuple :: (a -> b) -> Quintuple a -> Quintuple b
-mapQuintuple = undefined
+mapQuintuple f (Quintuple a b c d e) = Quintuple (f a) (f b) (f c) (f d) (f e)
 
 mapMaybe :: (a -> b) -> Maybe a -> Maybe b
-mapMaybe = undefined
+mapMaybe f (Just a) = Just (f a)
+mapMaybe f _ = Nothing
 
 mapList :: (a -> b) -> List a -> List b
-mapList = undefined
+mapList f (Cons a b) = Cons (f a) (mapList f b)
+mapList f Nil = Nil
+
+-- >>> :k Int
+-- Int :: *
+
+-- >>> :k Single
+-- Single :: * -> *
 
 -- Emeljük ki a Single, Tuple stb-t a típusból (ezt hívják magasabbrendű polimorfizmusnak, mert a polimorfizmust típusfüggvényekre alkalmazzuk):
 {-
@@ -85,19 +93,29 @@ instance Functor List where
 
 -- Írjuk meg a többi típusra is a Functor instance-ot!
 
+-- data NonEmpty a = Last a | NECons a (NonEmpty a) deriving (Eq, Show)
+-- 0. Minden konstruktornak definiálunk egy ágat
+-- 1. Minden ágba ugyanazt a konstruktor leírjuk, amit illesztettünk
+-- 2. Minden paraméterre:
+-- 2a. t :: a -> f t
+-- 2b. t :: g a, ahol g egy Functor -> fmap f t*
+-- 2c. t :: q -> t
+-- * fmap annyiszor alkalmazva, ahányszor funktorba van csomagolva
 instance Functor NonEmpty where
   fmap :: (a -> b) -> NonEmpty a -> NonEmpty b
-  fmap = undefined
+  fmap f (Last a) = Last (f a)
+  fmap f (NECons a as) = NECons (f a) (fmap f as)
 
 instance Functor NonEmpty2 where
   fmap :: (a -> b) -> NonEmpty2 a -> NonEmpty2 b
-  fmap = undefined
+  fmap f (NECons2 a as) = NECons2 (f a) (fmap f as)
 
 -- Ugye a Functor egy Type -> Type kindú kifejezést vár, viszont pl az Either egy Type -> Type -> Type kindú valami, ezért le kell fixálni az első paramétert
 
 instance Functor (Either fixed) where
   fmap :: (a -> b) -> Either fixed a -> Either fixed b
-  fmap = undefined
+  fmap f (Left fixed) = Left fixed
+  fmap f (Right a) = Right (f a)
 
 instance Functor (BiTuple fixed) where
   fmap :: (a -> b) -> BiTuple fixed a -> BiTuple fixed b
@@ -133,7 +151,7 @@ maybeABool = Lift Nothing -- pont nincs bool :(
 -- Viszont a fix típusra kell Functor kikötés, hogy az a-t kicserélhessük benne
 instance (Functor f) => Functor (Lift f) where
   fmap :: (Functor f) => (a -> b) -> Lift f a -> Lift f b
-  fmap = undefined
+  fmap f (Lift fa) = Lift (fmap f fa)
 
 -- f az vmi funktor
 -- g : a -> b
@@ -156,7 +174,7 @@ instance (Functor f, Functor g) => Functor (Product f g) where
 
 instance (Functor f, Functor g) => Functor (Compose f g) where
   fmap :: (Functor f, Functor g) => (a -> b) -> Compose f g a -> Compose f g b
-  fmap = undefined
+  fmap f (Compose fga) = Compose (fmap (fmap f) fga)
 
 -- A függvény funktor?
 data Fun a b = Fun (a -> b)
