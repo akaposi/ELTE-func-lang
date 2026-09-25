@@ -3,6 +3,7 @@
 module Gy03 where
 
 import Prelude hiding (Maybe(..), Either(..))
+import GHC.Boot.TH.Lib (gadtC)
 
 -- Hajtogatás: Listára való rekurzió szimulációja
 -- foldr :: (a ->  b  ->  b ) ->  b -> [a] -> b
@@ -32,19 +33,21 @@ data Prod f a b = FProd (f a) (f b) deriving (Eq, Show)
 data FList f a = FNil | FCons (f a) (f (FList f a))
 
 foldrSingle :: (a -> b -> b) -> b -> Single a -> b
-foldrSingle = undefined
+foldrSingle f b (Single a) = a `f` b
 
 foldrTuple :: (a -> b -> b) -> b -> Tuple a -> b
-foldrTuple = undefined
+foldrTuple f b (Tuple x y) = f x (f y b)
 
 foldrQuintuple :: (a -> b -> b) -> b -> Quintuple a -> b
-foldrQuintuple = undefined
+foldrQuintuple f b (Quintuple x y z m n) = f x $ f y $ f z $ f m $ f n b
 
 foldrList :: (a -> b -> b) -> b -> List a -> b
-foldrList = undefined
+foldrList f b Nil = b
+foldrList f b (x `Cons` xs) = x `f` foldrList f b xs
 
 foldrMaybe :: (a -> b -> b) -> b -> Maybe a -> b
-foldrMaybe = undefined
+foldrMaybe f b Nothing = b
+foldrMaybe f b (Just a) = f a b
 
 -- Hasonlóan a mappolhatósághoz, a hajtogatás is általánosítható a Foldable típusosztály segítéségvel
 {-
@@ -98,31 +101,77 @@ instance Foldable Maybe where
   foldr = foldrMaybe
 
 instance Foldable NonEmpty where
+  foldr :: (a -> b -> b) -> b -> NonEmpty a -> b
+  foldr f m (Last a) = f a m
+  foldr f m (NECons a as) = a `f` foldr f m as
+
+  foldMap :: Monoid m => (a -> m) -> NonEmpty a -> m
+  foldMap f (Last a) = f a
+  foldMap f (NECons a as) = f a <> foldMap f as
+
 
 instance Foldable NonEmpty2 where
 
 instance Foldable Tree where
+  --foldr :: (a -> b -> b) -> b -> Tree a -> b
+  --foldr f b (Leaf a) = f a b
+  --foldr f m (Node tl a tr) = foldr f (f a (foldr f m tr)) tl        --foldr f tl a foldr f tr
+
+  foldMap f (Leaf a) = f a
+  foldMap f (Node tl a tr) = foldMap f tl <> f a <> foldMap f tr
 
 instance Foldable (Either fixed) where
 
 instance Foldable (BiTuple fixed) where
 
 instance Foldable (TriEither fixed1 fixed2) where
+  foldr :: (a -> b -> b) -> b -> TriEither fixed1 fixed2 a -> b
+  foldr _ m (LeftT f1) = m
+  foldr _ m (MiddleT f1) = m
+  foldr f m (RightT a) = f a m
 
 instance Foldable (BiList fixed) where
 
 -- Magasabbrendű megkötések
 instance Foldable f => Foldable (Apply f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Apply f a -> b
+  foldr f m (MkApply fa) = foldr f m fa
 
 instance Foldable f => Foldable (Fix f) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Fix f a -> b
+  foldr f m (MkFix fFixfa) = foldr (\fixfa y -> foldr f y fixfa) m fFixfa
+  --                         foldr (flip (foldr f)) m fFixfa
 
 instance (Foldable f, Foldable g) => Foldable (Compose f g) where
+  -- (MkCompose f (g a))
+  foldr :: (Foldable f, Foldable g) => (a -> b -> b) -> b -> Compose f g a -> b
+  foldr f m (MkCompose fga) = foldr (flip (foldr f)) m fga
+  foldMap :: (Foldable f, Foldable g, Monoid m) => (a -> m) -> Compose f g a -> m
+  foldMap f (MkCompose fga) = foldMap (\ga -> foldMap f ga) fga <> mempty
 
 instance Foldable f => Foldable (Sum f fixed) where
+  foldr :: Foldable f => (a -> b -> b) -> b -> Sum f fixed a -> b
+  foldr _ m (FLeft _) = m
+  foldr f m (FRight fa) = foldr f m fa
 
 instance Foldable f => Foldable (Prod f fixed) where
 
 instance Foldable f => Foldable (FList f) where
+  foldMap :: (Foldable f, Monoid m) => (a -> m) -> FList f a -> m
+  foldMap _ FNil = mempty
+  foldMap f (FCons fa fFlistfa) = foldMap f fa <> foldMap (foldMap f) fFlistfa
+  
+
+-- 0. lépés = leilleszted a konstruktorokat
+-- 1. lépés = _ mindenhova (mindig a holeokban operálunk)
+-- sorba a paramétereken:
+{-
+   t :: a   -> f t _           |  f t <> _
+   t ~:: a  -> foldr f _ t     | foldMap f t <> _
+   t !~:: a -> _               | _
+   ha nincs több  ->  b        | mempty
+-}
+
 
 
 {-
@@ -136,18 +185,34 @@ Ez Haskellben a Semigroup típusosztály
 
 instance Semigroup Bool where
   (<>) :: Bool -> Bool -> Bool
-  (<>) = undefined
+  (<>) = (&&)
 
 instance Semigroup Int where
   (<>) :: Int -> Int -> Int
-  (<>) = undefined
+  (<>) = (*)
 
 data Endo a = MkEndo (a -> a)
 
 instance Semigroup (Endo a) where
   (<>) :: Endo a -> Endo a -> Endo a
-  (<>) = undefined
+  (MkEndo fa) <> (MkEndo ga) = MkEndo $ fa . ga
 
+data Sum' where
+  Sum :: Int -> Sum'
+
+instance Semigroup Sum' where
+  (<>) :: Sum' -> Sum' -> Sum'
+  (<>) (Sum a) (Sum b) = Sum (a + b)
+
+instance Monoid Sum' where
+  mempty :: Sum'
+  mempty = Sum 0
+
+-- (Monoid m, Foldable t) => (a -> m) -> t a -> m 
+-- Sum : (Int -> Sum')
+-- foldMap :: (Int -> Sum') -> [Int] -> Sum'
+-- foldMap Sum [1,2,3]
+ 
 {-
 Egy halmazhoz több művelet is választható, hogy félcsoportot alkossanak
 Pl.:
@@ -174,15 +239,15 @@ Ez Haskellben a Monoid típusosztály
 
 instance Monoid Bool where
   mempty :: Bool
-  mempty = undefined
+  mempty = True
 
 instance Monoid Int where
   mempty :: Int
-  mempty = undefined
+  mempty = 1
 
 instance Monoid (Endo a) where
   mempty :: Endo a
-  mempty = undefined
+  mempty = MkEndo id
 
 
 -- A foldr művelet alternatívája: foldMap
