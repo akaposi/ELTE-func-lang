@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-noncanonical-monad-instances #-}
+{-# OPTIONS_GHC -Wincomplete-patterns #-}
 module Gyak04 where
 import Control.Monad
 
@@ -25,7 +26,11 @@ combineThrees f x y
 -- magicFunction 2 == Nothing (incrementIfEven 2 == 3, 2 + 3 `mod` 3 /= 0)
 
 magicFunction :: Integral a => a -> Maybe a
-magicFunction = undefined
+magicFunction a = case incrementIfEven a of
+  Just b -> case combineThrees (*) a b of
+    Just c -> incrementIfEven c
+    Nothing -> Nothing 
+  Nothing -> Nothing
 
 -- Ez még egy darab Maybe vizsgálatnál annyira nem vészes, de ha sokat kell, elég sok boilerplate kódot vezethet be
 -- Az úgynevezett "mellékhatást" (tehát ha egy számítás az eredményen kívül valami mást is csinál, Maybe esetén a művelet elromolhat)
@@ -49,7 +54,7 @@ class Functor m => Monad m where
 -- TODO : Miért
 
 magicFunctionM :: Integral a => a -> Maybe a
-magicFunctionM x = undefined
+magicFunctionM x = incrementIfEven x >>= \b -> combineThrees (*) x b >>= \c -> incrementIfEven c
 
 -- Így lehet több olyan műveletet komponálni, amelyeknek vannak mellékhatásaik
 -- Akinek nem tetszik a >>= irogatás létezik az imperatív stílusú do notáció
@@ -62,7 +67,11 @@ y >>= \x -> a
 -}
 
 magicFunctionDo :: Integral a => a -> Maybe a
-magicFunctionDo = undefined
+magicFunctionDo a = do
+  b <- incrementIfEven a
+  c <- combineThrees (*) a b
+  let x = 3
+  incrementIfEven c
 
 
 -- Monád példa: IO monád
@@ -89,34 +98,51 @@ print :: Show a => a -> IO ()
 --                    ^ eredmény irreleváns, csak fusson le
 
 -- Írjunk olyan IO műveleteket do notációval és bindokkal amely
--- a, beolvas két sort és a konkatenációjukat kiírja
+-- a, beolvas harmat sort és a forditotjuk konkatenaciojat kiírja
 -- b, beolvas egy számot és kiírja a négyzetét
 -- c, kiírja egy lista összes elemét
 -- d, beolvas egy számot minden listaelemhez és azt hozzáadja
 
 readAndConcat :: IO ()
-readAndConcat = undefined
+readAndConcat = do
+  line1 <- getLine
+  line2 <- getLine
+  line3 <- getLine
+  putStrLn $ concat (reverse <$> [line1, line2, line3])
 
 readAndConcat' :: IO ()
-readAndConcat' = undefined
+readAndConcat' = getLine >>= \line1 -> getLine >>= \line2 -> getLine >>= \line3 ->  putStrLn $ concat (reverse <$> [line1, line2, line3])
 
 readAndSq :: IO ()
-readAndSq = undefined
+readAndSq = do
+ num <- readLn :: IO Int
+ print (num ^ 2)
 
 readAndSq' :: IO ()
-readAndSq' = undefined
+readAndSq' = (readLn :: IO Int) >>= \n -> print (n ^ 2)
 
 printAll :: Show a => [a] -> IO ()
-printAll = undefined
+printAll [] = return ()
+printAll (x:xs) = print x >> printAll xs 
 
 printAll' :: Show a => [a] -> IO ()
-printAll' = undefined
+printAll' [] = return ()
+printAll' (x:xs) = do
+  print x
+  printAll xs
 
-readAndAdd :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd = undefined
+readAndAdd :: forall a. (Read a, Num a) => [a] -> IO [a]
+readAndAdd [] = return []
+readAndAdd (x:xs) = do
+  n <- readLn :: IO a
+  ns <- readAndAdd xs
+  return (n + x : ns)
 
-readAndAdd' :: (Read a, Num a) => [a] -> IO [a]
-readAndAdd' = undefined
+readAndAdd' :: forall a. (Read a, Num a) => [a] -> IO [a]
+readAndAdd' [] = return []
+readAndAdd' (x:xs) = (readLn :: IO a) >>= \num -> readAndAdd xs >>= \nl -> return (num + x : nl)
+--                                                (\nl -> num + x : nl) <$> readAndAdd xs
+--                                                readAndAdd xs <&> (\nl -> num + x : nl)
 
 -- Micsoda még monád?
 -- Pl lista:
@@ -136,5 +162,5 @@ readAndAdd' = undefined
 -- Másik megközelítése a monándak: a join művelet
 
 join' :: Monad m => m (m a) -> m a
-join' = undefined
+join' m = m >>= id 
 
