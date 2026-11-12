@@ -1,26 +1,28 @@
+{- HLINT ignore "Use foldr" -}
+{- HLINT ignore "Use lambda-case" -}
 module Gy09 where
 
-import Control.Monad
 import Control.Applicative
-import Data.Functor
-import Data.Traversable
-import Data.Foldable
+import Control.Monad
 import Data.Char
+import Data.Foldable
+import Data.Functor
+import Data.List
+import Data.Traversable
 
-newtype Parser a = Parser { runParser :: String -> Maybe (a, String) } deriving Functor
+newtype Parser a = Parser {runParser :: String -> Maybe (a, String)} deriving (Functor)
 
 -- Nagyon hasonló a State-hez
 --                        { runState  :: s      ->       (a,       s) }
 
 instance Applicative Parser where
-  pure a = Parser $ \s -> Just (a, s)
-  (<*>) = ap
+    pure a = Parser $ \s -> Just (a, s)
+    (<*>) = ap
 
 instance Monad Parser where
-  (Parser rP) >>= f = Parser $ \s -> case rP s of
-    Nothing -> Nothing
-    Just (a, s') -> runParser (f a) s'
-
+    (Parser rP) >>= f = Parser $ \s -> case rP s of
+        Nothing -> Nothing
+        Just (a, s') -> runParser (f a) s'
 
 -- A Parser és a State két fő különbsége
 -- 1. A Parsernek a "belső állapota" mindig string
@@ -31,39 +33,65 @@ instance Monad Parser where
 -- Primitív parserek
 -- Olyan parser, amely lenyel egy karaktert a bemenetről és akkor fogad el, ha az adott predikátum teljesül rá
 satisfy :: (Char -> Bool) -> Parser Char
-satisfy = undefined
+satisfy p = Parser $ \input -> case input of
+    (c : cs) | p c -> Just (c, cs)
+    _ -> Nothing
+
+-- uncons input >>= \(c, cs) -> if p c then Just (c, cs) else Nothing
 
 -- Olyan parser, amely akkor fogad el, ha nincs semmi a bemeneten
 eof :: Parser ()
-eof = undefined
+eof = Parser $ \input -> case input of
+    [] -> Just ((), [])
+    _ -> Nothing
 
 -- Ezekből felépíthetőek egyéb parserek
 -- Olyan parser, ami egy adott karaktert parseol
 -- Itt irreleváns az, hogy mi a kimenet
+
+-- >>> :t void
+-- void :: Functor f => f a -> f ()
+
 char :: Char -> Parser ()
-char = undefined
+char c =
+    void $ satisfy (== c)
+
+--        ()  <$  satisfy (== c)
+-- (\_ -> ()) <$> satisfy (== c)
 
 -- Parseoljunk akármilyen karaktert
 anychar :: Parser Char
-anychar = undefined
+anychar = satisfy (const True) -- (\_ -> True)
 
 -- Parseoljunk egy konkrét stringet
 -- hint: mapM_
 string :: String -> Parser ()
-string = undefined
+string [] = return ()
+string (c : cs) = char c >> string cs
+
+-- >>> runParser (mapM_ char "alma") "almafa"
+-- Just ((),"fa")
+
+-- >>> runParser (string "alma") "almafa"
+-- Just ((),"fa")
 
 -- Parsernél fontos a "vagy" művelet (ha az első parser elhasal, akkor a másikat próbáljuk meg)
 -- Ez lesz az Alternative típusosztály
 instance Alternative Parser where
-  empty :: Parser a -- Garantáltan elhasaló parser
-  empty = undefined
-  (<|>) :: Parser a -> Parser a -> Parser a -- Ha a baloldali sikertelen, futassuk le a jobboldalit (hint: A Maybe is egy alternatív)
-  (<|>) = undefined
+    empty :: Parser a -- Garantáltan elhasaló parser
+    empty = Parser $ const Nothing
+    (<|>) :: Parser a -> Parser a -> Parser a -- Ha a baloldali sikertelen, futassuk le a jobboldalit (hint: A Maybe is egy alternatív)
+    Parser a <|> Parser b = Parser $ \input -> case a input of
+        Just (x, xs) -> Just (x, xs)
+        Nothing -> b input
 
 -- Definiáljunk egy parsert ami egy 'a' vagy egy 'b' karaktert parseol
 
 aorb :: Parser Char
-aorb = undefined
+aorb = ('a' <$ char 'a') <|> ('b' <$ char 'b')
+
+-- >>> runParser aorb "balmafa"
+-- Just ('b',"almafa")
 
 -- many :: Parser a -> Parser [a]
 -- 0 vagy többször lefuttatja a parsert
@@ -76,20 +104,40 @@ many' p = some' p <|> pure [] -- Ha 1 vagy több sikertelen, akkor 0 van
 some' :: Parser a -> Parser [a]
 some' p = (:) <$> p <*> many' p -- Lefuttatja 1x és utána 0 vagy többször
 
+-- >>> runParser (some' aorb) "aaabababababababababbabacaabbabababab"
+-- Just ("aaabababababababababbaba","caabbabababab")
+
 -- optional' :: Parser a -> Parser (Maybe a)
 -- ha elhasalna a parser, mégse hasal el
 optional' :: Parser a -> Parser (Maybe a)
-optional' p = undefined
+optional' p = Just <$> p <|> pure Nothing
+
+-- >>> sequence [char c | c <- inputString]
 
 -- replicateM :: Int -> Parser a -> Parser [a]
 -- n-szer lefuttat egy parsert
-replicateM' :: Integral i => i -> Parser a -> Parser [a]
-replicateM' = undefined
+replicateM' :: (Integral i) => i -> Parser a -> Parser [a]
+replicateM' 0 a = return []
+replicateM' n p = do
+    par <- p
+    par' <- replicateM' (n - 1) p
+    return (par : par')
+
+{-
+replicateM 0 p = pure []
+replicateM n p = (:) <$> p <*> replicateM (n - 1) p
+
+replicateM n p = p >>= \c -> (c:) <$> replicateM (n - 1) p
+
+replicateM n p = sequence [ p | _ <- [1..n] ]
+
+-}
 
 -- asum :: [Parser a] -> Parser a
 -- Sorban megpróbálja az összes parsert lefuttatni
 asum' :: [Parser a] -> Parser a
-asum' = undefined
+asum' [] = empty
+asum' (x : xs) = x <|> asum' xs
 
 -- Regex féle parserek
 {-
@@ -112,19 +160,31 @@ asum' = undefined
 
 -- alm(a|ák)
 p1 :: Parser ()
-p1 = undefined
+p1 = do
+    string "alm"
+    char 'a' <|> string "ák"
+
+-- >>> runParser p1 "almá"
+-- Nothing
 
 -- c(i+)ca
 p2 :: Parser ()
-p2 = undefined
+p2 = do
+    char 'c'
+    some (char 'i')
+    string "ca"
 
 -- (c*)i?(c+)a{3}
 p3 :: Parser ()
-p3 = undefined
+p3 = do
+    many (char 'c')
+    optional (char 'i')
+    some (char 'c')
+    string "aaa"
 
 -- (alma|banana)?
 p4 :: Parser ()
-p4 = undefined
+p4 = void $ optional $ string "alma" <|> string "banana"
 
 -- [A-Z]{10}
 p5 :: Parser ()
@@ -161,3 +221,33 @@ p12 = undefined
 -- alm(a|ák)|banán(ok)?
 p13 :: Parser ()
 p13 = undefined
+
+newtype NParser a = NParser {runNParser :: String -> [(a, String)]} deriving (Functor)
+
+instance Applicative NParser where
+    pure a = NParser $ \s -> [(a, s)]
+    (<*>) = ap
+
+instance Monad NParser where
+    NParser a >>= f = NParser $ \s -> let p = a s in concatMap (\(a, r) -> runNParser (f a) r) p
+
+charN :: Char -> NParser ()
+charN c = NParser $ \input -> case input of
+    [] -> []
+    (k : ks) -> ([((), ks) | k == c])
+
+stringN :: String -> NParser ()
+stringN [] = pure ()
+stringN (c : cs) = charN c >> stringN cs
+
+anycharN :: NParser ()
+anycharN = NParser $ \s -> case s of
+    [] -> []
+    (c : cs) -> [((), cs)]
+
+instance Alternative NParser where
+    empty = NParser $ const []
+    NParser l <|> NParser r = NParser $ \s -> l s ++ r s
+
+--- >>> runNParser (void $ many (charN 'a')) "aaaaaaab"
+-- [((),"b"),((),"ab"),((),"aab"),((),"aaab"),((),"aaaab"),((),"aaaaab"),((),"aaaaaab"),((),"aaaaaaab")]
