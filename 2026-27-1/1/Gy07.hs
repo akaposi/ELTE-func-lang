@@ -79,7 +79,7 @@ basicExecutables = ["/usr/bin/bash", "/usr/bin/ls", "/bin/sh"]
 -- Rakjuk be a felhasználó home directoryját a fájl rendszerbe ha még nincs benne
 addHomeIfNotIn :: StateT FileSystem (Reader Env) ()
 --addHomeIfNotIn :: (MonadState FileSystem m, MonadReader Env m) => m ()
-addHomeIfNotIn = get >>= \filesystem -> ask >>= \env -> unless (homeDir env `elem` filesystem) (put  $ homeDir env : filesystem) 
+addHomeIfNotIn = get >>= \filesystem -> ask >>= \env -> unless (homeDir env `elem` filesystem) (put  $ homeDir env : filesystem)
 
 
 -- Legyen egy FileSystem típusú állapotváltozási környezetünk
@@ -147,19 +147,19 @@ getAndPrint' = do
 -- IO környezet
 -- Vizsgán általában csak 4 lesz az 5-ből
 
-type MyMonad a = ReaderT Env (ExceptT FSError (StateT FileSystem (WriterT [String] IO))) a
+type MyMonad a = ExceptT FSError (ReaderT [Env] (StateT FileSystem (WriterT [String] IO))) a
 
-type MyMonad' a = forall m . (MonadReader Env m, MonadError FSError m, MonadState FileSystem m, MonadWriter [String] m, MonadIO m) => m a
+type MyMonad' a = forall m . (MonadReader [Env] m, MonadError FSError m, MonadState FileSystem m, MonadWriter [String] m, MonadIO m) => m a
 
 type Monad'' m = (MonadState Int m, MonadReader Int m)
 
 splitOn :: Eq a => a -> [a] -> [[a]]
 splitOn x = map tail . groupBy (/=) . (x :)
 
--- Olvassunk be konzolrol egy a konzolról egy stringet
+-- Olvassunk be a konzolról egy stringet
 -- ha valid útvonal (/-ekkel elváálasztott nem üres stringek) akkor adjuk hozzá a fájlrendszerhez
 -- ha nem az dobjunk BadPath hibát
-f1 :: MyMonad ()
+f1 :: MyMonad' ()
 f1 = do
     line <- liftIO getLine
     let parts = splitOn '/' line
@@ -171,8 +171,9 @@ f1 = do
 -- Futtassuk le az f1-et
 -- Ha hibát dob írjuk ki az írási környezetbe, hogy nem sikerült, majd próbáljuk az f1-et újra
 -- Eredményként adjuk vissza, hányadik próbálkozásra sikerült a felhasználónak valid útvonalat adnia
-f2 :: type_signature_goes_here
-f2 = undefined
+f2 :: MyMonad' Int
+f2 = do
+  catchError (f1 >> return 0) (\BadPath -> f2 >>= \x -> return $ x + 1)
 
 -- Menjünk végig az összes fájlrendszerbeli elemen
 -- Kérdezzük meg a felhasználót (azaz írjuk ki a konzolra) hogy meg szeretné-e tartani azt a fájlt
